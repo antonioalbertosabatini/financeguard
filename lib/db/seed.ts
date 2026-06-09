@@ -1,0 +1,81 @@
+import type { Category } from "@/lib/schemas/category";
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  {
+    id: "cat_stipendio",
+    name: "Stipendio",
+    type: "income",
+    color: "#22C55E",
+    icon: "banknote",
+  },
+  {
+    id: "cat_freelance",
+    name: "Freelance",
+    type: "income",
+    color: "#10B981",
+    icon: "briefcase",
+  },
+  {
+    id: "cat_altro_entrata",
+    name: "Altro entrata",
+    type: "income",
+    color: "#14B8A6",
+    icon: "gift",
+  },
+  {
+    id: "cat_spesa",
+    name: "Spesa",
+    type: "expense",
+    color: "#EF4444",
+    icon: "shopping-cart",
+  },
+  {
+    id: "cat_affitto",
+    name: "Affitto",
+    type: "expense",
+    color: "#F97316",
+    icon: "home",
+  },
+  {
+    id: "cat_trasporti",
+    name: "Trasporti",
+    type: "expense",
+    color: "#3B82F6",
+    icon: "car",
+  },
+  {
+    id: "cat_ristoranti",
+    name: "Ristoranti",
+    type: "expense",
+    color: "#EAB308",
+    icon: "utensils",
+  },
+  {
+    id: "cat_svago",
+    name: "Svago",
+    type: "expense",
+    color: "#A855F7",
+    icon: "gamepad-2",
+  },
+  {
+    id: "cat_salute",
+    name: "Salute",
+    type: "expense",
+    color: "#EC4899",
+    icon: "heart",
+  },
+  {
+    id: "cat_bollette",
+    name: "Bollette",
+    type: "expense",
+    color: "#6366F1",
+    icon: "home",
+  },
+  {
+    id: "cat_abbonamenti",
+    name: "Abbonamenti",
+    type: "expense",
+    color: "#8B5CF6",
+    icon: "plane",
+  },
+];
