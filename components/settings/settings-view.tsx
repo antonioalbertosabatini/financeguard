@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,12 +63,10 @@ export function SettingsView({ settings }: { settings: Settings }) {
 
   return (
     <div className="space-y-6 max-w-xl">
-      <div>
-        <h2 className="text-2xl font-semibold">Impostazioni</h2>
-        <p className="text-sm text-muted-foreground">
-          Valuta, export e import dati
-        </p>
-      </div>
+      <PageHeader
+        title="Impostazioni"
+        description="Valuta, export e import dati"
+      />
 
       <Card>
         <CardHeader>

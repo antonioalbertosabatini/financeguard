@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -81,18 +82,16 @@ export function BudgetView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">Budget</h2>
-          <p className="text-sm text-muted-foreground">
-            Limiti mensili per categoria
-          </p>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="size-4" />
-          Nuovo budget
-        </Button>
-      </div>
+      <PageHeader
+        title="Budget"
+        description="Limiti mensili per categoria"
+        actions={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="size-4" />
+            Nuovo budget
+          </Button>
+        }
+      />
 
       {items.length === 0 ? (
         <Card>

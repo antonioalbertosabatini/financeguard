@@ -12,6 +12,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { TrendingDown, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCents } from "@/lib/utils/money";
 import { MONTH_LABELS } from "@/lib/constants";
@@ -30,6 +32,42 @@ type DashboardProps = {
   monthlyTrend: { month: number; income: number; expense: number }[];
 };
 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  iconClassName,
+  valueClassName,
+  borderClassName,
+}: {
+  title: string;
+  value: string;
+  icon: LucideIcon;
+  iconClassName: string;
+  valueClassName?: string;
+  borderClassName?: string;
+}) {
+  return (
+    <Card className={`shadow-sm ${borderClassName ?? ""}`}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
+        <div
+          className={`flex size-9 items-center justify-center rounded-xl ${iconClassName}`}
+        >
+          <Icon className="size-4" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className={`text-3xl font-bold tracking-tight tabular-nums ${valueClassName ?? ""}`}>
+          {value}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DashboardView({
   totalBalance,
   monthlyIncome,
@@ -46,51 +84,35 @@ export function DashboardView({
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">
-          Panoramica finanziaria dell&apos;anno selezionato
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title="Dashboard"
+        description="Panoramica finanziaria dell'anno selezionato"
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Saldo totale
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold tracking-tight">
-              {formatCents(totalBalance, currency, locale)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-emerald-200/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Entrate mese corrente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold tracking-tight text-emerald-600">
-              {formatCents(monthlyIncome, currency, locale)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-rose-200/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Uscite mese corrente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold tracking-tight text-rose-600">
-              {formatCents(monthlyExpense, currency, locale)}
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Saldo totale"
+          value={formatCents(totalBalance, currency, locale)}
+          icon={Wallet}
+          iconClassName="bg-primary/10 text-primary"
+        />
+        <StatCard
+          title="Entrate mese corrente"
+          value={formatCents(monthlyIncome, currency, locale)}
+          icon={TrendingUp}
+          iconClassName="bg-emerald-500/10 text-emerald-600"
+          valueClassName="text-emerald-600"
+          borderClassName="border-emerald-200/60"
+        />
+        <StatCard
+          title="Uscite mese corrente"
+          value={formatCents(monthlyExpense, currency, locale)}
+          icon={TrendingDown}
+          iconClassName="bg-rose-500/10 text-rose-600"
+          valueClassName="text-rose-600"
+          borderClassName="border-rose-200/60"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -139,8 +161,8 @@ export function DashboardView({
                 <YAxis fontSize={12} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="Entrate" fill="#22c55e" />
-                <Bar dataKey="Uscite" fill="#ef4444" />
+                <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

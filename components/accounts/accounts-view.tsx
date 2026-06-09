@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -100,16 +101,16 @@ export function AccountsView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">Conti</h2>
-          <p className="text-sm text-muted-foreground">Gestisci i tuoi conti</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" />
-          Nuovo conto
-        </Button>
-      </div>
+      <PageHeader
+        title="Conti"
+        description="Gestisci i tuoi conti"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" />
+            Nuovo conto
+          </Button>
+        }
+      />
 
       {accounts.length === 0 ? (
         <Card>

@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Pencil, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -110,72 +112,81 @@ export function TransactionsView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">Transazioni</h2>
-          <p className="text-sm text-muted-foreground">
-            Anno {year} — regole e transazioni singole
-          </p>
-        </div>
-        <Button variant="outline" onClick={handleCopyRecurring}>
-          <Copy className="size-4" />
-          Copia ricorrenti da {year - 1}
-        </Button>
-      </div>
+      <PageHeader
+        title="Transazioni"
+        description={`Anno ${year} — regole e transazioni singole`}
+        actions={
+          <Button variant="outline" onClick={handleCopyRecurring}>
+            <Copy className="size-4" />
+            Copia ricorrenti da {year - 1}
+          </Button>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="space-y-2">
-          <Label>Da data</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>A data</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Categoria</Label>
-          <Select value={categoryId} onValueChange={setCategoryId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutte</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Conto</Label>
-          <Select value={accountId} onValueChange={setAccountId}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              {accounts.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Tipo</Label>
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti</SelectItem>
-              {TRANSACTION_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Filtri
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Da data</Label>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">A data</Label>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Categoria</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutte</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Conto</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Tipo</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  {TRANSACTION_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-10">
-          Nessuna transazione trovata per i filtri selezionati.
-        </p>
+        <Card className="shadow-sm">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Nessuna transazione trovata per i filtri selezionati.
+          </CardContent>
+        </Card>
       ) : (
-        <div className="rounded-lg border">
+        <Card className="overflow-hidden shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -191,7 +202,7 @@ export function TransactionsView({
             <TableBody>
               {filtered.map((tx) => (
                 <TableRow key={tx.id}>
-                  <TableCell>{formatDate(tx.date)}</TableCell>
+                  <TableCell className="tabular-nums">{formatDate(tx.date)}</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
@@ -206,7 +217,7 @@ export function TransactionsView({
                     {tx.categoryId ? categoryMap[tx.categoryId] ?? "—" : "—"}
                   </TableCell>
                   <TableCell>{accountMap[tx.accountId] ?? "—"}</TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right font-medium tabular-nums">
                     {formatCents(tx.amount, currency, locale)}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">
@@ -234,7 +245,7 @@ export function TransactionsView({
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Card>
       )}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
@@ -249,6 +260,7 @@ export function TransactionsView({
               year={year}
               transaction={editing}
               onSuccess={() => setEditing(null)}
+              compact
             />
           )}
         </DialogContent>

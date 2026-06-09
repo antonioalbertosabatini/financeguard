@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -131,16 +132,16 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">Categorie</h2>
-          <p className="text-sm text-muted-foreground">Entrate e uscite</p>
-        </div>
-        <Button onClick={openCreate}>
-          <Plus className="size-4" />
-          Nuova categoria
-        </Button>
-      </div>
+      <PageHeader
+        title="Categorie"
+        description="Entrate e uscite"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="size-4" />
+            Nuova categoria
+          </Button>
+        }
+      />
 
       {categories.length === 0 ? (
         <Card>

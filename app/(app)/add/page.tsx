@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/layout/page-header";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,12 +25,10 @@ export default async function AddPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Inserimento</h2>
-        <p className="text-sm text-muted-foreground">
-          Aggiungi una nuova transazione
-        </p>
-      </div>
+      <PageHeader
+        title="Inserimento"
+        description="Aggiungi una nuova transazione"
+      />
 
       {accounts.length === 0 ? (
         <Card className="shadow-sm">

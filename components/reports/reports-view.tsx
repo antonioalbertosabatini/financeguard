@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -97,10 +98,7 @@ export function ReportsView({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold">Report</h2>
-        <p className="text-sm text-muted-foreground">Anno {year}</p>
-      </div>
+      <PageHeader title="Report" description={`Anno ${year}`} />
 
       <Tabs defaultValue="monthly">
         <TabsList>

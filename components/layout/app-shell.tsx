@@ -9,16 +9,14 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <YearProviderWrapper availableYears={availableYears}>
-      <div className="min-h-screen bg-background md:pl-64">
+      <div className="flex min-h-screen flex-col md:pl-64">
         <AppSidebarWrapper />
-        <div className="flex min-h-screen flex-col">
-          <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-md">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Anno fiscale
-              </p>
+        <div className="flex min-h-screen flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/30">
+          <header className="sticky top-0 z-20 flex h-14 items-center justify-end gap-4 border-b border-border/60 bg-background/85 px-6 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">Anno</span>
+              <YearSelector />
             </div>
-            <YearSelector />
           </header>
           <main className="mx-auto w-full max-w-7xl flex-1 p-6 md:p-8">
             {children}

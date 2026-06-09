@@ -14,7 +14,7 @@ export function YearSelector() {
 
   return (
     <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
-      <SelectTrigger className="w-[120px]">
+      <SelectTrigger className="h-9 w-[130px] rounded-xl bg-card shadow-sm">
         <SelectValue placeholder="Anno" />
       </SelectTrigger>
       <SelectContent>

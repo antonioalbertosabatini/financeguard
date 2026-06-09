@@ -65,6 +65,7 @@ type TransactionFormProps = {
   year: number;
   transaction?: Transaction;
   onSuccess?: () => void;
+  compact?: boolean;
 };
 
 export function TransactionForm({
@@ -73,6 +74,7 @@ export function TransactionForm({
   year,
   transaction,
   onSuccess,
+  compact = false,
 }: TransactionFormProps) {
   const router = useRouter();
   const isEdit = !!transaction;
@@ -154,16 +156,11 @@ export function TransactionForm({
     }
   }
 
-  return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">
-          {isEdit ? "Modifica transazione" : "Nuova transazione"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+  const formBody = (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-muted-foreground">Dettagli</h3>
+            <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="date">Data</Label>
               <Input id="date" type="date" {...form.register("date")} />
@@ -178,7 +175,7 @@ export function TransactionForm({
                   form.setValue("categoryId", undefined);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,12 +188,12 @@ export function TransactionForm({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="amount">Importo (€)</Label>
               <Input
                 id="amount"
                 placeholder="0.00"
-                className="text-lg"
+                className="text-xl font-semibold tabular-nums"
                 {...form.register("amountEuro")}
               />
               {form.formState.errors.amountEuro && (
@@ -222,7 +219,7 @@ export function TransactionForm({
                       value={form.watch("categoryId") ?? ""}
                       onValueChange={(v) => form.setValue("categoryId", v)}
                     >
-                      <SelectTrigger aria-invalid={!!form.formState.errors.categoryId}>
+                      <SelectTrigger className="w-full" aria-invalid={!!form.formState.errors.categoryId}>
                         <SelectValue placeholder="Seleziona categoria" />
                       </SelectTrigger>
                       <SelectContent>
@@ -243,13 +240,13 @@ export function TransactionForm({
               </div>
             )}
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label>Conto</Label>
               <Select
                 value={form.watch("accountId")}
                 onValueChange={(v) => form.setValue("accountId", v)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Seleziona conto" />
                 </SelectTrigger>
                 <SelectContent>
@@ -261,9 +258,12 @@ export function TransactionForm({
                 </SelectContent>
               </Select>
             </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-muted-foreground">Note e tag</h3>
+            <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="notes">Note</Label>
               <Textarea id="notes" rows={3} {...form.register("notes")} />
@@ -272,9 +272,11 @@ export function TransactionForm({
               <Label htmlFor="tags">Tag (separati da virgola)</Label>
               <Input id="tags" placeholder="casa, lavoro" {...form.register("tags")} />
             </div>
+            </div>
           </div>
 
           <div className="rounded-xl border bg-muted/30 p-4 space-y-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Ricorrenza</h3>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="recurring"
@@ -316,7 +318,20 @@ export function TransactionForm({
             {isEdit ? "Aggiorna transazione" : "Salva transazione"}
           </Button>
         </form>
-      </CardContent>
+  );
+
+  if (compact) {
+    return formBody;
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg">
+          {isEdit ? "Modifica transazione" : "Nuova transazione"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>{formBody}</CardContent>
     </Card>
   );
 }
