@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { CategorySelectItem } from "@/components/categories/category-select-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTransaction, updateTransaction } from "@/lib/actions/transactions";
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
@@ -221,9 +222,7 @@ export function TransactionForm({
                       </SelectTrigger>
                       <SelectContent>
                         {filteredCategories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
+                          <CategorySelectItem key={c.id} category={c} />
                         ))}
                       </SelectContent>
                     </Select>

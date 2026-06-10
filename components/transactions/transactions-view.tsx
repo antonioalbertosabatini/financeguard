@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, Filter, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CategoryIcon } from "@/components/categories/category-icon";
+import { CategorySelectItem } from "@/components/categories/category-select-item";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,13 +38,14 @@ import {
   copyRecurringFromPreviousYear,
   deleteTransaction,
 } from "@/lib/actions/transactions";
-import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
+import { MONTH_LABELS_FULL, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
 import { formatDate } from "@/lib/utils/dates";
 import { formatCents } from "@/lib/utils/money";
 import { getRecurrenceIntervalLabel } from "@/lib/utils/recurrence";
+import { cn } from "@/lib/utils";
 
 type TransactionsViewProps = {
   transactions: Transaction[];
@@ -51,6 +55,24 @@ type TransactionsViewProps = {
   currency: string;
   locale: string;
 };
+
+const TYPE_BADGE_CLASS: Record<Transaction["type"], string> = {
+  income: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+  expense: "bg-rose-500/10 text-rose-700 hover:bg-rose-500/10",
+  transfer: "bg-muted text-muted-foreground hover:bg-muted",
+};
+
+const TYPE_BORDER_CLASS: Record<Transaction["type"], string> = {
+  income: "border-l-emerald-500",
+  expense: "border-l-rose-500",
+  transfer: "border-l-muted-foreground/30",
+};
+
+function formatMonthGroup(date: string): string {
+  const month = parseInt(date.slice(5, 7), 10);
+  const year = date.slice(0, 4);
+  return `${MONTH_LABELS_FULL[month - 1]} ${year}`;
+}
 
 export function TransactionsView({
   transactions,
@@ -72,7 +94,7 @@ export function TransactionsView({
     [accounts]
   );
   const categoryMap = useMemo(
-    () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories]
   );
 
@@ -86,6 +108,52 @@ export function TransactionsView({
       return true;
     });
   }, [transactions, dateFrom, dateTo, categoryId, accountId, type]);
+
+  const totals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const tx of filtered) {
+      if (tx.type === "income") income += tx.amount;
+      if (tx.type === "expense") expense += tx.amount;
+    }
+    return { income, expense, net: income - expense };
+  }, [filtered]);
+
+  const groupedByMonth = useMemo(() => {
+    const groups: { monthKey: string; label: string; items: Transaction[] }[] = [];
+    const map = new Map<string, Transaction[]>();
+
+    for (const tx of filtered) {
+      const key = tx.date.slice(0, 7);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(tx);
+    }
+
+    for (const [monthKey, items] of map) {
+      groups.push({
+        monthKey,
+        label: formatMonthGroup(`${monthKey}-01`),
+        items,
+      });
+    }
+
+    return groups;
+  }, [filtered]);
+
+  const hasActiveFilters =
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    categoryId !== "all" ||
+    accountId !== "all" ||
+    type !== "all";
+
+  function clearFilters() {
+    setDateFrom("");
+    setDateTo("");
+    setCategoryId("all");
+    setAccountId("all");
+    setType("all");
+  }
 
   async function handleDelete(tx: Transaction) {
     if (!confirm("Eliminare questa transazione?")) return;
@@ -110,26 +178,42 @@ export function TransactionsView({
     }
   }
 
+  function formatAmount(tx: Transaction) {
+    const formatted = formatCents(tx.amount, currency, locale);
+    if (tx.type === "income") return `+${formatted}`;
+    if (tx.type === "expense") return `-${formatted}`;
+    return formatted;
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Transazioni"
         description={`Anno ${year} — regole e transazioni singole`}
         actions={
-          <Button variant="outline" onClick={handleCopyRecurring}>
-            <Copy className="size-4" />
-            Copia ricorrenti da {year - 1}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/add">
+                <Plus className="size-4" />
+                Nuova transazione
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={handleCopyRecurring}>
+              <Copy className="size-4" />
+              Copia ricorrenti da {year - 1}
+            </Button>
+          </div>
         }
       />
 
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Filter className="size-4" />
             Filtri
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Da data</Label>
@@ -146,7 +230,7 @@ export function TransactionsView({
                 <SelectContent>
                   <SelectItem value="all">Tutte</SelectItem>
                   {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <CategorySelectItem key={c.id} category={c} />
                   ))}
                 </SelectContent>
               </Select>
@@ -176,17 +260,100 @@ export function TransactionsView({
               </Select>
             </div>
           </div>
+
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2">
+              {dateFrom && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer gap-1 pr-1.5"
+                  onClick={() => setDateFrom("")}
+                >
+                  Da: {formatDate(dateFrom)}
+                  <X className="size-3" />
+                </Badge>
+              )}
+              {dateTo && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer gap-1 pr-1.5"
+                  onClick={() => setDateTo("")}
+                >
+                  A: {formatDate(dateTo)}
+                  <X className="size-3" />
+                </Badge>
+              )}
+              {categoryId !== "all" && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer gap-1 pr-1.5"
+                  onClick={() => setCategoryId("all")}
+                >
+                  Categoria: {categoryMap[categoryId]?.name ?? categoryId}
+                  <X className="size-3" />
+                </Badge>
+              )}
+              {accountId !== "all" && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer gap-1 pr-1.5"
+                  onClick={() => setAccountId("all")}
+                >
+                  Conto: {accountMap[accountId] ?? accountId}
+                  <X className="size-3" />
+                </Badge>
+              )}
+              {type !== "all" && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer gap-1 pr-1.5"
+                  onClick={() => setType("all")}
+                >
+                  Tipo: {TRANSACTION_TYPE_LABELS[type as Transaction["type"]]}
+                  <X className="size-3" />
+                </Badge>
+              )}
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Azzera filtri
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {filtered.length === 0 ? (
         <Card className="shadow-sm">
           <CardContent className="py-12 text-center text-muted-foreground">
-            Nessuna transazione trovata per i filtri selezionati.
+            <p>
+              {transactions.length === 0
+                ? "Nessuna transazione registrata per questo anno."
+                : "Nessuna transazione trovata per i filtri selezionati."}
+            </p>
+            <Button variant="link" asChild className="mt-2">
+              <Link href="/add">Aggiungi una transazione</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <Card className="overflow-hidden shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{filtered.length}</span>
+              {" "}
+              {filtered.length === 1 ? "transazione" : "transazioni"}
+            </p>
+            <div className="flex flex-wrap items-center gap-4 text-sm tabular-nums">
+              <span className="text-emerald-600">
+                +{formatCents(totals.income, currency, locale)}
+              </span>
+              <span className="text-rose-600">
+                -{formatCents(totals.expense, currency, locale)}
+              </span>
+              <span className="font-medium">
+                Saldo: {formatCents(totals.net, currency, locale)}
+              </span>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -200,48 +367,102 @@ export function TransactionsView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell className="tabular-nums">{formatDate(tx.date)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <span>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
-                      {tx.isRecurring && (
-                        <Badge variant="secondary" className="w-fit text-xs">
-                          Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {tx.categoryId ? categoryMap[tx.categoryId] ?? "—" : "—"}
-                  </TableCell>
-                  <TableCell>{accountMap[tx.accountId] ?? "—"}</TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {formatCents(tx.amount, currency, locale)}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {tx.notes || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setEditing(tx)}
+              {groupedByMonth.map((group) => (
+                <Fragment key={group.monthKey}>
+                  <TableRow
+                    className="bg-muted/40 hover:bg-muted/40"
+                  >
+                    <TableCell colSpan={7} className="sticky top-0 py-2 font-medium">
+                      {group.label}
+                      <span className="ml-2 font-normal text-muted-foreground">
+                        — {group.items.length}{" "}
+                        {group.items.length === 1 ? "transazione" : "transazioni"}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                  {group.items.map((tx) => {
+                    const category = tx.categoryId
+                      ? categoryMap[tx.categoryId]
+                      : undefined;
+                    return (
+                      <TableRow
+                        key={tx.id}
+                        className={cn(
+                          "border-l-2 hover:bg-muted/50",
+                          TYPE_BORDER_CLASS[tx.type]
+                        )}
                       >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDelete(tx)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                        <TableCell className="tabular-nums">
+                          {formatDate(tx.date)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="secondary"
+                              className={cn("w-fit", TYPE_BADGE_CLASS[tx.type])}
+                            >
+                              {TRANSACTION_TYPE_LABELS[tx.type]}
+                            </Badge>
+                            {tx.isRecurring && (
+                              <Badge variant="outline" className="w-fit text-xs">
+                                Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {category ? (
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: category.color }}
+                              />
+                              <CategoryIcon
+                                name={category.icon}
+                                color={category.color}
+                                className="size-3.5"
+                              />
+                              <span className="truncate">{category.name}</span>
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell>{accountMap[tx.accountId] ?? "—"}</TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-medium tabular-nums",
+                            tx.type === "income" && "text-emerald-600",
+                            tx.type === "expense" && "text-rose-600"
+                          )}
+                        >
+                          {formatAmount(tx)}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {tx.notes || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setEditing(tx)}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => handleDelete(tx)}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </Fragment>
               ))}
             </TableBody>
           </Table>

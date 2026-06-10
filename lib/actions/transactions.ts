@@ -144,14 +144,14 @@ export async function getMonthlyReport(year: number, month: number) {
     income: sumByType(monthTxs, "income"),
     expense: sumByType(monthTxs, "expense"),
     net: sumByType(monthTxs, "income") - sumByType(monthTxs, "expense"),
-    expensesByCategory: Object.entries(sumExpensesByCategory(monthTxs)).map(
-      ([categoryId, amount]) => ({
+    expensesByCategory: Object.entries(sumExpensesByCategory(monthTxs))
+      .map(([categoryId, amount]) => ({
         categoryId,
         name: categoryMap[categoryId]?.name ?? categoryId,
         color: categoryMap[categoryId]?.color ?? "#888",
         amount,
-      })
-    ),
+      }))
+      .sort((a, b) => b.amount - a.amount),
   };
 }
 
@@ -175,14 +175,14 @@ export async function getAnnualReport(year: number) {
     expense: sumByType(expanded, "expense"),
     net: sumByType(expanded, "income") - sumByType(expanded, "expense"),
     monthlyTrend: sumByMonth(expanded, year),
-    expensesByCategory: Object.entries(sumExpensesByCategory(expanded)).map(
-      ([categoryId, amount]) => ({
+    expensesByCategory: Object.entries(sumExpensesByCategory(expanded))
+      .map(([categoryId, amount]) => ({
         categoryId,
         name: categoryMap[categoryId]?.name ?? categoryId,
         color: categoryMap[categoryId]?.color ?? "#888",
         amount,
-      })
-    ),
+      }))
+      .sort((a, b) => b.amount - a.amount),
   };
 }
 

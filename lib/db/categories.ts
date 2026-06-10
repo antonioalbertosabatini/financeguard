@@ -39,7 +39,10 @@ async function loadCategoriesFromDb(): Promise<Category[]> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  return loadCategoriesFromDb();
+  const categories = await loadCategoriesFromDb();
+  return categories.sort((a, b) =>
+    a.name.localeCompare(b.name, "it", { sensitivity: "base" })
+  );
 }
 
 export async function createCategory(input: CategoryInput): Promise<Category> {
