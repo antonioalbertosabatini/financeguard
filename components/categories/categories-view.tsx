@@ -1,24 +1,9 @@
 "use client";
 
-import {
-  Briefcase,
-  Car,
-  Gamepad2,
-  Gift,
-  Heart,
-  Home,
-  Banknote,
-  Plane,
-  Plus,
-  Pencil,
-  ShoppingCart,
-  Trash2,
-  Utensils,
-  Circle,
-  type LucideIcon,
-} from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,38 +29,9 @@ import {
   updateCategory,
 } from "@/lib/actions/categories";
 import { CATEGORY_TYPES } from "@/lib/constants";
+import { CATEGORY_ICON_NAMES } from "@/lib/constants/category-icons";
 import type { Category } from "@/lib/schemas/category";
-
-const ICON_OPTIONS = [
-  "shopping-cart",
-  "banknote",
-  "home",
-  "car",
-  "utensils",
-  "heart",
-  "gamepad-2",
-  "briefcase",
-  "gift",
-  "plane",
-] as const;
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  "shopping-cart": ShoppingCart,
-  banknote: Banknote,
-  home: Home,
-  car: Car,
-  utensils: Utensils,
-  heart: Heart,
-  "gamepad-2": Gamepad2,
-  briefcase: Briefcase,
-  gift: Gift,
-  plane: Plane,
-};
-
-function CategoryIcon({ name, color }: { name: string; color: string }) {
-  const Icon = ICON_MAP[name] ?? Circle;
-  return <Icon className="size-5" style={{ color }} />;
-}
+import { cn } from "@/lib/utils";
 
 export function CategoriesView({ categories }: { categories: Category[] }) {
   const [open, setOpen] = useState(false);
@@ -83,14 +39,14 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
   const [name, setName] = useState("");
   const [type, setType] = useState<(typeof CATEGORY_TYPES)[number]>("expense");
   const [color, setColor] = useState("#ef4444");
-  const [icon, setIcon] = useState<string>(ICON_OPTIONS[0]);
+  const [icon, setIcon] = useState<string>(CATEGORY_ICON_NAMES[0]);
 
   function openCreate() {
     setEditing(null);
     setName("");
     setType("expense");
     setColor("#ef4444");
-    setIcon(ICON_OPTIONS[0]);
+    setIcon(CATEGORY_ICON_NAMES[0]);
     setOpen(true);
   }
 
@@ -191,7 +147,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Modifica categoria" : "Nuova categoria"}
@@ -230,18 +186,24 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
             </div>
             <div className="space-y-2">
               <Label>Icona</Label>
-              <Select value={icon} onValueChange={setIcon}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICON_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-6 gap-2">
+                {CATEGORY_ICON_NAMES.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    title={opt}
+                    onClick={() => setIcon(opt)}
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-lg border transition-colors",
+                      icon === opt
+                        ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2"
+                        : "border-border hover:bg-muted"
+                    )}
+                  >
+                    <CategoryIcon name={opt} color={color} className="size-5" />
+                  </button>
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit">Salva</Button>

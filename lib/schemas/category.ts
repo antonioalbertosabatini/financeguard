@@ -1,19 +1,11 @@
 import { z } from "zod";
 import { CATEGORY_TYPES } from "@/lib/constants";
+import {
+  CATEGORY_ICON_FALLBACK,
+  KNOWN_CATEGORY_ICONS,
+} from "@/lib/constants/category-icons";
 
-export const KNOWN_CATEGORY_ICONS = [
-  "shopping-cart",
-  "banknote",
-  "home",
-  "car",
-  "utensils",
-  "heart",
-  "gamepad-2",
-  "briefcase",
-  "gift",
-  "plane",
-  "circle",
-] as const;
+export { KNOWN_CATEGORY_ICONS };
 
 const TYPE_ALIASES: Record<string, (typeof CATEGORY_TYPES)[number]> = {
   income: "income",
@@ -45,13 +37,13 @@ export function normalizeColor(value: unknown): string {
 }
 
 export function normalizeIcon(value: unknown): string {
-  if (typeof value !== "string" || !value.trim()) return "circle";
+  if (typeof value !== "string" || !value.trim()) return CATEGORY_ICON_FALLBACK;
   const icon = value.trim().toLowerCase();
   return KNOWN_CATEGORY_ICONS.includes(
     icon as (typeof KNOWN_CATEGORY_ICONS)[number]
   )
     ? icon
-    : "circle";
+    : CATEGORY_ICON_FALLBACK;
 }
 
 export function normalizeType(value: unknown): (typeof CATEGORY_TYPES)[number] {

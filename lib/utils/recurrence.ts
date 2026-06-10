@@ -12,23 +12,18 @@ import {
 
 export function getRecurrenceIntervalLabel(
   transaction: Transaction,
-  year: number,
-  now = new Date()
+  year: number
 ): string {
   if (!transaction.isRecurring) return "";
 
   const y = year;
-  const nowYear = now.getFullYear();
-  const nowMonth = now.getMonth() + 1;
 
   let startMonth = transaction.recurrenceStart
     ? getMonthFromDate(transaction.recurrenceStart)
-    : 1;
+    : getMonthFromDate(transaction.date);
   let endMonth = transaction.recurrenceEnd
     ? getMonthFromDate(transaction.recurrenceEnd)
-    : y === nowYear
-      ? nowMonth
-      : 12;
+    : 12;
 
   startMonth = Math.max(1, Math.min(12, startMonth));
   endMonth = Math.max(1, Math.min(12, endMonth));
@@ -56,12 +51,9 @@ export function getRecurrenceIntervalLabel(
 
 export function expandRecurrences(
   transactions: Transaction[],
-  year: number,
-  now: Date = new Date()
+  year: number
 ): ExpandedTransaction[] {
   const result: ExpandedTransaction[] = [];
-  const nowYear = now.getFullYear();
-  const nowMonth = now.getMonth() + 1;
 
   for (const tx of transactions) {
     if (!tx.isRecurring) {
@@ -80,13 +72,11 @@ export function expandRecurrences(
 
     let startMonth = tx.recurrenceStart
       ? getMonthFromDate(tx.recurrenceStart)
-      : 1;
+      : getMonthFromDate(tx.date);
 
     let endMonth = tx.recurrenceEnd
       ? getMonthFromDate(tx.recurrenceEnd)
-      : year === nowYear
-        ? nowMonth
-        : 12;
+      : 12;
 
     startMonth = Math.max(1, Math.min(12, startMonth));
     endMonth = Math.max(1, Math.min(12, endMonth));

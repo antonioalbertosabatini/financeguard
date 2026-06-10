@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -76,7 +75,6 @@ export function TransactionForm({
   onSuccess,
   compact = false,
 }: TransactionFormProps) {
-  const router = useRouter();
   const isEdit = !!transaction;
 
   const form = useForm<FormValues>({
@@ -150,7 +148,6 @@ export function TransactionForm({
         });
       }
       onSuccess?.();
-      if (!isEdit) router.push("/transactions");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore nel salvataggio");
     }
@@ -281,31 +278,40 @@ export function TransactionForm({
               <Checkbox
                 id="recurring"
                 checked={watchRecurring}
-                onCheckedChange={(checked) =>
-                  form.setValue("isRecurring", checked === true)
-                }
+                onCheckedChange={(checked) => {
+                  const isRecurring = checked === true;
+                  form.setValue("isRecurring", isRecurring);
+                  if (isRecurring && !form.getValues("recurrenceStart")) {
+                    form.setValue("recurrenceStart", form.getValues("date"));
+                  }
+                }}
               />
               <Label htmlFor="recurring">Ricorrente (mensile)</Label>
             </div>
 
             {watchRecurring && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="recurrenceStart">Inizio ricorrenza</Label>
-                  <Input
-                    id="recurrenceStart"
-                    type="date"
-                    {...form.register("recurrenceStart")}
-                  />
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrenceStart">Inizio ricorrenza</Label>
+                    <Input
+                      id="recurrenceStart"
+                      type="date"
+                      {...form.register("recurrenceStart")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrenceEnd">Fine ricorrenza</Label>
+                    <Input
+                      id="recurrenceEnd"
+                      type="date"
+                      {...form.register("recurrenceEnd")}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recurrenceEnd">Fine ricorrenza</Label>
-                  <Input
-                    id="recurrenceEnd"
-                    type="date"
-                    {...form.register("recurrenceEnd")}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Se non specifichi una fine, la spesa si ripete fino a fine anno.
+                </p>
               </div>
             )}
           </div>
