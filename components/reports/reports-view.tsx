@@ -25,9 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useFormatCents } from "@/hooks/use-format-cents";
 import { getMonthlyReport } from "@/lib/actions/transactions";
 import { MONTH_LABELS, MONTH_LABELS_FULL } from "@/lib/constants";
-import { formatCents } from "@/lib/utils/money";
 import { currentMonth } from "@/lib/utils/dates";
 
 type CategoryAmount = {
@@ -105,6 +106,9 @@ function CategoryBarChart({
   currency: string;
   locale: string;
 }) {
+  const formatAmount = useFormatCents();
+  const { amountsHidden } = useAmountVisibility();
+
   const chartData = data.map((c) => ({
     name: c.name,
     amount: c.amount / 100,
@@ -114,7 +118,15 @@ function CategoryBarChart({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 8 }}>
-        <XAxis type="number" fontSize={12} />
+        <XAxis
+          type="number"
+          fontSize={12}
+          tickFormatter={(value) =>
+            amountsHidden
+              ? "••"
+              : formatAmount(Number(value) * 100, currency, locale)
+          }
+        />
         <YAxis
           type="category"
           dataKey="name"
@@ -123,7 +135,9 @@ function CategoryBarChart({
           tick={{ fontSize: 11 }}
         />
         <Tooltip
-          formatter={(value) => formatCents(Number(value) * 100, currency, locale)}
+          formatter={(value) =>
+            formatAmount(Number(value) * 100, currency, locale)
+          }
         />
         <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
           {chartData.map((entry) => (
@@ -144,6 +158,8 @@ function CategoryPieChart({
   currency: string;
   locale: string;
 }) {
+  const formatAmount = useFormatCents();
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -161,7 +177,7 @@ function CategoryPieChart({
           ))}
         </Pie>
         <Tooltip
-          formatter={(value) => formatCents(Number(value), currency, locale)}
+          formatter={(value) => formatAmount(Number(value), currency, locale)}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -175,6 +191,9 @@ export function ReportsView({
   initialMonthlyReport,
   annualReport,
 }: ReportsViewProps) {
+  const formatAmount = useFormatCents();
+  const { amountsHidden } = useAmountVisibility();
+
   const [month, setMonth] = useState(String(currentMonth()));
   const [monthlyReport, setMonthlyReport] = useState(initialMonthlyReport);
   const [loading, setLoading] = useState(false);
@@ -246,7 +265,7 @@ export function ReportsView({
           <div className="grid gap-4 md:grid-cols-3">
             <StatCard
               title={`Entrate — ${monthLabel}`}
-              value={formatCents(monthlyReport.income, currency, locale)}
+              value={formatAmount(monthlyReport.income, currency, locale)}
               icon={TrendingUp}
               iconClassName="bg-emerald-500/10 text-emerald-600"
               valueClassName="text-emerald-600"
@@ -254,7 +273,7 @@ export function ReportsView({
             />
             <StatCard
               title={`Uscite — ${monthLabel}`}
-              value={formatCents(monthlyReport.expense, currency, locale)}
+              value={formatAmount(monthlyReport.expense, currency, locale)}
               icon={TrendingDown}
               iconClassName="bg-rose-500/10 text-rose-600"
               valueClassName="text-rose-600"
@@ -262,7 +281,7 @@ export function ReportsView({
             />
             <StatCard
               title="Saldo netto"
-              value={formatCents(monthlyReport.net, currency, locale)}
+              value={formatAmount(monthlyReport.net, currency, locale)}
               icon={Wallet}
               iconClassName="bg-primary/10 text-primary"
             />
@@ -315,7 +334,7 @@ export function ReportsView({
           <div className="grid gap-4 md:grid-cols-3">
             <StatCard
               title={`Entrate totali ${year}`}
-              value={formatCents(annualReport.income, currency, locale)}
+              value={formatAmount(annualReport.income, currency, locale)}
               icon={TrendingUp}
               iconClassName="bg-emerald-500/10 text-emerald-600"
               valueClassName="text-emerald-600"
@@ -323,7 +342,7 @@ export function ReportsView({
             />
             <StatCard
               title={`Uscite totali ${year}`}
-              value={formatCents(annualReport.expense, currency, locale)}
+              value={formatAmount(annualReport.expense, currency, locale)}
               icon={TrendingDown}
               iconClassName="bg-rose-500/10 text-rose-600"
               valueClassName="text-rose-600"
@@ -331,7 +350,7 @@ export function ReportsView({
             />
             <StatCard
               title="Saldo netto annuale"
-              value={formatCents(annualReport.net, currency, locale)}
+              value={formatAmount(annualReport.net, currency, locale)}
               icon={Wallet}
               iconClassName="bg-primary/10 text-primary"
             />
@@ -345,10 +364,17 @@ export function ReportsView({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trendData}>
                   <XAxis dataKey="name" fontSize={12} />
-                  <YAxis fontSize={12} />
+                  <YAxis
+                    fontSize={12}
+                    tickFormatter={(value) =>
+                      amountsHidden
+                        ? "••"
+                        : formatAmount(Number(value) * 100, currency, locale)
+                    }
+                  />
                   <Tooltip
                     formatter={(value) =>
-                      formatCents(Number(value) * 100, currency, locale)
+                      formatAmount(Number(value) * 100, currency, locale)
                     }
                   />
                   <Legend />

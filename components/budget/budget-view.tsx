@@ -25,7 +25,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { deleteBudget, upsertBudget } from "@/lib/actions/budgets";
 import type { Category } from "@/lib/schemas/category";
-import { formatCents, toCents } from "@/lib/utils/money";
+import { useFormatCents } from "@/hooks/use-format-cents";
+import { toCents } from "@/lib/utils/money";
 
 type BudgetItem = {
   id: string;
@@ -47,6 +48,7 @@ export function BudgetView({
   currency: string;
   locale: string;
 }) {
+  const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [limitEuro, setLimitEuro] = useState("");
@@ -124,10 +126,10 @@ export function BudgetView({
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>
-                      {formatCents(item.spent, currency, locale)} spesi
+                      {formatAmount(item.spent, currency, locale)} spesi
                     </span>
                     <span className="text-muted-foreground">
-                      limite {formatCents(item.monthlyLimit, currency, locale)}
+                      limite {formatAmount(item.monthlyLimit, currency, locale)}
                     </span>
                   </div>
                   <Progress

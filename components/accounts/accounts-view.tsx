@@ -29,7 +29,8 @@ import {
 } from "@/lib/actions/accounts";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
-import { formatCents, centsToEuroString, toCents } from "@/lib/utils/money";
+import { useFormatCents } from "@/hooks/use-format-cents";
+import { centsToEuroString, toCents } from "@/lib/utils/money";
 
 type AccountWithBalance = Account & { balance: number };
 
@@ -42,6 +43,7 @@ export function AccountsView({
   currency: string;
   locale: string;
 }) {
+  const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [name, setName] = useState("");
@@ -148,7 +150,7 @@ export function AccountsView({
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
-                  {formatCents(account.balance, account.currency, locale)}
+                  {formatAmount(account.balance, account.currency, locale)}
                 </p>
               </CardContent>
             </Card>

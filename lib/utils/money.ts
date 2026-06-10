@@ -10,6 +10,8 @@ export function centsToEuroString(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+export const HIDDEN_AMOUNT = "••••••";
+
 export function formatCents(
   cents: number,
   currency = "EUR",
@@ -19,6 +21,16 @@ export function formatCents(
     style: "currency",
     currency,
   }).format(cents / 100);
+}
+
+export function formatCentsMasked(
+  cents: number,
+  currency = "EUR",
+  locale = "it-IT",
+  hidden = false
+): string {
+  if (hidden) return HIDDEN_AMOUNT;
+  return formatCents(cents, currency, locale);
 }
 
 export function parseEuroInput(value: string): number {

@@ -15,7 +15,8 @@ import {
 import { TrendingDown, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCents } from "@/lib/utils/money";
+import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useFormatCents } from "@/hooks/use-format-cents";
 import { MONTH_LABELS } from "@/lib/constants";
 
 type DashboardProps = {
@@ -77,6 +78,9 @@ export function DashboardView({
   expensesByCategory,
   monthlyTrend,
 }: DashboardProps) {
+  const formatAmount = useFormatCents();
+  const { amountsHidden } = useAmountVisibility();
+
   const trendData = monthlyTrend.map((m) => ({
     name: MONTH_LABELS[m.month - 1],
     Entrate: m.income / 100,
@@ -93,13 +97,13 @@ export function DashboardView({
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
           title="Saldo totale"
-          value={formatCents(totalBalance, currency, locale)}
+          value={formatAmount(totalBalance, currency, locale)}
           icon={Wallet}
           iconClassName="bg-primary/10 text-primary"
         />
         <StatCard
           title="Entrate mese corrente"
-          value={formatCents(monthlyIncome, currency, locale)}
+          value={formatAmount(monthlyIncome, currency, locale)}
           icon={TrendingUp}
           iconClassName="bg-emerald-500/10 text-emerald-600"
           valueClassName="text-emerald-600"
@@ -107,7 +111,7 @@ export function DashboardView({
         />
         <StatCard
           title="Uscite mese corrente"
-          value={formatCents(monthlyExpense, currency, locale)}
+          value={formatAmount(monthlyExpense, currency, locale)}
           icon={TrendingDown}
           iconClassName="bg-rose-500/10 text-rose-600"
           valueClassName="text-rose-600"
@@ -141,7 +145,7 @@ export function DashboardView({
                   </Pie>
                   <Tooltip
                     formatter={(value) =>
-                      formatCents(Number(value), currency, locale)
+                      formatAmount(Number(value), currency, locale)
                     }
                   />
                 </PieChart>
@@ -158,8 +162,19 @@ export function DashboardView({
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trendData}>
                 <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
+                <YAxis
+                  fontSize={12}
+                  tickFormatter={(value) =>
+                    amountsHidden
+                      ? "••"
+                      : formatAmount(Number(value) * 100, currency, locale)
+                  }
+                />
+                <Tooltip
+                  formatter={(value) =>
+                    formatAmount(Number(value) * 100, currency, locale)
+                  }
+                />
                 <Legend />
                 <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />

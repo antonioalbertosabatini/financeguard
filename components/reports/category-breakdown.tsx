@@ -1,4 +1,6 @@
-import { formatCents } from "@/lib/utils/money";
+"use client";
+
+import { useFormatCents } from "@/hooks/use-format-cents";
 
 type CategoryAmount = {
   categoryId: string;
@@ -20,6 +22,8 @@ export function CategoryBreakdown({
   locale,
   emptyMessage = "Nessuna spesa",
 }: CategoryBreakdownProps) {
+  const formatAmount = useFormatCents();
+
   if (categories.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
   }
@@ -42,7 +46,7 @@ export function CategoryBreakdown({
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  {formatCents(c.amount, currency, locale)}
+                  {formatAmount(c.amount, currency, locale)}
                 </span>
                 {" · "}
                 {percent.toFixed(1)}%

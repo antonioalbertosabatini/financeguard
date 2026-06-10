@@ -42,8 +42,10 @@ import { MONTH_LABELS_FULL, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
+import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useFormatCents } from "@/hooks/use-format-cents";
 import { formatDate } from "@/lib/utils/dates";
-import { formatCents } from "@/lib/utils/money";
+import { HIDDEN_AMOUNT } from "@/lib/utils/money";
 import { getRecurrenceIntervalLabel } from "@/lib/utils/recurrence";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +84,9 @@ export function TransactionsView({
   currency,
   locale,
 }: TransactionsViewProps) {
+  const formatCentsDisplay = useFormatCents();
+  const { amountsHidden } = useAmountVisibility();
+
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [categoryId, setCategoryId] = useState<string>("all");
@@ -179,7 +184,8 @@ export function TransactionsView({
   }
 
   function formatAmount(tx: Transaction) {
-    const formatted = formatCents(tx.amount, currency, locale);
+    if (amountsHidden) return HIDDEN_AMOUNT;
+    const formatted = formatCentsDisplay(tx.amount, currency, locale);
     if (tx.type === "income") return `+${formatted}`;
     if (tx.type === "expense") return `-${formatted}`;
     return formatted;
@@ -344,13 +350,18 @@ export function TransactionsView({
             </p>
             <div className="flex flex-wrap items-center gap-4 text-sm tabular-nums">
               <span className="text-emerald-600">
-                +{formatCents(totals.income, currency, locale)}
+                {amountsHidden
+                  ? HIDDEN_AMOUNT
+                  : `+${formatCentsDisplay(totals.income, currency, locale)}`}
               </span>
               <span className="text-rose-600">
-                -{formatCents(totals.expense, currency, locale)}
+                {amountsHidden
+                  ? HIDDEN_AMOUNT
+                  : `-${formatCentsDisplay(totals.expense, currency, locale)}`}
               </span>
               <span className="font-medium">
-                Saldo: {formatCents(totals.net, currency, locale)}
+                Saldo:{" "}
+                {formatCentsDisplay(totals.net, currency, locale)}
               </span>
             </div>
           </div>
