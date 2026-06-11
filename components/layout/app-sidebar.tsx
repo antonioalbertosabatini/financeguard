@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
-  PlusCircle,
   ArrowLeftRight,
   Wallet,
   Tags,
@@ -13,15 +12,13 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
+import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
   {
     label: "Principale",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/add", label: "Inserimento", icon: PlusCircle, cta: true },
-    ],
+    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
   },
   {
     label: "Gestione",
@@ -44,6 +41,7 @@ const navGroups = [
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { sidebarOpen } = useSidebar();
   const yearParam = searchParams.get("year");
   const query = yearParam ? `?year=${yearParam}` : "";
 
@@ -53,7 +51,7 @@ export function AppSidebar() {
       <aside className="flex shrink-0 border-b border-sidebar-border bg-sidebar md:hidden">
         <div className="flex w-full items-center gap-2 overflow-x-auto px-3 py-2">
           {navGroups.flatMap((group) =>
-            group.items.map(({ href, label, icon: Icon, cta }) => {
+            group.items.map(({ href, label, icon: Icon }) => {
               const active =
                 href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
@@ -65,9 +63,7 @@ export function AppSidebar() {
                     "flex size-10 shrink-0 items-center justify-center rounded-xl transition-all",
                     active
                       ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                      : cta
-                        ? "border border-dashed border-primary/40 bg-primary/10 text-primary"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
                 >
                   <Icon className="size-4" />
@@ -78,8 +74,14 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* Desktop: full sidebar */}
-      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:fixed md:inset-y-0 md:left-0 md:z-30 md:flex">
+      {/* Desktop: collapsible sidebar */}
+      <aside
+        aria-hidden={!sidebarOpen}
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out md:flex",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="border-b border-sidebar-border px-5 py-6">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
@@ -99,7 +101,7 @@ export function AppSidebar() {
               <p className="px-3 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
                 {group.label}
               </p>
-              {group.items.map(({ href, label, icon: Icon, cta }) => {
+              {group.items.map(({ href, label, icon: Icon }) => {
                 const active =
                   href === "/" ? pathname === "/" : pathname.startsWith(href);
                 return (
@@ -110,9 +112,7 @@ export function AppSidebar() {
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                       active
                         ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                        : cta
-                          ? "border border-dashed border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <Icon className="size-4 shrink-0" />
