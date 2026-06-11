@@ -1,7 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
-import { JSONFilePreset } from "lowdb/node";
+import { Low } from "lowdb";
+import { DataFile } from "lowdb/node";
 import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import { decryptJson, encryptJson } from "@/lib/crypto/cipher";
+import { getSessionKey } from "@/lib/crypto/session";
 
 export async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -26,14 +29,14 @@ export async function writeJsonAtomic<T>(
 ): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   const tempPath = `${filePath}.tmp`;
-  const content = JSON.stringify(data, null, 2);
+  const content = encryptJson(data, getSessionKey());
   await fs.writeFile(tempPath, content, "utf-8");
   await fs.rename(tempPath, filePath);
 }
 
 export async function readJsonFile<T>(filePath: string): Promise<T> {
   const content = await fs.readFile(filePath, "utf-8");
-  return JSON.parse(content) as T;
+  return decryptJson<T>(content, getSessionKey());
 }
 
 export async function getDb<T extends object>(
@@ -41,7 +44,14 @@ export async function getDb<T extends object>(
   defaultData: T
 ) {
   await ensureFile(filePath, defaultData);
-  return JSONFilePreset<T>(filePath, defaultData);
+  const adapter = new DataFile<T>(filePath, {
+    parse: (str: string) => {
+      if (str.trim() === "") return defaultData;
+      return decryptJson<T>(str, getSessionKey());
+    },
+    stringify: (data: T) => encryptJson(data, getSessionKey()),
+  });
+  return new Low<T>(adapter, defaultData);
 }
 
 export function getYearFromDate(date: string): number {

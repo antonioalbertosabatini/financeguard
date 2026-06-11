@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateSettings } from "@/lib/actions/settings";
+import { lockApp } from "@/lib/actions/auth";
 import type { Settings } from "@/lib/schemas/settings";
 
 export function SettingsView({ settings }: { settings: Settings }) {
   const [currency, setCurrency] = useState(settings.defaultCurrency);
   const [locale, setLocale] = useState(settings.locale);
   const [importing, setImporting] = useState(false);
+  const [locking, startLocking] = useTransition();
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -131,6 +133,26 @@ export function SettingsView({ settings }: { settings: Settings }) {
           {importing && (
             <p className="text-sm text-muted-foreground mt-2">Import in corso…</p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sicurezza</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            I dati sono cifrati a riposo. Blocca l&apos;app per richiedere di
+            nuovo la password.
+          </p>
+          <Button
+            variant="outline"
+            disabled={locking}
+            onClick={() => startLocking(() => lockApp())}
+          >
+            <Lock className="size-4" />
+            Blocca app
+          </Button>
         </CardContent>
       </Card>
     </div>

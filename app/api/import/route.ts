@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { NextResponse } from "next/server";
 import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
 import { ensureDataDir, writeJsonAtomic } from "@/lib/db/index";
+import { isUnlocked } from "@/lib/crypto/session";
 import { accountsFileSchema } from "@/lib/schemas/account";
 import { parseCategoriesFile } from "@/lib/schemas/category";
 import { budgetsFileSchema } from "@/lib/schemas/budget";
@@ -11,6 +12,13 @@ import { settingsSchema } from "@/lib/schemas/settings";
 import { transactionsFileSchema } from "@/lib/schemas/transaction";
 
 export async function POST(request: Request) {
+  if (!isUnlocked()) {
+    return NextResponse.json(
+      { error: "App bloccata. Sblocca con la password per importare." },
+      { status: 401 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");

@@ -2,10 +2,26 @@ import fs from "fs/promises";
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import { DATA_DIR, TRANSACTIONS_DIR, VAULT_FILENAME } from "@/lib/constants";
 import { ensureDataDir } from "@/lib/db/index";
+import { decryptJson } from "@/lib/crypto/cipher";
+import { getSessionKey, isUnlocked } from "@/lib/crypto/session";
+
+async function readDecrypted(filePath: string, key: Buffer): Promise<string> {
+  const content = await fs.readFile(filePath, "utf-8");
+  const data = decryptJson<unknown>(content, key);
+  return JSON.stringify(data, null, 2);
+}
 
 export async function GET() {
+  if (!isUnlocked()) {
+    return NextResponse.json(
+      { error: "App bloccata. Sblocca con la password per esportare." },
+      { status: 401 }
+    );
+  }
+
+  const key = getSessionKey();
   await ensureDataDir();
 
   const zip = new JSZip();
@@ -24,8 +40,7 @@ export async function GET() {
       if (stat.isDirectory()) {
         await addDir(fullPath, zipFolder.folder(entry)!);
       } else if (entry.endsWith(".json")) {
-        const content = await fs.readFile(fullPath, "utf-8");
-        zipFolder.file(entry, content);
+        zipFolder.file(entry, await readDecrypted(fullPath, key));
       }
     }
   }
@@ -33,11 +48,11 @@ export async function GET() {
   const rootFolder = zip.folder("data")!;
   const rootFiles = await fs.readdir(DATA_DIR);
   for (const file of rootFiles) {
+    if (file === VAULT_FILENAME) continue;
     const fullPath = path.join(DATA_DIR, file);
     const stat = await fs.stat(fullPath);
     if (stat.isFile() && file.endsWith(".json")) {
-      const content = await fs.readFile(fullPath, "utf-8");
-      rootFolder.file(file, content);
+      rootFolder.file(file, await readDecrypted(fullPath, key));
     }
   }
 

@@ -2,6 +2,8 @@ import path from "path";
 
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const TRANSACTIONS_DIR = path.join(DATA_DIR, "transactions");
+export const VAULT_FILENAME = "vault.json";
+export const VAULT_PATH = path.join(DATA_DIR, VAULT_FILENAME);
 
 export const ACCOUNT_TYPES = [
   "checking",
