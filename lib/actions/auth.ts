@@ -1,7 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { initVault, vaultExists, verifyPassword } from "@/lib/crypto/vault";
+import {
+  createVault,
+  initVault,
+  reKeyAllData,
+  vaultExists,
+  verifyPassword,
+  writeVaultFile,
+} from "@/lib/crypto/vault";
 import { lockSession, setSessionKey } from "@/lib/crypto/session";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -41,6 +48,31 @@ export async function unlockApp(password: string): Promise<AuthResult> {
 
   setSessionKey(key);
   redirect("/");
+}
+
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+  confirm: string
+): Promise<AuthResult> {
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    return {
+      error: `La nuova password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`,
+    };
+  }
+  if (newPassword !== confirm) {
+    return { error: "Le password non coincidono." };
+  }
+
+  const oldKey = await verifyPassword(oldPassword);
+  if (!oldKey) {
+    return { error: "Vecchia password errata." };
+  }
+
+  const { vault, key: newKey } = createVault(newPassword);
+  await reKeyAllData(oldKey, newKey);
+  await writeVaultFile(vault);
+  setSessionKey(newKey);
 }
 
 export async function lockApp(): Promise<void> {

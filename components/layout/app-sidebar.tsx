@@ -11,6 +11,7 @@ import {
   BarChart3,
   Settings,
   Shield,
+  DatabaseBackup,
 } from "lucide-react";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const navGroups = [
     label: "Analisi",
     items: [
       { href: "/reports", label: "Report", icon: BarChart3 },
+      { href: "/data", label: "Backup", icon: DatabaseBackup },
       { href: "/settings", label: "Impostazioni", icon: Settings },
     ],
   },

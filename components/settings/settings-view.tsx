@@ -2,21 +2,34 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Download, Lock } from "lucide-react";
+import { KeyRound, Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateSettings } from "@/lib/actions/settings";
-import { lockApp } from "@/lib/actions/auth";
+import { changePassword, lockApp } from "@/lib/actions/auth";
 import type { Settings } from "@/lib/schemas/settings";
 
 export function SettingsView({ settings }: { settings: Settings }) {
   const [currency, setCurrency] = useState(settings.defaultCurrency);
   const [locale, setLocale] = useState(settings.locale);
-  const [importing, setImporting] = useState(false);
   const [locking, startLocking] = useTransition();
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [changingPassword, startChangingPassword] = useTransition();
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -28,47 +41,30 @@ export function SettingsView({ settings }: { settings: Settings }) {
     }
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (
-      !confirm(
-        "L'import sovrascriverà tutti i dati attuali. Continuare?"
-      )
-    ) {
-      e.target.value = "";
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/import", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Import fallito");
+  function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    startChangingPassword(async () => {
+      const result = await changePassword(
+        oldPassword,
+        newPassword,
+        confirmPassword
+      );
+      if (result?.error) {
+        setPasswordError(result.error);
+        return;
       }
-      toast.success("Dati importati con successo");
-      window.location.reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore import");
-    } finally {
-      setImporting(false);
-      e.target.value = "";
-    }
+      toast.success("Password aggiornata");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordOpen(false);
+    });
   }
 
   return (
     <div className="space-y-6 max-w-xl">
-      <PageHeader
-        title="Impostazioni"
-        description="Valuta, export e import dati"
-      />
+      <PageHeader title="Impostazioni" description="Valuta e sicurezza" />
 
       <Card>
         <CardHeader>
@@ -100,39 +96,20 @@ export function SettingsView({ settings }: { settings: Settings }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Export dati</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="size-4" />
+            Cambia password
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Scarica tutti i file JSON in un archivio ZIP.
+            Aggiorna la password di accesso. I dati verranno ricifrati con la
+            nuova password.
           </p>
-          <Button asChild>
-            <a href="/api/export" download>
-              <Download className="size-4" />
-              Esporta dati
-            </a>
+          <Button variant="outline" onClick={() => setPasswordOpen(true)}>
+            <KeyRound className="size-4" />
+            Cambia password
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Import dati</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Carica un archivio ZIP esportato in precedenza. Sovrascrive i dati
-            attuali.
-          </p>
-          <Input
-            type="file"
-            accept=".zip"
-            disabled={importing}
-            onChange={handleImport}
-          />
-          {importing && (
-            <p className="text-sm text-muted-foreground mt-2">Import in corso…</p>
-          )}
         </CardContent>
       </Card>
 
@@ -155,6 +132,60 @@ export function SettingsView({ settings }: { settings: Settings }) {
           </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-4" />
+              Cambia password
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="old-password">Vecchia password</Label>
+              <Input
+                id="old-password"
+                type="password"
+                autoComplete="current-password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                aria-invalid={passwordError ? true : undefined}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nuova password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                aria-invalid={passwordError ? true : undefined}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Conferma nuova password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                aria-invalid={passwordError ? true : undefined}
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-destructive">{passwordError}</p>
+            )}
+            <DialogFooter>
+              <Button type="submit" disabled={changingPassword}>
+                {changingPassword ? "Salvataggio…" : "Salva"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

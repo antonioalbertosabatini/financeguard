@@ -1,9 +1,15 @@
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import { DATA_DIR, TRANSACTIONS_DIR, VAULT_FILENAME } from "@/lib/constants";
 import { ensureDataDir, writeJsonAtomic } from "@/lib/db/index";
-import { isUnlocked } from "@/lib/crypto/session";
+import { decryptJson } from "@/lib/crypto/cipher";
+import { isUnlocked, setSessionKey } from "@/lib/crypto/session";
+import {
+  verifyVaultPassword,
+  writeVaultFile,
+  type VaultFile,
+} from "@/lib/crypto/vault";
 import {
   ROOT_DATA_FILES,
   clearDataFiles,
@@ -22,8 +28,13 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
+    const password = formData.get("password");
+
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json({ error: "File mancante" }, { status: 400 });
+    }
+    if (typeof password !== "string" || password.length === 0) {
+      return NextResponse.json({ error: "Password mancante" }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -37,15 +48,35 @@ export async function POST(request: Request) {
       );
     }
 
+    const vaultFile = dataFolder.file(VAULT_FILENAME);
+    if (!vaultFile) {
+      return NextResponse.json(
+        {
+          error:
+            "Questo non e' un backup criptato (vault.json mancante). Usa l'import in chiaro.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const vault = JSON.parse(await vaultFile.async("string")) as VaultFile;
+    const keyB = verifyVaultPassword(vault, password);
+    if (!keyB) {
+      return NextResponse.json(
+        { error: "Password errata per questo backup." },
+        { status: 400 }
+      );
+    }
+
     const rootData: { filename: string; validated: unknown }[] = [];
     for (const filename of ROOT_DATA_FILES) {
       const zipFile = dataFolder.file(filename);
       if (!zipFile) continue;
       const content = await zipFile.async("string");
-      const parsed = JSON.parse(content);
+      const decrypted = decryptJson<unknown>(content, keyB);
       rootData.push({
         filename,
-        validated: rootFileValidators[filename](parsed),
+        validated: rootFileValidators[filename](decrypted),
       });
     }
 
@@ -60,15 +91,18 @@ export async function POST(request: Request) {
       });
       for (const { name, file: entry } of txEntries) {
         const content = await entry.async("string");
+        const decrypted = decryptJson<unknown>(content, keyB);
         txData.push({
           filename: name,
-          validated: transactionsFileSchema.parse(JSON.parse(content)),
+          validated: transactionsFileSchema.parse(decrypted),
         });
       }
     }
 
     await ensureDataDir();
+    setSessionKey(keyB);
     await clearDataFiles();
+    await writeVaultFile(vault);
 
     for (const { filename, validated } of rootData) {
       await writeJsonAtomic(path.join(DATA_DIR, filename), validated);

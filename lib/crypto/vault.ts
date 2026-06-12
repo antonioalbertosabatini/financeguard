@@ -20,7 +20,7 @@ const ROOT_DATA_FILES = [
   "settings.json",
 ];
 
-interface VaultFile {
+export interface VaultFile {
   v: 1;
   salt: string;
   verifier: Envelope;
@@ -45,6 +45,38 @@ async function writeRaw(filePath: string, content: string): Promise<void> {
   const tempPath = `${filePath}.tmp`;
   await fs.writeFile(tempPath, content, "utf-8");
   await fs.rename(tempPath, filePath);
+}
+
+export function createVault(password: string): {
+  vault: VaultFile;
+  key: Buffer;
+} {
+  const salt = crypto.randomBytes(SALT_LENGTH);
+  const key = deriveKey(password, salt);
+  const vault: VaultFile = {
+    v: 1,
+    salt: salt.toString("base64"),
+    verifier: encrypt(VERIFIER_PLAINTEXT, key),
+  };
+  return { vault, key };
+}
+
+export function verifyVaultPassword(
+  vault: VaultFile,
+  password: string
+): Buffer | null {
+  const salt = Buffer.from(vault.salt, "base64");
+  const key = deriveKey(password, salt);
+  try {
+    if (decrypt(vault.verifier, key) !== VERIFIER_PLAINTEXT) return null;
+    return key;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeVaultFile(vault: VaultFile): Promise<void> {
+  await writeRaw(VAULT_PATH, JSON.stringify(vault, null, 2));
 }
 
 async function encryptFileIfPlaintext(
@@ -89,31 +121,61 @@ async function migrateToEncrypted(key: Buffer): Promise<void> {
   }
 }
 
+async function reKeyFile(
+  filePath: string,
+  fromKey: Buffer,
+  toKey: Buffer
+): Promise<void> {
+  let content: string;
+  try {
+    content = await fs.readFile(filePath, "utf-8");
+  } catch {
+    return;
+  }
+  if (content.trim() === "") return;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return;
+  }
+  if (!isEnvelope(parsed)) return;
+
+  const reEncrypted = JSON.stringify(encrypt(decrypt(parsed, fromKey), toKey));
+  await writeRaw(filePath, reEncrypted);
+}
+
+export async function reKeyAllData(
+  fromKey: Buffer,
+  toKey: Buffer
+): Promise<void> {
+  for (const filename of ROOT_DATA_FILES) {
+    await reKeyFile(path.join(DATA_DIR, filename), fromKey, toKey);
+  }
+
+  try {
+    const txFiles = await fs.readdir(TRANSACTIONS_DIR);
+    for (const filename of txFiles) {
+      if (!filename.endsWith(".json")) continue;
+      await reKeyFile(path.join(TRANSACTIONS_DIR, filename), fromKey, toKey);
+    }
+  } catch {
+    // transactions dir may not exist yet
+  }
+}
+
 export async function initVault(password: string): Promise<Buffer> {
   await fs.mkdir(DATA_DIR, { recursive: true });
-  const salt = crypto.randomBytes(SALT_LENGTH);
-  const key = deriveKey(password, salt);
+  const { vault, key } = createVault(password);
 
   await migrateToEncrypted(key);
-
-  const vault: VaultFile = {
-    v: 1,
-    salt: salt.toString("base64"),
-    verifier: encrypt(VERIFIER_PLAINTEXT, key),
-  };
-  await writeRaw(VAULT_PATH, JSON.stringify(vault, null, 2));
+  await writeVaultFile(vault);
 
   return key;
 }
 
 export async function verifyPassword(password: string): Promise<Buffer | null> {
   const vault = await readVault();
-  const salt = Buffer.from(vault.salt, "base64");
-  const key = deriveKey(password, salt);
-  try {
-    if (decrypt(vault.verifier, key) !== VERIFIER_PLAINTEXT) return null;
-    return key;
-  } catch {
-    return null;
-  }
+  return verifyVaultPassword(vault, password);
 }
