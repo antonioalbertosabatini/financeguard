@@ -20,6 +20,9 @@ export default async function BudgetPage({
     <BudgetView
       items={data.items}
       categories={categories}
+      availableTags={data.availableTags}
+      year={year}
+      month={month}
       currency={data.settings.defaultCurrency}
       locale={data.settings.locale}
     />

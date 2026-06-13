@@ -207,21 +207,60 @@ export async function getBudgetProgress(year: number, month: number) {
 
   const raw = await getTransactionsForYear(year);
   const expanded = expandRecurrences(raw, year);
-  const { filterByMonth, sumExpensesByCategory } = await import(
-    "@/lib/utils/balance"
-  );
+  const { filterByMonth } = await import("@/lib/utils/balance");
 
   const monthTxs = filterByMonth(expanded, year, month);
-  const spent = sumExpensesByCategory(monthTxs);
+  const expenseTxs = monthTxs.filter((tx) => tx.type === "expense");
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const normalizeTag = (tag: string) => tag.trim().toLowerCase();
+  const availableTags = Array.from(
+    new Set(
+      expanded
+        .filter((tx) => tx.type === "expense")
+        .flatMap((tx) => tx.tags.map(normalizeTag))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }));
 
   return {
     settings,
-    items: budgets.map((budget) => ({
-      ...budget,
-      categoryName: categoryMap[budget.categoryId]?.name ?? budget.categoryId,
-      categoryColor: categoryMap[budget.categoryId]?.color ?? "#888",
-      spent: spent[budget.categoryId] ?? 0,
-    })),
+    availableTags,
+    items: budgets.map((budget) => {
+      const matchingExpenses = expenseTxs.filter((tx) => {
+        if (budget.categoryId && tx.categoryId !== budget.categoryId) return false;
+        if (
+          budget.tag &&
+          !tx.tags.some((tag) => normalizeTag(tag) === budget.tag)
+        ) {
+          return false;
+        }
+        return true;
+      });
+      const category = budget.categoryId
+        ? categoryMap[budget.categoryId]
+        : undefined;
+
+      return {
+        ...budget,
+        categoryName: category?.name,
+        categoryColor: category?.color ?? "#888",
+        categoryIcon: category?.icon,
+        spent: matchingExpenses.reduce((sum, tx) => sum + tx.amount, 0),
+        expenses: matchingExpenses.map((tx) => {
+          const txCategory = tx.categoryId ? categoryMap[tx.categoryId] : undefined;
+          return {
+            id: tx.occurrenceId,
+            amount: tx.amount,
+            tags: tx.tags,
+            categoryId: tx.categoryId,
+            categoryName: txCategory?.name ?? tx.categoryId ?? "—",
+            categoryColor: txCategory?.color ?? "#888",
+            categoryIcon: txCategory?.icon,
+            date: tx.date,
+            notes: tx.notes ?? "",
+          };
+        }),
+      };
+    }),
   };
 }
