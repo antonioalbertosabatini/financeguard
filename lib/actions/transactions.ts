@@ -22,6 +22,7 @@ import {
   filterRawTransactions,
 } from "@/lib/utils/recurrence";
 import { currentYear } from "@/lib/utils/dates";
+import { normalizeTag } from "@/lib/utils/tags";
 
 export async function getAvailableYears() {
   const years = await listTransactionYears();
@@ -124,6 +125,32 @@ export async function getDashboardData(year: number) {
   };
 }
 
+export async function getAvailableTags(year?: number) {
+  const years =
+    year !== undefined
+      ? [year]
+      : await listTransactionYears().then((ys) =>
+          ys.length > 0 ? ys : [currentYear()]
+        );
+
+  const allExpanded = await Promise.all(
+    years.map(async (y) => {
+      const raw = await getTransactionsForYear(y);
+      return expandRecurrences(raw, y);
+    })
+  );
+
+  return Array.from(
+    new Set(
+      allExpanded
+        .flat()
+        .filter((tx) => tx.type === "expense")
+        .flatMap((tx) => tx.tags.map(normalizeTag))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }));
+}
+
 export async function getMonthlyReport(year: number, month: number) {
   const [categories, settings] = await Promise.all([
     getCategories(),
@@ -132,9 +159,12 @@ export async function getMonthlyReport(year: number, month: number) {
 
   const raw = await getTransactionsForYear(year);
   const expanded = expandRecurrences(raw, year);
-  const { filterByMonth, sumByType, sumExpensesByCategory } = await import(
-    "@/lib/utils/balance"
-  );
+  const {
+    filterByMonth,
+    sumByType,
+    sumExpensesByCategory,
+    sumExpensesByDayAndCategory,
+  } = await import("@/lib/utils/balance");
 
   const monthTxs = filterByMonth(expanded, year, month);
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
@@ -152,6 +182,12 @@ export async function getMonthlyReport(year: number, month: number) {
         amount,
       }))
       .sort((a, b) => b.amount - a.amount),
+    dailyExpenses: sumExpensesByDayAndCategory(
+      monthTxs,
+      year,
+      month,
+      categories.map((c) => ({ id: c.id, name: c.name, color: c.color }))
+    ),
   };
 }
 
@@ -212,15 +248,7 @@ export async function getBudgetProgress(year: number, month: number) {
   const monthTxs = filterByMonth(expanded, year, month);
   const expenseTxs = monthTxs.filter((tx) => tx.type === "expense");
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
-  const normalizeTag = (tag: string) => tag.trim().toLowerCase();
-  const availableTags = Array.from(
-    new Set(
-      expanded
-        .filter((tx) => tx.type === "expense")
-        .flatMap((tx) => tx.tags.map(normalizeTag))
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }));
+  const availableTags = await getAvailableTags(year);
 
   return {
     settings,

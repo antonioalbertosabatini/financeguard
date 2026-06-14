@@ -30,6 +30,10 @@ import { useFormatCents } from "@/hooks/use-format-cents";
 import { getMonthlyReport } from "@/lib/actions/transactions";
 import { MONTH_LABELS, MONTH_LABELS_FULL } from "@/lib/constants";
 import { currentMonth } from "@/lib/utils/dates";
+import type {
+  DailyExpenseRow,
+  DailyExpenseSeries,
+} from "@/lib/utils/balance";
 
 type CategoryAmount = {
   categoryId: string;
@@ -40,6 +44,11 @@ type CategoryAmount = {
 
 type MonthlyTrend = { month: number; income: number; expense: number };
 
+type DailyExpenses = {
+  rows: DailyExpenseRow[];
+  series: DailyExpenseSeries[];
+};
+
 type ReportsViewProps = {
   year: number;
   currency: string;
@@ -49,6 +58,7 @@ type ReportsViewProps = {
     expense: number;
     net: number;
     expensesByCategory: CategoryAmount[];
+    dailyExpenses: DailyExpenses;
   };
   annualReport: {
     income: number;
@@ -184,6 +194,57 @@ function CategoryPieChart({
   );
 }
 
+function DailyStackedBarChart({
+  rows,
+  series,
+  currency,
+  locale,
+}: {
+  rows: DailyExpenseRow[];
+  series: DailyExpenseSeries[];
+  currency: string;
+  locale: string;
+}) {
+  const formatAmount = useFormatCents();
+  const { amountsHidden } = useAmountVisibility();
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={rows} margin={{ left: 4, right: 4 }}>
+        <XAxis dataKey="label" fontSize={12} />
+        <YAxis
+          fontSize={12}
+          tickFormatter={(value) =>
+            amountsHidden
+              ? "••"
+              : formatAmount(Number(value) * 100, currency, locale)
+          }
+        />
+        <Tooltip
+          formatter={(value, name) =>
+            amountsHidden
+              ? "••"
+              : formatAmount(Number(value) * 100, currency, locale)
+          }
+          labelFormatter={(label) => `Giorno ${label}`}
+        />
+        <Legend />
+        {series.map((cat, index) => (
+          <Bar
+            key={cat.key}
+            dataKey={cat.name}
+            stackId="daily"
+            fill={cat.color}
+            radius={
+              index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
+            }
+          />
+        ))}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function ReportsView({
   year,
   currency,
@@ -212,6 +273,7 @@ export function ReportsView({
             expense: data.expense,
             net: data.net,
             expensesByCategory: data.expensesByCategory,
+            dailyExpenses: data.dailyExpenses,
           });
         }
       } finally {
@@ -328,6 +390,31 @@ export function ReportsView({
               />
             </CardContent>
           </Card>
+
+          {hasMonthlyExpenses ? (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Spese giornaliere — {monthLabel}</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[320px]">
+                <DailyStackedBarChart
+                  rows={monthlyReport.dailyExpenses.rows}
+                  series={monthlyReport.dailyExpenses.series}
+                  currency={currency}
+                  locale={locale}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Spese giornaliere — {monthLabel}</CardTitle>
+              </CardHeader>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Nessuna spesa registrata in questo mese.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="annual" className="space-y-4">

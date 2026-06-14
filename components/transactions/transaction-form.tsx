@@ -1,10 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  ArrowLeftRight,
+  Calendar,
+  CirclePlus,
+  Euro,
+  FileText,
+  Receipt,
+  Repeat,
+  Tag,
+  Tags,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -18,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CategorySelectItem } from "@/components/categories/category-select-item";
+import { TagInput } from "@/components/tags/tag-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTransaction, updateTransaction } from "@/lib/actions/transactions";
 import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
@@ -26,6 +42,13 @@ import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
 import { todayISO } from "@/lib/utils/dates";
 import { toCents } from "@/lib/utils/money";
+import { dedupeTags } from "@/lib/utils/tags";
+
+const TYPE_ICONS: Record<(typeof TRANSACTION_TYPES)[number], LucideIcon> = {
+  income: TrendingUp,
+  expense: TrendingDown,
+  transfer: ArrowLeftRight,
+};
 
 const formSchema = z
   .object({
@@ -35,7 +58,7 @@ const formSchema = z
     categoryId: z.string().optional(),
     accountId: z.string().min(1),
     notes: z.string(),
-    tags: z.string(),
+    tags: z.array(z.string()),
     isRecurring: z.boolean(),
     recurrenceStart: z.string().optional(),
     recurrenceEnd: z.string().optional(),
@@ -62,15 +85,49 @@ type FormValues = z.infer<typeof formSchema>;
 type TransactionFormProps = {
   accounts: Account[];
   categories: Category[];
+  availableTags?: string[];
   year: number;
   transaction?: Transaction;
   onSuccess?: () => void;
   compact?: boolean;
 };
 
+function FieldLabel({
+  htmlFor,
+  icon: Icon,
+  children,
+}: {
+  htmlFor?: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <Label htmlFor={htmlFor} className="flex items-center gap-1.5">
+      <Icon className="size-3.5 text-muted-foreground" />
+      {children}
+    </Label>
+  );
+}
+
+function SectionTitle({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+      <Icon className="size-4" />
+      {children}
+    </h3>
+  );
+}
+
 export function TransactionForm({
   accounts,
   categories,
+  availableTags = [],
   year,
   transaction,
   onSuccess,
@@ -89,7 +146,7 @@ export function TransactionForm({
       categoryId: transaction?.categoryId ?? undefined,
       accountId: transaction?.accountId ?? accounts[0]?.id ?? "",
       notes: transaction?.notes ?? "",
-      tags: transaction?.tags?.join(", ") ?? "",
+      tags: transaction?.tags ?? [],
       isRecurring: transaction?.isRecurring ?? false,
       recurrenceStart: transaction?.recurrenceStart ?? "",
       recurrenceEnd: transaction?.recurrenceEnd ?? "",
@@ -98,6 +155,7 @@ export function TransactionForm({
 
   const watchType = form.watch("type");
   const watchRecurring = form.watch("isRecurring");
+  const TypeIcon = TYPE_ICONS[watchType];
 
   const filteredCategories = categories.filter((c) => {
     if (watchType === "income") return c.type === "income";
@@ -113,10 +171,7 @@ export function TransactionForm({
       categoryId: values.type === "transfer" ? null : values.categoryId ?? null,
       accountId: values.accountId,
       notes: values.notes,
-      tags: values.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: dedupeTags(values.tags),
       isRecurring: values.isRecurring,
       recurrenceStart:
         values.isRecurring && values.recurrenceStart
@@ -142,7 +197,7 @@ export function TransactionForm({
           categoryId: undefined,
           accountId: accounts[0]?.id ?? "",
           notes: "",
-          tags: "",
+          tags: [],
           isRecurring: false,
           recurrenceStart: "",
           recurrenceEnd: "",
@@ -156,16 +211,14 @@ export function TransactionForm({
 
   const formBody = (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <h3 className="mb-3 text-sm font-medium text-muted-foreground">Dettagli</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
+              <FieldLabel htmlFor="date" icon={Calendar}>Data</FieldLabel>
               <Input id="date" type="date" {...form.register("date")} />
             </div>
 
             <div className="space-y-2">
-              <Label>Tipo</Label>
+              <FieldLabel icon={ArrowLeftRight}>Tipo</FieldLabel>
               <Select
                 value={watchType}
                 onValueChange={(v) => {
@@ -174,20 +227,31 @@ export function TransactionForm({
                 }}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <TypeIcon className="size-3.5" />
+                      {TRANSACTION_TYPE_LABELS[watchType]}
+                    </span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {TRANSACTION_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {TRANSACTION_TYPE_LABELS[t]}
-                    </SelectItem>
-                  ))}
+                  {TRANSACTION_TYPES.map((t) => {
+                    const Icon = TYPE_ICONS[t];
+                    return (
+                      <SelectItem key={t} value={t}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="size-3.5" />
+                          {TRANSACTION_TYPE_LABELS[t]}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="amount">Importo (€)</Label>
+              <FieldLabel htmlFor="amount" icon={Euro}>Importo (€)</FieldLabel>
               <Input
                 id="amount"
                 placeholder="0.00"
@@ -203,7 +267,7 @@ export function TransactionForm({
 
             {watchType !== "transfer" && (
               <div className="space-y-2">
-                <Label>Categoria</Label>
+                <FieldLabel icon={Tags}>Categoria</FieldLabel>
                 {filteredCategories.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
                     Nessuna categoria per questo tipo.{" "}
@@ -237,7 +301,7 @@ export function TransactionForm({
             )}
 
             <div className="space-y-2">
-              <Label>Conto</Label>
+              <FieldLabel icon={Wallet}>Conto</FieldLabel>
               <Select
                 value={form.watch("accountId")}
                 onValueChange={(v) => form.setValue("accountId", v)}
@@ -248,31 +312,40 @@ export function TransactionForm({
                 <SelectContent>
                   {accounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name}
+                      <span className="flex items-center gap-2">
+                        <Wallet className="size-3.5 text-muted-foreground" />
+                        {a.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            </div>
-          </div>
 
-          <div>
-            <h3 className="mb-3 text-sm font-medium text-muted-foreground">Note e tag</h3>
-            <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="notes">Note</Label>
+              <FieldLabel htmlFor="notes" icon={FileText}>Note</FieldLabel>
               <Textarea id="notes" rows={3} {...form.register("notes")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tags">Tag (separati da virgola)</Label>
-              <Input id="tags" placeholder="casa, lavoro" {...form.register("tags")} />
-            </div>
+              <FieldLabel htmlFor="tags" icon={Tag}>Tag</FieldLabel>
+              <Controller
+                name="tags"
+                control={form.control}
+                render={({ field }) => (
+                  <TagInput
+                    id="tags"
+                    value={field.value}
+                    onChange={field.onChange}
+                    suggestions={availableTags}
+                    placeholder="casa, lavoro…"
+                  />
+                )}
+              />
             </div>
           </div>
 
           <div className="rounded-xl border bg-muted/30 p-4 space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Ricorrenza</h3>
+            <SectionTitle icon={Repeat}>Ricorrenza</SectionTitle>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="recurring"
@@ -292,7 +365,9 @@ export function TransactionForm({
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="recurrenceStart">Inizio ricorrenza</Label>
+                    <FieldLabel htmlFor="recurrenceStart" icon={Calendar}>
+                      Inizio ricorrenza
+                    </FieldLabel>
                     <Input
                       id="recurrenceStart"
                       type="date"
@@ -300,7 +375,9 @@ export function TransactionForm({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="recurrenceEnd">Fine ricorrenza</Label>
+                    <FieldLabel htmlFor="recurrenceEnd" icon={Calendar}>
+                      Fine ricorrenza
+                    </FieldLabel>
                     <Input
                       id="recurrenceEnd"
                       type="date"
@@ -332,9 +409,18 @@ export function TransactionForm({
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="text-lg">
-          {isEdit ? "Modifica transazione" : "Nuova transazione"}
-        </CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            {isEdit ? (
+              <Receipt className="size-5" />
+            ) : (
+              <CirclePlus className="size-5" />
+            )}
+          </div>
+          <CardTitle className="text-lg">
+            {isEdit ? "Modifica transazione" : "Nuova transazione"}
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>{formBody}</CardContent>
     </Card>

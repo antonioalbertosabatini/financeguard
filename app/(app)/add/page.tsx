@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAccounts } from "@/lib/actions/accounts";
 import { getCategories } from "@/lib/actions/categories";
+import { getAvailableTags } from "@/lib/actions/transactions";
 import { currentYear } from "@/lib/utils/dates";
 
 export default async function AddPage({
@@ -15,9 +16,10 @@ export default async function AddPage({
   const params = await searchParams;
   const year = params.year ? parseInt(params.year, 10) : currentYear();
   const yearQuery = params.year ? `?year=${params.year}` : "";
-  const [accounts, categories] = await Promise.all([
+  const [accounts, categories, availableTags] = await Promise.all([
     getAccounts(),
     getCategories(),
+    getAvailableTags(year),
   ]);
 
   const hasExpenseCategories = categories.some((c) => c.type === "expense");
@@ -75,6 +77,7 @@ export default async function AddPage({
         <TransactionForm
           accounts={accounts}
           categories={categories}
+          availableTags={availableTags}
           year={year}
         />
       )}

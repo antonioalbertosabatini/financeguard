@@ -29,6 +29,7 @@ export default async function ReportsPage({
         expense: monthlyReport.expense,
         net: monthlyReport.net,
         expensesByCategory: monthlyReport.expensesByCategory,
+        dailyExpenses: monthlyReport.dailyExpenses,
       }}
       annualReport={{
         income: annualReport.income,

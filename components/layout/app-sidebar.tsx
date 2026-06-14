@@ -28,12 +28,12 @@ const navGroups = [
       { href: "/accounts", label: "Conti", icon: Wallet },
       { href: "/categories", label: "Categorie", icon: Tags },
       { href: "/budget", label: "Budget", icon: PiggyBank },
+      { href: "/reports", label: "Report", icon: BarChart3 },
     ],
   },
   {
-    label: "Analisi",
+    label: "Sistema",
     items: [
-      { href: "/reports", label: "Report", icon: BarChart3 },
       { href: "/data", label: "Backup", icon: DatabaseBackup },
       { href: "/settings", label: "Impostazioni", icon: Settings },
     ],

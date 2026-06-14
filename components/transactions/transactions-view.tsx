@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TransactionForm } from "@/components/transactions/transaction-form";
+import { TagBadges } from "@/components/tags/tag-badges";
 import {
   copyRecurringFromPreviousYear,
   deleteTransaction,
@@ -53,6 +54,7 @@ type TransactionsViewProps = {
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  availableTags: string[];
   year: number;
   currency: string;
   locale: string;
@@ -80,6 +82,7 @@ export function TransactionsView({
   transactions,
   accounts,
   categories,
+  availableTags,
   year,
   currency,
   locale,
@@ -373,6 +376,7 @@ export function TransactionsView({
                 <TableHead>Categoria</TableHead>
                 <TableHead>Conto</TableHead>
                 <TableHead className="text-right">Importo</TableHead>
+                <TableHead>Tag</TableHead>
                 <TableHead>Note</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
@@ -383,7 +387,7 @@ export function TransactionsView({
                   <TableRow
                     className="bg-muted/40 hover:bg-muted/40"
                   >
-                    <TableCell colSpan={7} className="sticky top-0 py-2 font-medium">
+                    <TableCell colSpan={8} className="sticky top-0 py-2 font-medium">
                       {group.label}
                       <span className="ml-2 font-normal text-muted-foreground">
                         — {group.items.length}{" "}
@@ -449,6 +453,9 @@ export function TransactionsView({
                         >
                           {formatAmount(tx)}
                         </TableCell>
+                        <TableCell>
+                          <TagBadges tags={tx.tags ?? []} />
+                        </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {tx.notes || "—"}
                         </TableCell>
@@ -489,6 +496,7 @@ export function TransactionsView({
             <TransactionForm
               accounts={accounts}
               categories={categories}
+              availableTags={availableTags}
               year={year}
               transaction={editing}
               onSuccess={() => setEditing(null)}

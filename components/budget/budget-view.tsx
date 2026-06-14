@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { ChevronDown, Pencil, Plus, Tag, Trash2 } from "lucide-react";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { CategorySelectItem } from "@/components/categories/category-select-item";
+import { TagBadges } from "@/components/tags/tag-badges";
+import { TagSingleInput } from "@/components/tags/tag-single-input";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -115,13 +117,11 @@ export function BudgetView({
         item.id !== editingBudget?.id &&
         getBudgetKey(item.categoryId, item.tag) === selectedKey
     );
-  const invalidTag = tag.includes(",");
   const canSubmit =
     !!name.trim() &&
     (!!selectedCategoryId || !!normalizedTag) &&
     toCents(limitEuro) > 0 &&
-    !duplicateBudget &&
-    !invalidTag;
+    !duplicateBudget;
 
   const totals = useMemo(() => {
     return items.reduce(
@@ -303,18 +303,13 @@ export function BudgetView({
 
               <div className="space-y-2">
                 <Label htmlFor="budget-tag">Tag singolo</Label>
-                <Input
+                <TagSingleInput
                   id="budget-tag"
-                  list="budget-tag-suggestions"
                   value={tag}
-                  onChange={(e) => setTag(e.target.value.split(",")[0])}
+                  onChange={setTag}
+                  suggestions={availableTags}
                   placeholder="es. lavoro"
                 />
-                <datalist id="budget-tag-suggestions">
-                  {availableTags.map((availableTag) => (
-                    <option key={availableTag} value={availableTag} />
-                  ))}
-                </datalist>
               </div>
             </div>
 
@@ -358,7 +353,6 @@ export function BudgetView({
               {duplicateBudget
                 ? "Esiste già un budget con questa combinazione di categoria e tag."
                 : "Lascia vuoto uno dei due campi per creare un budget solo categoria o solo tag."}
-              {invalidTag && " Usa un solo tag, senza virgole."}
             </div>
 
             <DialogFooter>
@@ -512,17 +506,7 @@ function BudgetCard({
                           </span>
                         </TableCell>
                         <TableCell>
-                          {expense.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {expense.tags.map((expenseTag) => (
-                                <Badge key={expenseTag} variant="outline">
-                                  {expenseTag}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          <TagBadges tags={expense.tags} />
                         </TableCell>
                         <TableCell className="max-w-[180px] truncate">
                           {expense.notes || "—"}
