@@ -4,15 +4,21 @@ import { AmountVisibilityProvider } from "@/providers/amount-visibility-provider
 import { SidebarProvider } from "@/providers/sidebar-provider";
 import { YearProviderWrapper } from "@/providers/year-provider-wrapper";
 import { getAvailableYears } from "@/lib/actions/transactions";
+import { getSyncStatus } from "@/lib/db/sync-guard";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
-  const availableYears = await getAvailableYears();
+  const [availableYears, syncStatus] = await Promise.all([
+    getAvailableYears(),
+    getSyncStatus(),
+  ]);
 
   return (
     <YearProviderWrapper availableYears={availableYears}>
       <AmountVisibilityProvider>
         <SidebarProvider>
-          <AppShellLayout>{children}</AppShellLayout>
+          <AppShellLayout syncWarnings={syncStatus.warnings}>
+            {children}
+          </AppShellLayout>
         </SidebarProvider>
         <Toaster richColors closeButton />
       </AmountVisibilityProvider>

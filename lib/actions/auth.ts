@@ -10,8 +10,8 @@ import {
   writeVaultFile,
 } from "@/lib/crypto/vault";
 import { lockSession, setSessionKey } from "@/lib/crypto/session";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { markDataWritten, releaseLock } from "@/lib/db/sync-guard";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 
 export type AuthResult = { error: string } | undefined;
 
@@ -72,10 +72,12 @@ export async function changePassword(
   const { vault, key: newKey } = createVault(newPassword);
   await reKeyAllData(oldKey, newKey);
   await writeVaultFile(vault);
+  await markDataWritten();
   setSessionKey(newKey);
 }
 
 export async function lockApp(): Promise<void> {
+  await releaseLock();
   lockSession();
   redirect("/unlock");
 }

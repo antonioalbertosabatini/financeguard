@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FinanceGuard">
+  <rect width="512" height="512" rx="96" fill="#0b0b0c"/>
+  <path d="M256 80 110 140v120c0 92 60 150 146 192 86-42 146-100 146-192V140L256 80z"
+        fill="none" stroke="#34d399" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M210 196h92M210 256h92M236 196v140" fill="none" stroke="#34d399"
+        stroke-width="24" stroke-linecap="round"/>
+</svg>

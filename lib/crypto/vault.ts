@@ -1,29 +1,44 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import { DATA_DIR, TRANSACTIONS_DIR, VAULT_PATH } from "@/lib/constants";
+import {
+  DATA_DIR,
+  ROOT_DATA_FILES,
+  TRANSACTIONS_DIR,
+  VAULT_PATH,
+} from "@/lib/constants";
 import {
   decrypt,
   deriveKey,
   encrypt,
   encryptJson,
   isEnvelope,
+  scryptParamsEqual,
+  SCRYPT_PARAMS,
+  LEGACY_SCRYPT_PARAMS,
   type Envelope,
+  type ScryptParams,
 } from "@/lib/crypto/cipher";
+import { writeFileRobust } from "@/lib/db/index";
+import { markDataWritten } from "@/lib/db/sync-guard";
 
 const VERIFIER_PLAINTEXT = "financeguard-vault-v1";
 const SALT_LENGTH = 16;
-const ROOT_DATA_FILES = [
-  "accounts.json",
-  "categories.json",
-  "budgets.json",
-  "settings.json",
-];
 
 export interface VaultFile {
   v: 1;
   salt: string;
   verifier: Envelope;
+  // Parametri KDF usati per questo vault. Assente => vault legacy.
+  kdf?: ScryptParams;
+}
+
+function vaultParams(vault: VaultFile): ScryptParams {
+  return vault.kdf ?? LEGACY_SCRYPT_PARAMS;
+}
+
+export function vaultNeedsUpgrade(vault: VaultFile): boolean {
+  return !scryptParamsEqual(vaultParams(vault), SCRYPT_PARAMS);
 }
 
 export async function vaultExists(): Promise<boolean> {
@@ -41,10 +56,7 @@ async function readVault(): Promise<VaultFile> {
 }
 
 async function writeRaw(filePath: string, content: string): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tempPath = `${filePath}.tmp`;
-  await fs.writeFile(tempPath, content, "utf-8");
-  await fs.rename(tempPath, filePath);
+  await writeFileRobust(filePath, content);
 }
 
 export function createVault(password: string): {
@@ -52,11 +64,12 @@ export function createVault(password: string): {
   key: Buffer;
 } {
   const salt = crypto.randomBytes(SALT_LENGTH);
-  const key = deriveKey(password, salt);
+  const key = deriveKey(password, salt, SCRYPT_PARAMS);
   const vault: VaultFile = {
     v: 1,
     salt: salt.toString("base64"),
     verifier: encrypt(VERIFIER_PLAINTEXT, key),
+    kdf: { ...SCRYPT_PARAMS },
   };
   return { vault, key };
 }
@@ -66,7 +79,7 @@ export function verifyVaultPassword(
   password: string
 ): Buffer | null {
   const salt = Buffer.from(vault.salt, "base64");
-  const key = deriveKey(password, salt);
+  const key = deriveKey(password, salt, vaultParams(vault));
   try {
     if (decrypt(vault.verifier, key) !== VERIFIER_PLAINTEXT) return null;
     return key;
@@ -171,11 +184,38 @@ export async function initVault(password: string): Promise<Buffer> {
 
   await migrateToEncrypted(key);
   await writeVaultFile(vault);
+  await markDataWritten();
 
   return key;
 }
 
+/**
+ * Aggiorna i parametri KDF del vault: deriva una nuova chiave con i parametri
+ * attuali (nuovo salt), ri-cifra tutti i dati e riscrive il vault. Restituisce
+ * la nuova chiave da usare per la sessione.
+ */
+export async function upgradeVaultKdf(
+  password: string,
+  oldKey: Buffer
+): Promise<Buffer> {
+  const { vault, key: newKey } = createVault(password);
+  await reKeyAllData(oldKey, newKey);
+  await writeVaultFile(vault);
+  await markDataWritten();
+  return newKey;
+}
+
 export async function verifyPassword(password: string): Promise<Buffer | null> {
   const vault = await readVault();
-  return verifyVaultPassword(vault, password);
+  const key = verifyVaultPassword(vault, password);
+  if (!key) return null;
+  if (vaultNeedsUpgrade(vault)) {
+    try {
+      return await upgradeVaultKdf(password, key);
+    } catch {
+      // Se l'upgrade fallisce, consenti comunque l'accesso con la chiave attuale.
+      return key;
+    }
+  }
+  return key;
 }

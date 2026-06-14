@@ -5,6 +5,7 @@ import { AmountVisibilityToggle } from "@/components/layout/amount-visibility-to
 import { AddTransactionButton } from "@/components/layout/add-transaction-button";
 import { AppSidebarWrapper } from "@/components/layout/app-sidebar-wrapper";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { SyncWarnings } from "@/components/layout/sync-warnings";
 import { YearSelector } from "@/components/layout/year-selector";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
@@ -23,7 +24,13 @@ function AddTransactionButtonFallback() {
   );
 }
 
-export function AppShellLayout({ children }: { children: ReactNode }) {
+export function AppShellLayout({
+  children,
+  syncWarnings = [],
+}: {
+  children: ReactNode;
+  syncWarnings?: string[];
+}) {
   const { sidebarOpen } = useSidebar();
 
   return (
@@ -49,6 +56,7 @@ export function AppShellLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl flex-1 p-6 md:p-8">
+          <SyncWarnings warnings={syncWarnings} />
           {children}
         </main>
       </div>

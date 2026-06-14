@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, TRANSACTIONS_DIR, VAULT_FILENAME } from "@/lib/constants";
+import { DATA_DIR, NON_DATA_FILES, TRANSACTIONS_DIR } from "@/lib/constants";
 import { ensureDataDir } from "@/lib/db/index";
 import { decryptJson } from "@/lib/crypto/cipher";
 import { getSessionKey, isUnlocked } from "@/lib/crypto/session";
@@ -48,7 +48,7 @@ export async function GET() {
   const rootFolder = zip.folder("data")!;
   const rootFiles = await fs.readdir(DATA_DIR);
   for (const file of rootFiles) {
-    if (file === VAULT_FILENAME) continue;
+    if (NON_DATA_FILES.has(file)) continue;
     const fullPath = path.join(DATA_DIR, file);
     const stat = await fs.stat(fullPath);
     if (stat.isFile() && file.endsWith(".json")) {

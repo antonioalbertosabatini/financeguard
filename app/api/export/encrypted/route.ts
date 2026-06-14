@@ -2,13 +2,17 @@ import fs from "fs/promises";
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, TRANSACTIONS_DIR, VAULT_FILENAME } from "@/lib/constants";
+import {
+  DATA_DIR,
+  MIN_PASSWORD_LENGTH,
+  NON_DATA_FILES,
+  TRANSACTIONS_DIR,
+  VAULT_FILENAME,
+} from "@/lib/constants";
 import { ensureDataDir } from "@/lib/db/index";
 import { decrypt, encrypt, isEnvelope } from "@/lib/crypto/cipher";
 import { getSessionKey, isUnlocked } from "@/lib/crypto/session";
 import { createVault } from "@/lib/crypto/vault";
-
-const MIN_PASSWORD_LENGTH = 8;
 
 function reKey(content: string, keyFrom: Buffer, keyTo: Buffer): string {
   const parsed: unknown = JSON.parse(content);
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
 
   const rootFiles = await fs.readdir(DATA_DIR);
   for (const file of rootFiles) {
-    if (file === VAULT_FILENAME) continue;
+    if (NON_DATA_FILES.has(file)) continue;
     const fullPath = path.join(DATA_DIR, file);
     const stat = await fs.stat(fullPath);
     if (stat.isFile() && file.endsWith(".json")) {

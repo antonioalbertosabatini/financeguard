@@ -1,10 +1,11 @@
+import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import { Low } from "lowdb";
-import { DataFile } from "lowdb/node";
-import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import { Low, type Adapter } from "lowdb";
+import { DATA_DIR, TMP_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
 import { decryptJson, encryptJson } from "@/lib/crypto/cipher";
 import { getSessionKey } from "@/lib/crypto/session";
+import { markDataWritten } from "@/lib/db/sync-guard";
 
 export async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -23,15 +24,40 @@ export async function ensureFile<T extends object>(
   }
 }
 
+/**
+ * Scrittura robusta rispetto alla sincronizzazione cloud: il file temporaneo
+ * viene creato in una sottocartella dedicata (stesso volume di DATA_DIR),
+ * forzato su disco con fsync e poi spostato in modo atomico con rename. Questo
+ * riduce il rischio che OneDrive sincronizzi un file parziale. Non incrementa
+ * la revisione: usala per scritture "raw" (vault, metadati).
+ */
+export async function writeFileRobust(
+  filePath: string,
+  content: string
+): Promise<void> {
+  await fs.mkdir(TMP_DIR, { recursive: true });
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const tempPath = path.join(
+    TMP_DIR,
+    `${path.basename(filePath)}.${crypto.randomUUID()}.tmp`
+  );
+  const fh = await fs.open(tempPath, "w");
+  try {
+    await fh.writeFile(content, "utf-8");
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+  await fs.rename(tempPath, filePath);
+}
+
 export async function writeJsonAtomic<T>(
   filePath: string,
   data: T
 ): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tempPath = `${filePath}.tmp`;
   const content = encryptJson(data, getSessionKey());
-  await fs.writeFile(tempPath, content, "utf-8");
-  await fs.rename(tempPath, filePath);
+  await writeFileRobust(filePath, content);
+  await markDataWritten();
 }
 
 export async function readJsonFile<T>(filePath: string): Promise<T> {
@@ -39,19 +65,34 @@ export async function readJsonFile<T>(filePath: string): Promise<T> {
   return decryptJson<T>(content, getSessionKey());
 }
 
+class EncryptedAdapter<T> implements Adapter<T> {
+  constructor(
+    private readonly filePath: string,
+    private readonly defaultData: T
+  ) {}
+
+  async read(): Promise<T | null> {
+    let content: string;
+    try {
+      content = await fs.readFile(this.filePath, "utf-8");
+    } catch {
+      return null;
+    }
+    if (content.trim() === "") return this.defaultData;
+    return decryptJson<T>(content, getSessionKey());
+  }
+
+  async write(data: T): Promise<void> {
+    await writeJsonAtomic(this.filePath, data);
+  }
+}
+
 export async function getDb<T extends object>(
   filePath: string,
   defaultData: T
 ) {
   await ensureFile(filePath, defaultData);
-  const adapter = new DataFile<T>(filePath, {
-    parse: (str: string) => {
-      if (str.trim() === "") return defaultData;
-      return decryptJson<T>(str, getSessionKey());
-    },
-    stringify: (data: T) => encryptJson(data, getSessionKey()),
-  });
-  return new Low<T>(adapter, defaultData);
+  return new Low<T>(new EncryptedAdapter<T>(filePath, defaultData), defaultData);
 }
 
 export function getYearFromDate(date: string): number {
