@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Filter, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AccountIcon } from "@/components/accounts/account-icon";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { CategorySelectItem } from "@/components/categories/category-select-item";
 import { PageHeader } from "@/components/layout/page-header";
@@ -98,7 +99,7 @@ export function TransactionsView({
   const [editing, setEditing] = useState<Transaction | null>(null);
 
   const accountMap = useMemo(
-    () => Object.fromEntries(accounts.map((a) => [a.id, a.name])),
+    () => Object.fromEntries(accounts.map((a) => [a.id, a])),
     [accounts]
   );
   const categoryMap = useMemo(
@@ -251,7 +252,15 @@ export function TransactionsView({
                 <SelectContent>
                   <SelectItem value="all">Tutti</SelectItem>
                   {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    <SelectItem key={a.id} value={a.id}>
+                      <span className="flex items-center gap-2">
+                        <AccountIcon
+                          name={a.icon}
+                          className="size-3.5 text-muted-foreground"
+                        />
+                        {a.name}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -308,7 +317,7 @@ export function TransactionsView({
                   className="cursor-pointer gap-1 pr-1.5"
                   onClick={() => setAccountId("all")}
                 >
-                  Conto: {accountMap[accountId] ?? accountId}
+                  Conto: {accountMap[accountId]?.name ?? accountId}
                   <X className="size-3" />
                 </Badge>
               )}
@@ -443,7 +452,19 @@ export function TransactionsView({
                             "—"
                           )}
                         </TableCell>
-                        <TableCell>{accountMap[tx.accountId] ?? "—"}</TableCell>
+                        <TableCell>
+                          {accountMap[tx.accountId] ? (
+                            <span className="flex items-center gap-2">
+                              <AccountIcon
+                                name={accountMap[tx.accountId]!.icon}
+                                className="size-3.5 text-muted-foreground"
+                              />
+                              {accountMap[tx.accountId]!.name}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
                         <TableCell
                           className={cn(
                             "text-right font-medium tabular-nums",

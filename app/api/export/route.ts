@@ -2,7 +2,12 @@ import fs from "fs/promises";
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, NON_DATA_FILES, TRANSACTIONS_DIR } from "@/lib/constants";
+import {
+  ACCOUNT_TRANSFERS_DIR,
+  DATA_DIR,
+  NON_DATA_FILES,
+  TRANSACTIONS_DIR,
+} from "@/lib/constants";
 import { ensureDataDir } from "@/lib/db/index";
 import { decryptJson } from "@/lib/crypto/cipher";
 import { getSessionKey, isUnlocked } from "@/lib/crypto/session";
@@ -57,6 +62,7 @@ export async function GET() {
   }
 
   await addDir(TRANSACTIONS_DIR, rootFolder.folder("transactions")!);
+  await addDir(ACCOUNT_TRANSFERS_DIR, rootFolder.folder("account-transfers")!);
 
   const buffer = await zip.generateAsync({ type: "arraybuffer" });
 

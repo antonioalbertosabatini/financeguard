@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import { ACCOUNT_TRANSFERS_DIR, DATA_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
 import { accountsFileSchema } from "@/lib/schemas/account";
 import { parseCategoriesFile } from "@/lib/schemas/category";
 import { budgetsFileSchema } from "@/lib/schemas/budget";
@@ -33,5 +33,15 @@ export async function clearDataFiles(): Promise<void> {
     }
   } catch {
     // transactions dir may not exist yet
+  }
+
+  try {
+    const files = await fs.readdir(ACCOUNT_TRANSFERS_DIR);
+    for (const filename of files) {
+      if (!filename.endsWith(".json")) continue;
+      await fs.rm(path.join(ACCOUNT_TRANSFERS_DIR, filename), { force: true });
+    }
+  } catch {
+    // transfers dir may not exist yet
   }
 }

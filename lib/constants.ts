@@ -9,6 +9,7 @@ export const DATA_DIR = process.env.FG_DATA_DIR
   : DEFAULT_DATA_DIR;
 
 export const TRANSACTIONS_DIR = path.join(DATA_DIR, "transactions");
+export const ACCOUNT_TRANSFERS_DIR = path.join(DATA_DIR, "account-transfers");
 export const VAULT_FILENAME = "vault.json";
 export const VAULT_PATH = path.join(DATA_DIR, VAULT_FILENAME);
 

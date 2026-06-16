@@ -2,7 +2,12 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { Low, type Adapter } from "lowdb";
-import { DATA_DIR, TMP_DIR, TRANSACTIONS_DIR } from "@/lib/constants";
+import {
+  ACCOUNT_TRANSFERS_DIR,
+  DATA_DIR,
+  TMP_DIR,
+  TRANSACTIONS_DIR,
+} from "@/lib/constants";
 import { decryptJson, encryptJson } from "@/lib/crypto/cipher";
 import { getSessionKey } from "@/lib/crypto/session";
 import { markDataWritten } from "@/lib/db/sync-guard";
@@ -10,6 +15,7 @@ import { markDataWritten } from "@/lib/db/sync-guard";
 export async function ensureDataDir(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(TRANSACTIONS_DIR, { recursive: true });
+  await fs.mkdir(ACCOUNT_TRANSFERS_DIR, { recursive: true });
 }
 
 export async function ensureFile<T extends object>(

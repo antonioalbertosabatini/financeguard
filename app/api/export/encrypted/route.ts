@@ -3,6 +3,7 @@ import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
 import {
+  ACCOUNT_TRANSFERS_DIR,
   DATA_DIR,
   MIN_PASSWORD_LENGTH,
   NON_DATA_FILES,
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
   }
 
   await addDir(TRANSACTIONS_DIR, rootFolder.folder("transactions")!);
+  await addDir(ACCOUNT_TRANSFERS_DIR, rootFolder.folder("account-transfers")!);
 
   rootFolder.file(VAULT_FILENAME, JSON.stringify(vault, null, 2));
 

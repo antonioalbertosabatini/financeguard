@@ -7,6 +7,7 @@ import {
   getAccounts as dbGetAccounts,
   updateAccount as dbUpdateAccount,
 } from "@/lib/db/accounts";
+import { getAllAccountTransfers } from "@/lib/db/account-transfers";
 import { getAllTransactions } from "@/lib/db/transactions";
 import {
   accountInputSchema,
@@ -34,9 +35,16 @@ export async function updateAccount(id: string, data: AccountInput) {
 }
 
 export async function deleteAccount(id: string) {
-  const transactions = await getAllTransactions();
+  const [transactions, transfers] = await Promise.all([
+    getAllTransactions(),
+    getAllAccountTransfers(),
+  ]);
+
   if (transactions.some((t) => t.accountId === id)) {
     throw new Error("Impossibile eliminare: conto usato in transazioni");
+  }
+  if (transfers.some((t) => t.fromAccountId === id || t.toAccountId === id)) {
+    throw new Error("Impossibile eliminare: conto usato in trasferimenti");
   }
   await dbDeleteAccount(id);
   revalidatePath("/accounts");

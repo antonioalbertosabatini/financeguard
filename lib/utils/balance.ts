@@ -1,4 +1,5 @@
 import type { Account } from "@/lib/schemas/account";
+import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
 import { getDaysInMonth } from "@/lib/utils/dates";
 
@@ -32,22 +33,39 @@ export function getTransactionEffect(
   }
 }
 
+export function getAccountTransferEffect(
+  transfer: AccountTransfer,
+  accountId: string
+): number {
+  if (transfer.fromAccountId === accountId) return -transfer.amount;
+  if (transfer.toAccountId === accountId) return transfer.amount;
+  return 0;
+}
+
 export function calculateAccountBalance(
   account: Account,
-  transactions: ExpandedTransaction[]
+  transactions: ExpandedTransaction[],
+  transfers: AccountTransfer[] = []
 ): number {
-  const delta = transactions
+  const txDelta = transactions
     .filter((tx) => tx.accountId === account.id)
     .reduce((sum, tx) => sum + getTransactionEffect(tx, account.id), 0);
-  return account.initialBalance + delta;
+
+  const transferDelta = transfers.reduce(
+    (sum, tr) => sum + getAccountTransferEffect(tr, account.id),
+    0
+  );
+
+  return account.initialBalance + txDelta + transferDelta;
 }
 
 export function calculateTotalBalance(
   accounts: Account[],
-  transactions: ExpandedTransaction[]
+  transactions: ExpandedTransaction[],
+  transfers: AccountTransfer[] = []
 ): number {
   return accounts.reduce(
-    (sum, account) => sum + calculateAccountBalance(account, transactions),
+    (sum, account) => sum + calculateAccountBalance(account, transactions, transfers),
     0
   );
 }

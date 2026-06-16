@@ -1,7 +1,12 @@
 import path from "path";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
-import { DATA_DIR, TRANSACTIONS_DIR, VAULT_FILENAME } from "@/lib/constants";
+import {
+  ACCOUNT_TRANSFERS_DIR,
+  DATA_DIR,
+  TRANSACTIONS_DIR,
+  VAULT_FILENAME,
+} from "@/lib/constants";
 import { ensureDataDir, writeJsonAtomic } from "@/lib/db/index";
 import { decryptJson } from "@/lib/crypto/cipher";
 import { isUnlocked, setSessionKey } from "@/lib/crypto/session";
@@ -15,6 +20,7 @@ import {
   clearDataFiles,
   rootFileValidators,
 } from "@/lib/db/backup";
+import { accountTransfersFileSchema } from "@/lib/schemas/account-transfer";
 import { transactionsFileSchema } from "@/lib/schemas/transaction";
 
 export async function POST(request: Request) {
@@ -99,6 +105,25 @@ export async function POST(request: Request) {
       }
     }
 
+    const transferData: { filename: string; validated: unknown }[] = [];
+    const transferFolder = dataFolder.folder("account-transfers");
+    if (transferFolder) {
+      const entries: { name: string; file: JSZip.JSZipObject }[] = [];
+      transferFolder.forEach((relativePath, file) => {
+        if (!file.dir && relativePath.endsWith(".json")) {
+          entries.push({ name: path.basename(relativePath), file });
+        }
+      });
+      for (const { name, file: entry } of entries) {
+        const content = await entry.async("string");
+        const decrypted = decryptJson<unknown>(content, keyB);
+        transferData.push({
+          filename: name,
+          validated: accountTransfersFileSchema.parse(decrypted),
+        });
+      }
+    }
+
     await ensureDataDir();
     setSessionKey(keyB);
     await clearDataFiles();
@@ -109,6 +134,12 @@ export async function POST(request: Request) {
     }
     for (const { filename, validated } of txData) {
       await writeJsonAtomic(path.join(TRANSACTIONS_DIR, filename), validated);
+    }
+    for (const { filename, validated } of transferData) {
+      await writeJsonAtomic(
+        path.join(ACCOUNT_TRANSFERS_DIR, filename),
+        validated
+      );
     }
 
     return NextResponse.json({ success: true });

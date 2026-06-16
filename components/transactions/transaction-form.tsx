@@ -20,6 +20,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { AccountIcon } from "@/components/accounts/account-icon";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -313,7 +314,10 @@ export function TransactionForm({
                   {accounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       <span className="flex items-center gap-2">
-                        <Wallet className="size-3.5 text-muted-foreground" />
+                        <AccountIcon
+                          name={a.icon}
+                          className="size-3.5 text-muted-foreground"
+                        />
                         {a.name}
                       </span>
                     </SelectItem>

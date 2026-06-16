@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  Filter,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { AccountIcon } from "@/components/accounts/account-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -23,25 +32,47 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   createAccount,
   deleteAccount,
   updateAccount,
 } from "@/lib/actions/accounts";
+import { createAccountTransfer } from "@/lib/actions/account-transfers";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants";
+import { ACCOUNT_ICON_NAMES } from "@/lib/constants/account-icons";
 import type { Account } from "@/lib/schemas/account";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
+import { cn } from "@/lib/utils";
+import type { AccountTransfer } from "@/lib/schemas/account-transfer";
+import { formatDate, todayISO } from "@/lib/utils/dates";
 
 type AccountWithBalance = Account & { balance: number };
 
 export function AccountsView({
   accounts,
+  transfers,
   currency,
   locale,
+  year,
 }: {
   accounts: AccountWithBalance[];
+  transfers: AccountTransfer[];
   currency: string;
   locale: string;
+  year: number;
 }) {
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
@@ -50,6 +81,52 @@ export function AccountsView({
   const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]>("checking");
   const [initialBalance, setInitialBalance] = useState("0.00");
   const [currencyInput, setCurrencyInput] = useState(currency);
+  const [icon, setIcon] = useState<string>(ACCOUNT_ICON_NAMES[0]);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferDate, setTransferDate] = useState(() => {
+    const today = todayISO();
+    return today.startsWith(String(year)) ? today : `${year}-01-01`;
+  });
+  const [transferAmount, setTransferAmount] = useState("");
+  const [fromAccountId, setFromAccountId] = useState("");
+  const [toAccountId, setToAccountId] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+
+  const [transfersOpen, setTransfersOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filterFrom, setFilterFrom] = useState<string>("all");
+  const [filterTo, setFilterTo] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [order, setOrder] = useState<"desc" | "asc">("desc");
+
+  const accountMap = useMemo(
+    () => Object.fromEntries(accounts.map((a) => [a.id, a])),
+    [accounts]
+  );
+
+  const filteredTransfers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = transfers.filter((tr) => {
+      if (dateFrom && tr.date < dateFrom) return false;
+      if (dateTo && tr.date > dateTo) return false;
+      if (filterFrom !== "all" && tr.fromAccountId !== filterFrom) return false;
+      if (filterTo !== "all" && tr.toAccountId !== filterTo) return false;
+      if (q && !(tr.notes ?? "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+    base.sort((a, b) =>
+      order === "desc" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)
+    );
+    return base;
+  }, [transfers, dateFrom, dateTo, filterFrom, filterTo, query, order]);
+
+  const hasActiveTransferFilters =
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    filterFrom !== "all" ||
+    filterTo !== "all" ||
+    query.trim() !== "";
 
   function openCreate() {
     setEditing(null);
@@ -57,6 +134,7 @@ export function AccountsView({
     setType("checking");
     setInitialBalance("0.00");
     setCurrencyInput(currency);
+    setIcon(ACCOUNT_ICON_NAMES[0]);
     setOpen(true);
   }
 
@@ -66,7 +144,18 @@ export function AccountsView({
     setType(account.type);
     setInitialBalance(centsToEuroString(account.initialBalance));
     setCurrencyInput(account.currency);
+    setIcon(account.icon);
     setOpen(true);
+  }
+
+  function openTransfer() {
+    const today = todayISO();
+    setTransferDate(today.startsWith(String(year)) ? today : `${year}-01-01`);
+    setTransferAmount("");
+    setFromAccountId(accounts[0]?.id ?? "");
+    setToAccountId(accounts[1]?.id ?? "");
+    setTransferNotes("");
+    setTransferOpen(true);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -76,6 +165,7 @@ export function AccountsView({
       type,
       initialBalance: toCents(initialBalance),
       currency: currencyInput,
+      icon,
     };
     try {
       if (editing) {
@@ -86,6 +176,24 @@ export function AccountsView({
         toast.success("Conto creato");
       }
       setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    }
+  }
+
+  async function handleTransferSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await createAccountTransfer({
+        date: transferDate,
+        amount: toCents(transferAmount),
+        fromAccountId,
+        toAccountId,
+        notes: transferNotes,
+      });
+      toast.success("Trasferimento registrato");
+      setTransferOpen(false);
+      setTransfersOpen(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
     }
@@ -107,10 +215,21 @@ export function AccountsView({
         title="Conti"
         description="Gestisci i tuoi conti"
         actions={
-          <Button onClick={openCreate}>
-            <Plus className="size-4" />
-            Nuovo conto
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={openCreate}>
+              <Plus className="size-4" />
+              Nuovo conto
+            </Button>
+            <Button
+              variant="outline"
+              onClick={openTransfer}
+              disabled={accounts.length < 2}
+              title={accounts.length < 2 ? "Servono almeno 2 conti" : undefined}
+            >
+              <ArrowLeftRight className="size-4" />
+              Trasferisci
+            </Button>
+          </div>
         }
       />
 
@@ -125,11 +244,16 @@ export function AccountsView({
           {accounts.map((account) => (
             <Card key={account.id}>
               <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base">{account.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {ACCOUNT_TYPE_LABELS[account.type]}
-                  </p>
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <AccountIcon name={account.icon} className="size-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">{account.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {ACCOUNT_TYPE_LABELS[account.type]}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -189,7 +313,30 @@ export function AccountsView({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="balance">Saldo iniziale (€)</Label>
+              <Label>Icona</Label>
+              <div className="grid grid-cols-6 gap-2">
+                {ACCOUNT_ICON_NAMES.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    title={opt}
+                    onClick={() => setIcon(opt)}
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-lg border transition-colors",
+                      icon === opt
+                        ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2"
+                        : "border-border hover:bg-muted"
+                    )}
+                  >
+                    <AccountIcon name={opt} className="size-5" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="balance">
+                Saldo iniziale ({currencyInput.toUpperCase()})
+              </Label>
               <Input
                 id="balance"
                 value={initialBalance}
@@ -213,6 +360,295 @@ export function AccountsView({
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Trasferimento tra conti</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleTransferSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tr-date">Data</Label>
+              <Input
+                id="tr-date"
+                type="date"
+                value={transferDate}
+                onChange={(e) => setTransferDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tr-amount">Importo ({currency})</Label>
+              <Input
+                id="tr-amount"
+                placeholder="0.00"
+                value={transferAmount}
+                onChange={(e) => setTransferAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Da</Label>
+                <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleziona conto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center gap-2">
+                          <AccountIcon
+                            name={a.icon}
+                            className="size-3.5 text-muted-foreground"
+                          />
+                          {a.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>A</Label>
+                <Select value={toAccountId} onValueChange={setToAccountId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleziona conto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center gap-2">
+                          <AccountIcon
+                            name={a.icon}
+                            className="size-3.5 text-muted-foreground"
+                          />
+                          {a.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tr-notes">Note</Label>
+              <Input
+                id="tr-notes"
+                value={transferNotes}
+                onChange={(e) => setTransferNotes(e.target.value)}
+                placeholder="Es. giroconto risparmio"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit">Salva</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Card className="shadow-sm">
+        <Collapsible open={transfersOpen} onOpenChange={setTransfersOpen}>
+          <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+            <div className="flex items-center gap-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <ChevronDown
+                    className={cn(
+                      "size-4 transition-transform",
+                      transfersOpen && "rotate-180"
+                    )}
+                  />
+                  Trasferimenti
+                </Button>
+              </CollapsibleTrigger>
+              <span className="text-sm text-muted-foreground">
+                {filteredTransfers.length}/{transfers.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="size-4" />
+              Filtri
+            </div>
+          </div>
+
+          <CollapsibleContent>
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Da data</Label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">A data</Label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Da</Label>
+                  <Select value={filterFrom} onValueChange={setFilterFrom}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          <span className="flex items-center gap-2">
+                            <AccountIcon
+                              name={a.icon}
+                              className="size-3.5 text-muted-foreground"
+                            />
+                            {a.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">A</Label>
+                  <Select value={filterTo} onValueChange={setFilterTo}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti</SelectItem>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          <span className="flex items-center gap-2">
+                            <AccountIcon
+                              name={a.icon}
+                              className="size-3.5 text-muted-foreground"
+                            />
+                            {a.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 lg:col-span-2">
+                  <Label className="text-xs text-muted-foreground">Cerca note</Label>
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="testo…"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Ordine</Label>
+                  <Select
+                    value={order}
+                    onValueChange={(v) => setOrder(v as typeof order)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">Più recenti</SelectItem>
+                      <SelectItem value="asc">Più vecchi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {hasActiveTransferFilters && (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    Filtri attivi
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                      setFilterFrom("all");
+                      setFilterTo("all");
+                      setQuery("");
+                    }}
+                  >
+                    <X className="size-4" />
+                    Azzera
+                  </Button>
+                </div>
+              )}
+
+              {filteredTransfers.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Nessun trasferimento per i filtri selezionati.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Da</TableHead>
+                      <TableHead>A</TableHead>
+                      <TableHead className="text-right">Importo</TableHead>
+                      <TableHead>Note</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransfers.map((tr) => {
+                      const from = accountMap[tr.fromAccountId];
+                      const to = accountMap[tr.toAccountId];
+                      const fromCurrency = from?.currency ?? currency;
+                      return (
+                        <TableRow key={tr.id}>
+                          <TableCell className="tabular-nums">
+                            {formatDate(tr.date)}
+                          </TableCell>
+                          <TableCell>
+                            {from ? (
+                              <span className="flex items-center gap-2">
+                                <AccountIcon
+                                  name={from.icon}
+                                  className="size-3.5 text-muted-foreground"
+                                />
+                                {from.name}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {to ? (
+                              <span className="flex items-center gap-2">
+                                <AccountIcon
+                                  name={to.icon}
+                                  className="size-3.5 text-muted-foreground"
+                                />
+                                {to.name}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium tabular-nums">
+                            {formatAmount(tr.amount, fromCurrency, locale)}
+                          </TableCell>
+                          <TableCell className="max-w-[320px] truncate">
+                            {tr.notes || "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
     </div>
   );
 }

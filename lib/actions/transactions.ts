@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAccounts } from "@/lib/db/accounts";
+import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getCategories } from "@/lib/db/categories";
 import {
   copyRecurringRules,
@@ -87,10 +88,11 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
 }
 
 export async function getDashboardData(year: number) {
-  const [accounts, categories, settings] = await Promise.all([
+  const [accounts, categories, settings, transfers] = await Promise.all([
     getAccounts(),
     getCategories(),
     import("@/lib/db/settings").then((m) => m.getSettings()),
+    getAccountTransfersForYear(year),
   ]);
 
   const raw = await getTransactionsForYear(year);
@@ -110,7 +112,7 @@ export async function getDashboardData(year: number) {
 
   return {
     settings,
-    totalBalance: calculateTotalBalance(accounts, expanded),
+    totalBalance: calculateTotalBalance(accounts, expanded, transfers),
     monthlyIncome: sumByType(monthTxs, "income"),
     monthlyExpense: sumByType(monthTxs, "expense"),
     expensesByCategory: Object.entries(sumExpensesByCategory(expanded)).map(
@@ -226,11 +228,12 @@ export async function getAccountsWithBalances(year: number) {
   const accounts = await getAccounts();
   const raw = await getTransactionsForYear(year);
   const expanded = expandRecurrences(raw, year);
+  const transfers = await getAccountTransfersForYear(year);
   const { calculateAccountBalance } = await import("@/lib/utils/balance");
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded),
+    balance: calculateAccountBalance(account, expanded, transfers),
   }));
 }
 
