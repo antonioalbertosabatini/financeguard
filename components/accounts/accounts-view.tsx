@@ -62,14 +62,24 @@ import { formatDate, todayISO } from "@/lib/utils/dates";
 
 type AccountWithBalance = Account & { balance: number };
 
+type AccountsAnalysis = {
+  accountsAsOf: AccountWithBalance[];
+  accountsAll: AccountWithBalance[];
+  totalAsOf: number;
+  totalAll: number;
+  asOfISO: string;
+};
+
 export function AccountsView({
   accounts,
+  analysis,
   transfers,
   currency,
   locale,
   year,
 }: {
   accounts: AccountWithBalance[];
+  analysis: AccountsAnalysis;
   transfers: AccountTransfer[];
   currency: string;
   locale: string;
@@ -94,6 +104,7 @@ export function AccountsView({
   const [transferNotes, setTransferNotes] = useState("");
 
   const [transfersOpen, setTransfersOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const [transferFiltersOpen, setTransferFiltersOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -106,6 +117,23 @@ export function AccountsView({
     () => Object.fromEntries(accounts.map((a) => [a.id, a])),
     [accounts]
   );
+
+  const summaryRows = useMemo(() => {
+    const allMap = Object.fromEntries(
+      analysis.accountsAll.map((a) => [a.id, a.balance])
+    );
+    return analysis.accountsAsOf.map((account) => {
+      const balanceAll = allMap[account.id] ?? account.balance;
+      return {
+        account,
+        balanceAsOf: account.balance,
+        balanceAll,
+        delta: balanceAll - account.balance,
+      };
+    });
+  }, [analysis]);
+
+  const hasFutureDelta = analysis.totalAll !== analysis.totalAsOf;
 
   const filteredTransfers = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -740,6 +768,106 @@ export function AccountsView({
           </CollapsibleContent>
         </Collapsible>
       </Card>
+
+      {accounts.length > 0 && (
+        <Card className="shadow-sm">
+          <Collapsible open={analysisOpen} onOpenChange={setAnalysisOpen}>
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <ChevronDown
+                      className={cn(
+                        "size-4 transition-transform",
+                        analysisOpen && "rotate-180"
+                      )}
+                    />
+                    Analisi Conti
+                  </Button>
+                </CollapsibleTrigger>
+                <span className="text-sm text-muted-foreground">
+                  al {formatDate(analysis.asOfISO)}
+                </span>
+              </div>
+            </div>
+
+            <CollapsibleContent>
+              <CardContent className="pt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Conto</TableHead>
+                      <TableHead className="text-right">Saldo attuale</TableHead>
+                      <TableHead className="text-right">
+                        Saldo con tutte le transazioni
+                      </TableHead>
+                      <TableHead className="text-right">Delta</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="bg-muted/40 font-medium">
+                      <TableCell>Totale</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAmount(analysis.totalAsOf, currency, locale)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatAmount(analysis.totalAll, currency, locale)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right tabular-nums",
+                          hasFutureDelta && analysis.totalAll - analysis.totalAsOf > 0
+                            ? "text-emerald-600"
+                            : hasFutureDelta && analysis.totalAll - analysis.totalAsOf < 0
+                              ? "text-rose-600"
+                              : ""
+                        )}
+                      >
+                        {formatAmount(
+                          analysis.totalAll - analysis.totalAsOf,
+                          currency,
+                          locale
+                        )}
+                      </TableCell>
+                    </TableRow>
+                    {summaryRows.map((row) => (
+                      <TableRow key={row.account.id}>
+                        <TableCell>
+                          <span className="flex items-center gap-2">
+                            <AccountIcon
+                              name={row.account.icon}
+                              className="size-3.5 text-muted-foreground"
+                            />
+                            {row.account.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatAmount(row.balanceAsOf, row.account.currency, locale)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatAmount(row.balanceAll, row.account.currency, locale)}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right tabular-nums",
+                            row.delta > 0
+                              ? "text-emerald-600"
+                              : row.delta < 0
+                                ? "text-rose-600"
+                                : ""
+                          )}
+                        >
+                          {formatAmount(row.delta, row.account.currency, locale)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
     </div>
   );
 }

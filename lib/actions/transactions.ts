@@ -252,6 +252,39 @@ export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string)
   }));
 }
 
+export async function getAccountsAnalysisSummary(year: number, asOfISO: string) {
+  const accounts = await getAccounts();
+  const raw = await getTransactionsForYear(year);
+  const expandedAll = expandRecurrences(raw, year);
+  const transfersAll = await getAccountTransfersForYear(year);
+
+  const {
+    calculateAccountBalance,
+    calculateTotalBalance,
+  } = await import("@/lib/utils/balance");
+
+  const expandedAsOf = expandedAll.filter((tx) => tx.date <= asOfISO);
+  const transfersAsOf = transfersAll.filter((tr) => tr.date <= asOfISO);
+
+  const accountsAsOf = accounts.map((account) => ({
+    ...account,
+    balance: calculateAccountBalance(account, expandedAsOf, transfersAsOf),
+  }));
+
+  const accountsAll = accounts.map((account) => ({
+    ...account,
+    balance: calculateAccountBalance(account, expandedAll, transfersAll),
+  }));
+
+  return {
+    accountsAsOf,
+    accountsAll,
+    totalAsOf: calculateTotalBalance(accounts, expandedAsOf, transfersAsOf),
+    totalAll: calculateTotalBalance(accounts, expandedAll, transfersAll),
+    asOfISO,
+  };
+}
+
 export async function getBudgetProgress(year: number, month: number) {
   const [budgets, categories, settings] = await Promise.all([
     import("@/lib/db/budgets").then((m) => m.getBudgets()),

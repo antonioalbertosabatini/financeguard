@@ -48,7 +48,6 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { ACCOUNT_ICON_FALLBACK } from "@/lib/constants/account-icons";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   wallet: Wallet,
@@ -98,7 +97,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   bus: Bus,
   bike: Bike,
   fuel: Fuel,
-  [ACCOUNT_ICON_FALLBACK]: Wallet,
 };
 
 type AccountIconProps = {
