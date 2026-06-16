@@ -1,6 +1,8 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { isUnlocked } from "@/lib/crypto/session";
 import { getAccounts } from "@/lib/db/accounts";
 import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getCategories } from "@/lib/db/categories";
@@ -88,6 +90,10 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
 }
 
 export async function getDashboardData(year: number) {
+  if (!isUnlocked()) {
+    redirect("/unlock");
+  }
+
   const [accounts, categories, settings, transfers] = await Promise.all([
     getAccounts(),
     getCategories(),

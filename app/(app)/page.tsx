@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { getDashboardData } from "@/lib/actions/transactions";
+import { isUnlocked } from "@/lib/crypto/session";
 import { currentYear } from "@/lib/utils/dates";
 
 export default async function DashboardPage({
@@ -7,6 +9,10 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ year?: string }>;
 }) {
+  if (!isUnlocked()) {
+    redirect("/unlock");
+  }
+
   const params = await searchParams;
   const year = params.year ? parseInt(params.year, 10) : currentYear();
   const data = await getDashboardData(year);
