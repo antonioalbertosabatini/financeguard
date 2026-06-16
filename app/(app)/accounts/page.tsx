@@ -1,8 +1,8 @@
 import { AccountsView } from "@/components/accounts/accounts-view";
 import { getAccountTransfers } from "@/lib/actions/account-transfers";
-import { getAccountsWithBalances } from "@/lib/actions/transactions";
+import { getAccountsWithBalancesAsOf } from "@/lib/actions/transactions";
 import { getSettings } from "@/lib/actions/settings";
-import { currentYear } from "@/lib/utils/dates";
+import { currentYear, todayISO } from "@/lib/utils/dates";
 
 export default async function AccountsPage({
   searchParams,
@@ -11,8 +11,10 @@ export default async function AccountsPage({
 }) {
   const params = await searchParams;
   const year = params.year ? parseInt(params.year, 10) : currentYear();
+  const nowYear = currentYear();
+  const asOfISO = year === nowYear ? todayISO() : `${year}-12-31`;
   const [accounts, settings, transfers] = await Promise.all([
-    getAccountsWithBalances(year),
+    getAccountsWithBalancesAsOf(year, asOfISO),
     getSettings(),
     getAccountTransfers(year),
   ]);

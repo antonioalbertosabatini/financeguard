@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   ChevronDown,
   Filter,
+  Shuffle,
   Pencil,
   Plus,
   Trash2,
@@ -93,6 +94,7 @@ export function AccountsView({
   const [transferNotes, setTransferNotes] = useState("");
 
   const [transfersOpen, setTransfersOpen] = useState(false);
+  const [transferFiltersOpen, setTransferFiltersOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterFrom, setFilterFrom] = useState<string>("all");
@@ -128,6 +130,25 @@ export function AccountsView({
     filterTo !== "all" ||
     query.trim() !== "";
 
+  const TYPE_STYLE: Record<Account["type"], { icon: string; badge: string }> = {
+    checking: {
+      icon: "bg-sky-500/10 text-sky-700",
+      badge: "bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
+    },
+    cash: {
+      icon: "bg-emerald-500/10 text-emerald-700",
+      badge: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
+    },
+    savings: {
+      icon: "bg-violet-500/10 text-violet-700",
+      badge: "bg-violet-500/10 text-violet-700 hover:bg-violet-500/10",
+    },
+    credit_card: {
+      icon: "bg-amber-500/10 text-amber-700",
+      badge: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10",
+    },
+  };
+
   function openCreate() {
     setEditing(null);
     setName("");
@@ -156,6 +177,37 @@ export function AccountsView({
     setToAccountId(accounts[1]?.id ?? "");
     setTransferNotes("");
     setTransferOpen(true);
+  }
+
+  function ensureDifferentAccounts(nextFrom: string, nextTo: string) {
+    if (!nextFrom || !nextTo || nextFrom !== nextTo) {
+      return { from: nextFrom, to: nextTo };
+    }
+    const alternative =
+      accounts.find((a) => a.id !== nextFrom)?.id ?? nextTo;
+    return { from: nextFrom, to: alternative || nextTo };
+  }
+
+  function handleChangeFromAccount(nextFrom: string) {
+    const ensured = ensureDifferentAccounts(nextFrom, toAccountId);
+    setFromAccountId(ensured.from);
+    if (ensured.to !== toAccountId) setToAccountId(ensured.to);
+  }
+
+  function handleChangeToAccount(nextTo: string) {
+    const ensured = ensureDifferentAccounts(fromAccountId, nextTo);
+    setToAccountId(ensured.to);
+    if (ensured.from !== fromAccountId) setFromAccountId(ensured.from);
+  }
+
+  function handleSwapAccounts() {
+    if (!fromAccountId || !toAccountId) return;
+    // Swap “atomico”: evita stati intermedi in cui un value non esiste tra le opzioni.
+    const nextFrom = toAccountId;
+    const nextTo = fromAccountId;
+    const ensured = ensureDifferentAccounts(nextFrom, nextTo);
+    setFromAccountId(ensured.from);
+    setToAccountId(ensured.to);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -216,18 +268,18 @@ export function AccountsView({
         description="Gestisci i tuoi conti"
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button onClick={openCreate}>
-              <Plus className="size-4" />
-              Nuovo conto
-            </Button>
             <Button
-              variant="outline"
+              className="shadow-sm"
               onClick={openTransfer}
               disabled={accounts.length < 2}
               title={accounts.length < 2 ? "Servono almeno 2 conti" : undefined}
             >
               <ArrowLeftRight className="size-4" />
               Trasferisci
+            </Button>
+            <Button variant="outline" onClick={openCreate}>
+              <Plus className="size-4" />
+              Nuovo conto
             </Button>
           </div>
         }
@@ -245,7 +297,16 @@ export function AccountsView({
             <Card key={account.id}>
               <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-start gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <div
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-lg border",
+                      account.balance > 0
+                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-200"
+                        : account.balance < 0
+                          ? "bg-rose-500/10 text-rose-700 border-rose-200"
+                          : TYPE_STYLE[account.type].icon
+                    )}
+                  >
                     <AccountIcon name={account.icon} className="size-5" />
                   </div>
                   <div>
@@ -273,7 +334,7 @@ export function AccountsView({
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold tabular-nums">
                   {formatAmount(account.balance, account.currency, locale)}
                 </p>
               </CardContent>
@@ -283,7 +344,7 @@ export function AccountsView({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifica conto" : "Nuovo conto"}</DialogTitle>
           </DialogHeader>
@@ -314,45 +375,49 @@ export function AccountsView({
             </div>
             <div className="space-y-2">
               <Label>Icona</Label>
-              <div className="grid grid-cols-6 gap-2">
-                {ACCOUNT_ICON_NAMES.map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    title={opt}
-                    onClick={() => setIcon(opt)}
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-lg border transition-colors",
-                      icon === opt
-                        ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2"
-                        : "border-border hover:bg-muted"
-                    )}
-                  >
-                    <AccountIcon name={opt} className="size-5" />
-                  </button>
-                ))}
+              <div className="max-h-60 overflow-y-auto rounded-lg border p-2">
+                <div className="grid grid-cols-6 gap-2">
+                  {ACCOUNT_ICON_NAMES.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      title={opt}
+                      onClick={() => setIcon(opt)}
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-lg border transition-colors",
+                        icon === opt
+                          ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2"
+                          : "border-border hover:bg-muted"
+                      )}
+                    >
+                      <AccountIcon name={opt} className="size-5" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="balance">
-                Saldo iniziale ({currencyInput.toUpperCase()})
-              </Label>
-              <Input
-                id="balance"
-                value={initialBalance}
-                onChange={(e) => setInitialBalance(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="currency">Valuta</Label>
-              <Input
-                id="currency"
-                value={currencyInput}
-                onChange={(e) => setCurrencyInput(e.target.value.toUpperCase())}
-                maxLength={3}
-                required
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="balance">
+                  Saldo iniziale ({currencyInput.toUpperCase()})
+                </Label>
+                <Input
+                  id="balance"
+                  value={initialBalance}
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currency">Valuta</Label>
+                <Input
+                  id="currency"
+                  value={currencyInput}
+                  onChange={(e) => setCurrencyInput(e.target.value.toUpperCase())}
+                  maxLength={3}
+                  required
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit">Salva</Button>
@@ -387,16 +452,16 @@ export function AccountsView({
                 required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
               <div className="space-y-2">
                 <Label>Da</Label>
-                <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                <Select value={fromAccountId} onValueChange={handleChangeFromAccount}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleziona conto" />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
+                      <SelectItem key={a.id} value={a.id} disabled={a.id === toAccountId}>
                         <span className="flex items-center gap-2">
                           <AccountIcon
                             name={a.icon}
@@ -409,15 +474,26 @@ export function AccountsView({
                   </SelectContent>
                 </Select>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="mb-3"
+                onClick={handleSwapAccounts}
+                disabled={!fromAccountId || !toAccountId}
+                title="Scambia conti"
+              >
+                <Shuffle className="size-4" />
+              </Button>
               <div className="space-y-2">
                 <Label>A</Label>
-                <Select value={toAccountId} onValueChange={setToAccountId}>
+                <Select value={toAccountId} onValueChange={handleChangeToAccount}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Seleziona conto" />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
+                      <SelectItem key={a.id} value={a.id} disabled={a.id === fromAccountId}>
                         <span className="flex items-center gap-2">
                           <AccountIcon
                             name={a.icon}
@@ -466,121 +542,136 @@ export function AccountsView({
                 {filteredTransfers.length}/{transfers.length}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Filter className="size-4" />
-              Filtri
-            </div>
+            <Collapsible open={transferFiltersOpen} onOpenChange={setTransferFiltersOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+                  <Filter className="size-4" />
+                  Filtri
+                  <ChevronDown
+                    className={cn(
+                      "size-4 transition-transform",
+                      transferFiltersOpen && "rotate-180"
+                    )}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent />
+            </Collapsible>
           </div>
 
           <CollapsibleContent>
             <CardContent className="space-y-4 pt-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Da data</Label>
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">A data</Label>
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Da</Label>
-                  <Select value={filterFrom} onValueChange={setFilterFrom}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tutti</SelectItem>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          <span className="flex items-center gap-2">
-                            <AccountIcon
-                              name={a.icon}
-                              className="size-3.5 text-muted-foreground"
-                            />
-                            {a.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">A</Label>
-                  <Select value={filterTo} onValueChange={setFilterTo}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tutti</SelectItem>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          <span className="flex items-center gap-2">
-                            <AccountIcon
-                              name={a.icon}
-                              className="size-3.5 text-muted-foreground"
-                            />
-                            {a.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5 lg:col-span-2">
-                  <Label className="text-xs text-muted-foreground">Cerca note</Label>
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="testo…"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Ordine</Label>
-                  <Select
-                    value={order}
-                    onValueChange={(v) => setOrder(v as typeof order)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">Più recenti</SelectItem>
-                      <SelectItem value="asc">Più vecchi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {hasActiveTransferFilters && (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm text-muted-foreground">
-                    Filtri attivi
+              <Collapsible open={transferFiltersOpen} onOpenChange={setTransferFiltersOpen}>
+                <CollapsibleContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Da data</Label>
+                      <Input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">A data</Label>
+                      <Input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Da</Label>
+                      <Select value={filterFrom} onValueChange={setFilterFrom}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tutti</SelectItem>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <span className="flex items-center gap-2">
+                                <AccountIcon
+                                  name={a.icon}
+                                  className="size-3.5 text-muted-foreground"
+                                />
+                                {a.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">A</Label>
+                      <Select value={filterTo} onValueChange={setFilterTo}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tutti</SelectItem>
+                          {accounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <span className="flex items-center gap-2">
+                                <AccountIcon
+                                  name={a.icon}
+                                  className="size-3.5 text-muted-foreground"
+                                />
+                                {a.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 lg:col-span-2">
+                      <Label className="text-xs text-muted-foreground">Cerca note</Label>
+                      <Input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="testo…"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Ordine</Label>
+                      <Select
+                        value={order}
+                        onValueChange={(v) => setOrder(v as typeof order)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="desc">Più recenti</SelectItem>
+                          <SelectItem value="asc">Più vecchi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setDateFrom("");
-                      setDateTo("");
-                      setFilterFrom("all");
-                      setFilterTo("all");
-                      setQuery("");
-                    }}
-                  >
-                    <X className="size-4" />
-                    Azzera
-                  </Button>
-                </div>
-              )}
+
+                  {hasActiveTransferFilters && (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm text-muted-foreground">
+                        Filtri attivi
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDateFrom("");
+                          setDateTo("");
+                          setFilterFrom("all");
+                          setFilterTo("all");
+                          setQuery("");
+                        }}
+                      >
+                        <X className="size-4" />
+                        Azzera
+                      </Button>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               {filteredTransfers.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">

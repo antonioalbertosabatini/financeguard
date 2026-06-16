@@ -237,6 +237,21 @@ export async function getAccountsWithBalances(year: number) {
   }));
 }
 
+export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string) {
+  const accounts = await getAccounts();
+  const raw = await getTransactionsForYear(year);
+  const expanded = expandRecurrences(raw, year).filter((tx) => tx.date <= asOfISO);
+  const transfers = (await getAccountTransfersForYear(year)).filter(
+    (tr) => tr.date <= asOfISO
+  );
+  const { calculateAccountBalance } = await import("@/lib/utils/balance");
+
+  return accounts.map((account) => ({
+    ...account,
+    balance: calculateAccountBalance(account, expanded, transfers),
+  }));
+}
+
 export async function getBudgetProgress(year: number, month: number) {
   const [budgets, categories, settings] = await Promise.all([
     import("@/lib/db/budgets").then((m) => m.getBudgets()),
