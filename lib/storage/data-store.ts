@@ -11,7 +11,7 @@
  * dataset e vault restano in campi interni non esposti a React.
  */
 import { useSyncExternalStore } from "react";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { getPasswordError } from "@/lib/constants";
 import { verifyVaultPasswordWeb, type VaultFile } from "@/lib/crypto/web-crypto";
 import type { StorageAdapter } from "@/lib/storage/adapter";
 import {
@@ -68,10 +68,7 @@ export function initStore(): Promise<void> {
 }
 
 function ensureValidPassword(password: string): string | null {
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return `La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`;
-  }
-  return null;
+  return getPasswordError(password);
 }
 
 export type AuthError = { error: string };

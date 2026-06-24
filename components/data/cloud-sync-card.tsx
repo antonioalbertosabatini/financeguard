@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getPasswordError } from "@/lib/constants";
 import { persistNow } from "@/lib/storage/data-store";
 import {
   hasCloudSession,
@@ -69,8 +70,12 @@ export function CloudSyncCard() {
     }
   }
 
+  const passwordError = getPasswordError(password);
+  const credentialsInvalid = !email.trim() || passwordError !== null;
+
   const handleSignIn = () =>
     withBusy(async () => {
+      if (passwordError) throw new Error(passwordError);
       await signInCloud(email, password);
       setSignedIn(true);
       setPassword("");
@@ -79,6 +84,7 @@ export function CloudSyncCard() {
 
   const handleSignUp = () =>
     withBusy(async () => {
+      if (passwordError) throw new Error(passwordError);
       await signUpCloud(email, password);
       toast.success(
         "Account cloud creato. Controlla l'email se è richiesta la conferma, poi accedi."
@@ -151,17 +157,21 @@ export function CloudSyncCard() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={password.length > 0 && !!passwordError}
               />
+              {password.length > 0 && passwordError && (
+                <p className="text-xs text-destructive">{passwordError}</p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={busy || credentialsInvalid}>
                 <LogIn className="size-4" />
                 Accedi
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                disabled={busy}
+                disabled={busy || credentialsInvalid}
                 onClick={handleSignUp}
               >
                 Crea account cloud

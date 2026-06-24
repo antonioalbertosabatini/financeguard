@@ -13,11 +13,23 @@
  *
  * NB: l'autenticazione usa `authHash` (vedi auth-derive), non la master password.
  */
+import { getPasswordError } from "@/lib/constants";
 import { ConflictError } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { deriveAuthHash, normalizeEmail } from "@/lib/sync/auth-derive";
 import { getSupabase } from "@/lib/sync/supabase-client";
+
+/**
+ * Guardia condivisa: una master password vuota o troppo corta non deve MAI
+ * generare una credenziale cloud (ne' in sign-up ne' in sign-in). authHash e'
+ * sempre lungo 64 hex, quindi Supabase non rifiuterebbe da solo le password
+ * deboli: la validazione va fatta qui, prima della derivazione.
+ */
+function assertValidPassword(password: string): void {
+  const error = getPasswordError(password);
+  if (error) throw new Error(error);
+}
 
 const BUCKET = "vaults";
 const OBJECT = "bundle.fgv";
@@ -41,6 +53,7 @@ export async function signUpCloud(
   email: string,
   password: string
 ): Promise<void> {
+  assertValidPassword(password);
   const supabase = getSupabase();
   const authHash = deriveAuthHash(email, password);
   const { error } = await supabase.auth.signUp({
@@ -54,6 +67,7 @@ export async function signInCloud(
   email: string,
   password: string
 ): Promise<void> {
+  assertValidPassword(password);
   const supabase = getSupabase();
   const authHash = deriveAuthHash(email, password);
   const { error } = await supabase.auth.signInWithPassword({
@@ -72,6 +86,7 @@ export async function updateCloudAuth(
   email: string,
   newPassword: string
 ): Promise<void> {
+  assertValidPassword(newPassword);
   const supabase = getSupabase();
   const authHash = deriveAuthHash(email, newPassword);
   const { error } = await supabase.auth.updateUser({ password: authHash });

@@ -2,6 +2,19 @@
 // agli attacchi offline su un vault esportato o sincronizzato sul cloud.
 export const MIN_PASSWORD_LENGTH = 12;
 
+/**
+ * Regola unica di validazione della master password, usata sia in locale
+ * (data-store) sia per il cloud (auth Supabase): ritorna un messaggio d'errore
+ * o null se la password e' valida. Centralizzarla evita che un percorso (es. il
+ * sign-up cloud) accetti password vuote/troppo corte.
+ */
+export function getPasswordError(password: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`;
+  }
+  return null;
+}
+
 // Nomi logici dei file dati usati da export/import (ZIP) per restare
 // compatibili con i backup creati dalla versione server.
 export const ROOT_DATA_FILES = [
