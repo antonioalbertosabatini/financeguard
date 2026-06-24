@@ -13,15 +13,43 @@ import {
   Unlock,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { CloudSyncCard } from "@/components/data/cloud-sync-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  buildEncryptedBackup,
+  buildPlainBackup,
+  readEncryptedBackup,
+  readPlainBackup,
+} from "@/lib/storage/backup-client";
+import {
+  getDataset,
+  replaceDataset,
+  replaceDatasetWithPassword,
+} from "@/lib/storage/data-store";
 
 const MIN_PASSWORD_LENGTH = 8;
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function DataView() {
   const [importing, setImporting] = useState(false);
+  const [exportingPlain, setExportingPlain] = useState(false);
 
   const [exportPassword, setExportPassword] = useState("");
   const [exportConfirm, setExportConfirm] = useState("");
@@ -30,6 +58,19 @@ export function DataView() {
   const [encFile, setEncFile] = useState<File | null>(null);
   const [importPassword, setImportPassword] = useState("");
   const [importingEnc, setImportingEnc] = useState(false);
+
+  async function handlePlainExport() {
+    setExportingPlain(true);
+    try {
+      const blob = await buildPlainBackup(getDataset());
+      downloadBlob(blob, `financeguard-export-${today()}.zip`);
+      toast.success("Dati esportati");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore export");
+    } finally {
+      setExportingPlain(false);
+    }
+  }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -42,15 +83,9 @@ export function DataView() {
 
     setImporting(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/import", { method: "POST", body: formData });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Import fallito");
-      }
+      const dataset = await readPlainBackup(file);
+      await replaceDataset(dataset);
       toast.success("Dati importati con successo");
-      window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore import");
     } finally {
@@ -74,26 +109,8 @@ export function DataView() {
 
     setExporting(true);
     try {
-      const res = await fetch("/api/export/encrypted", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: exportPassword }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Export fallito");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `financeguard-backup-criptato-${new Date()
-        .toISOString()
-        .slice(0, 10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const blob = await buildEncryptedBackup(getDataset(), exportPassword);
+      downloadBlob(blob, `financeguard-backup-criptato-${today()}.zip`);
       toast.success("Backup criptato creato");
       setExportPassword("");
       setExportConfirm("");
@@ -124,19 +141,13 @@ export function DataView() {
 
     setImportingEnc(true);
     try {
-      const formData = new FormData();
-      formData.append("file", encFile);
-      formData.append("password", importPassword);
-      const res = await fetch("/api/import/encrypted", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? "Import fallito");
-      }
-      toast.success("Backup importato. La password di accesso è ora quella del backup.");
-      window.location.reload();
+      const dataset = await readEncryptedBackup(encFile, importPassword);
+      await replaceDatasetWithPassword(dataset, importPassword);
+      toast.success(
+        "Backup importato. La password di accesso è ora quella del backup."
+      );
+      setEncFile(null);
+      setImportPassword("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore import");
     } finally {
@@ -151,6 +162,8 @@ export function DataView() {
         description="Esporta e importa i tuoi dati, in chiaro o criptati"
       />
 
+      <CloudSyncCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -163,11 +176,9 @@ export function DataView() {
             Scarica tutti i dati in un archivio ZIP leggibile, senza
             crittografia.
           </p>
-          <Button asChild>
-            <a href="/api/export" download>
-              <Download className="size-4" />
-              Esporta in chiaro
-            </a>
+          <Button onClick={handlePlainExport} disabled={exportingPlain}>
+            <Download className="size-4" />
+            {exportingPlain ? "Esportazione…" : "Esporta in chiaro"}
           </Button>
         </CardContent>
       </Card>

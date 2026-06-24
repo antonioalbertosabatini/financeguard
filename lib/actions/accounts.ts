@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createAccount as dbCreateAccount,
   deleteAccount as dbDeleteAccount,
@@ -20,18 +17,12 @@ export async function getAccounts() {
 
 export async function createAccount(data: AccountInput) {
   const parsed = accountInputSchema.parse(data);
-  const account = await dbCreateAccount(parsed);
-  revalidatePath("/accounts");
-  revalidatePath("/");
-  return account;
+  return dbCreateAccount(parsed);
 }
 
 export async function updateAccount(id: string, data: AccountInput) {
   const parsed = accountInputSchema.parse(data);
-  const account = await dbUpdateAccount(id, parsed);
-  revalidatePath("/accounts");
-  revalidatePath("/");
-  return account;
+  return dbUpdateAccount(id, parsed);
 }
 
 export async function deleteAccount(id: string) {
@@ -47,6 +38,4 @@ export async function deleteAccount(id: string) {
     throw new Error("Impossibile eliminare: conto usato in trasferimenti");
   }
   await dbDeleteAccount(id);
-  revalidatePath("/accounts");
-  revalidatePath("/");
 }

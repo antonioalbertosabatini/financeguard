@@ -1,11 +1,11 @@
-import path from "path";
-import fs from "fs/promises";
-import {
-  generateId,
-  getDb,
-  getYearFromDate,
-} from "@/lib/db/index";
-import { ACCOUNT_TRANSFERS_DIR } from "@/lib/constants";
+/**
+ * Trasferimenti tra conti nel data layer client-side. Come gli altri moduli di
+ * lib/db, operano sul Dataset in memoria (lib/storage/data-store) invece che su
+ * file: i trasferimenti vivono in dataset.accountTransfersByYear, partizionati
+ * per anno come le transazioni.
+ */
+import { commit, getDataset } from "@/lib/storage/data-store";
+import { generateId, getYearFromDate } from "@/lib/db/index";
 import {
   accountTransferSchema,
   accountTransfersFileSchema,
@@ -13,40 +13,37 @@ import {
   type AccountTransferInput,
 } from "@/lib/schemas/account-transfer";
 
-const DEFAULT = { transfers: [] as AccountTransfer[] };
-
-export function getAccountTransfersFilePath(year: number): string {
-  return path.join(ACCOUNT_TRANSFERS_DIR, `${year}.json`);
+/** Trasferimenti dell'anno (array vuoto se l'anno non esiste ancora). */
+function getYearTransfers(year: number): AccountTransfer[] {
+  return getDataset().accountTransfersByYear[String(year)] ?? [];
 }
 
+/** Sostituisce i trasferimenti dell'anno e segnala la mutazione (persist). */
+function setYearTransfers(year: number, transfers: AccountTransfer[]): void {
+  getDataset().accountTransfersByYear[String(year)] = transfers;
+  commit();
+}
+
+/** Anni che hanno trasferimenti nel dataset, dal piu' recente. */
 export async function listAccountTransferYears(): Promise<number[]> {
-  try {
-    const files = await fs.readdir(ACCOUNT_TRANSFERS_DIR);
-    return files
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => parseInt(f.replace(".json", ""), 10))
-      .filter((y) => !Number.isNaN(y))
-      .sort((a, b) => b - a);
-  } catch {
-    return [];
-  }
+  return Object.keys(getDataset().accountTransfersByYear)
+    .map((year) => parseInt(year, 10))
+    .filter((year) => !Number.isNaN(year))
+    .sort((a, b) => b - a);
 }
 
 export async function getAccountTransfersForYear(
   year: number
 ): Promise<AccountTransfer[]> {
-  const filePath = getAccountTransfersFilePath(year);
-  const db = await getDb(filePath, DEFAULT);
-  await db.read();
-  return accountTransfersFileSchema.parse(db.data).transfers;
+  return accountTransfersFileSchema.parse({ transfers: getYearTransfers(year) })
+    .transfers;
 }
 
 export async function getAllAccountTransfers(): Promise<AccountTransfer[]> {
   const years = await listAccountTransferYears();
   const all: AccountTransfer[] = [];
   for (const year of years) {
-    const items = await getAccountTransfersForYear(year);
-    all.push(...items);
+    all.push(...(await getAccountTransfersForYear(year)));
   }
   return all;
 }
@@ -60,11 +57,7 @@ export async function createAccountTransfer(
     id: generateId("trf"),
   });
   const year = getYearFromDate(transfer.date);
-  const filePath = getAccountTransfersFilePath(year);
-  const db = await getDb(filePath, DEFAULT);
-  await db.read();
-  db.data.transfers.push(transfer);
-  await db.write();
+  setYearTransfers(year, [...getYearTransfers(year), transfer]);
   return transfer;
 }
 
@@ -73,10 +66,8 @@ export async function updateAccountTransfer(
   year: number,
   input: AccountTransferInput
 ): Promise<AccountTransfer> {
-  const oldFilePath = getAccountTransfersFilePath(year);
-  const db = await getDb(oldFilePath, DEFAULT);
-  await db.read();
-  const index = db.data.transfers.findIndex((t) => t.id === id);
+  const list = [...getYearTransfers(year)];
+  const index = list.findIndex((t) => t.id === id);
   if (index === -1) throw new Error("Trasferimento non trovato");
 
   const updated = accountTransferSchema.parse({
@@ -87,18 +78,13 @@ export async function updateAccountTransfer(
   const newYear = getYearFromDate(updated.date);
 
   if (newYear === year) {
-    db.data.transfers[index] = updated;
-    await db.write();
+    list[index] = updated;
+    setYearTransfers(year, list);
   } else {
-    db.data.transfers.splice(index, 1);
-    await db.write();
-    const newFilePath = getAccountTransfersFilePath(newYear);
-    const newDb = await getDb(newFilePath, DEFAULT);
-    await newDb.read();
-    newDb.data.transfers.push(updated);
-    await newDb.write();
+    list.splice(index, 1);
+    setYearTransfers(year, list);
+    setYearTransfers(newYear, [...getYearTransfers(newYear), updated]);
   }
-
   return updated;
 }
 
@@ -106,10 +92,8 @@ export async function deleteAccountTransfer(
   id: string,
   year: number
 ): Promise<void> {
-  const filePath = getAccountTransfersFilePath(year);
-  const db = await getDb(filePath, DEFAULT);
-  await db.read();
-  db.data.transfers = db.data.transfers.filter((t) => t.id !== id);
-  await db.write();
+  setYearTransfers(
+    year,
+    getYearTransfers(year).filter((t) => t.id !== id)
+  );
 }
-

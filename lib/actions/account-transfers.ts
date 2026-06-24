@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createAccountTransfer as dbCreateAccountTransfer,
   deleteAccountTransfer as dbDeleteAccountTransfer,
@@ -18,10 +15,7 @@ export async function getAccountTransfers(year: number) {
 
 export async function createAccountTransfer(data: AccountTransferInput) {
   const parsed = accountTransferInputSchema.parse(data);
-  const transfer = await dbCreateAccountTransfer(parsed);
-  revalidatePath("/accounts");
-  revalidatePath("/");
-  return transfer;
+  return dbCreateAccountTransfer(parsed);
 }
 
 export async function updateAccountTransfer(
@@ -30,15 +24,9 @@ export async function updateAccountTransfer(
   data: AccountTransferInput
 ) {
   const parsed = accountTransferInputSchema.parse(data);
-  const transfer = await dbUpdateAccountTransfer(id, year, parsed);
-  revalidatePath("/accounts");
-  revalidatePath("/");
-  return transfer;
+  return dbUpdateAccountTransfer(id, year, parsed);
 }
 
 export async function deleteAccountTransfer(id: string, year: number) {
   await dbDeleteAccountTransfer(id, year);
-  revalidatePath("/accounts");
-  revalidatePath("/");
 }
-

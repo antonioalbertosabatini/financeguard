@@ -1,21 +1,16 @@
-import { redirect } from "next/navigation";
+"use client";
+
 import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { getDashboardData } from "@/lib/actions/transactions";
-import { isUnlocked } from "@/lib/crypto/session";
-import { currentYear } from "@/lib/utils/dates";
+import { useAsyncData } from "@/lib/storage/use-async-data";
+import { useYear } from "@/providers/year-provider";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  if (!isUnlocked()) {
-    redirect("/unlock");
-  }
+export default function DashboardPage() {
+  const { year } = useYear();
+  const { data } = useAsyncData(() => getDashboardData(year), [year]);
 
-  const params = await searchParams;
-  const year = params.year ? parseInt(params.year, 10) : currentYear();
-  const data = await getDashboardData(year);
+  if (!data) return <FullScreenLoader />;
 
   return (
     <DashboardView

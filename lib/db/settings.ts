@@ -1,25 +1,13 @@
-import path from "path";
-import { DATA_DIR } from "@/lib/constants";
-import {
-  DEFAULT_SETTINGS,
-  settingsSchema,
-  type Settings,
-} from "@/lib/schemas/settings";
-import { getDb } from "@/lib/db/index";
-
-const FILE_PATH = path.join(DATA_DIR, "settings.json");
+import { commit, getDataset } from "@/lib/storage/data-store";
+import { settingsSchema, type Settings } from "@/lib/schemas/settings";
 
 export async function getSettings(): Promise<Settings> {
-  const db = await getDb(FILE_PATH, DEFAULT_SETTINGS);
-  await db.read();
-  return settingsSchema.parse(db.data);
+  return settingsSchema.parse(getDataset().settings);
 }
 
 export async function updateSettings(input: Settings): Promise<Settings> {
   const parsed = settingsSchema.parse(input);
-  const db = await getDb(FILE_PATH, DEFAULT_SETTINGS);
-  await db.read();
-  db.data = parsed;
-  await db.write();
+  getDataset().settings = parsed;
+  commit();
   return parsed;
 }

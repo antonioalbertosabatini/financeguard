@@ -1,25 +1,20 @@
 /**
- * Configurazione Capacitor (FASE 2 - app native desktop/mobile).
+ * Configurazione Capacitor per le app native iOS/Android di FinanceGuard.
  *
- * Questo file e' un TEMPLATE: non e' operativo finche' non si installano i
- * pacchetti Capacitor e non si genera un build client statico. Vedi la sezione
- * "Roadmap multi-piattaforma" nel README per i passaggi completi.
+ * L'app e' un export statico Next.js (cartella `out/`, vedi `webDir`) 100%
+ * client-side: la WebView carica i file locali, il vault e' cifrato lato client
+ * (lib/crypto/web-crypto) e persiste in IndexedDB (lib/storage/idb-adapter).
  *
- * Dopo `npm i -D @capacitor/cli @capacitor/core`, sostituisci l'interfaccia
- * locale qui sotto con: `import type { CapacitorConfig } from "@capacitor/cli"`.
+ * `androidScheme: "https"` serve a far girare la WebView Android in un secure
+ * context, requisito di Web Crypto (`crypto.subtle`).
+ *
+ * Flusso: `npm run build` -> `npx cap sync` -> `npx cap open ios|android`.
  */
-interface CapacitorConfig {
-  appId: string;
-  appName: string;
-  webDir: string;
-  server?: { androidScheme?: string };
-}
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.financeguard",
   appName: "FinanceGuard",
-  // Cartella dell'export client statico (richiede output: "export" e un data
-  // layer interamente lato client - vedi lib/storage e lib/crypto/web-crypto).
   webDir: "out",
   server: { androidScheme: "https" },
 };

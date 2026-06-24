@@ -1,23 +1,29 @@
+"use client";
+
 import { ReportsView } from "@/components/reports/reports-view";
-import {
-  getAnnualReport,
-  getMonthlyReport,
-} from "@/lib/actions/transactions";
-import { currentMonth, currentYear } from "@/lib/utils/dates";
+import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { getAnnualReport, getMonthlyReport } from "@/lib/actions/transactions";
+import { useAsyncData } from "@/lib/storage/use-async-data";
+import { useYear } from "@/providers/year-provider";
+import { currentMonth } from "@/lib/utils/dates";
 
-export default async function ReportsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  const params = await searchParams;
-  const year = params.year ? parseInt(params.year, 10) : currentYear();
+export default function ReportsPage() {
+  const { year } = useYear();
   const month = currentMonth();
+  const { data } = useAsyncData(
+    async () => {
+      const [monthlyReport, annualReport] = await Promise.all([
+        getMonthlyReport(year, month),
+        getAnnualReport(year),
+      ]);
+      return { monthlyReport, annualReport };
+    },
+    [year, month]
+  );
 
-  const [monthlyReport, annualReport] = await Promise.all([
-    getMonthlyReport(year, month),
-    getAnnualReport(year),
-  ]);
+  if (!data) return <FullScreenLoader />;
+
+  const { monthlyReport, annualReport } = data;
 
   return (
     <ReportsView
