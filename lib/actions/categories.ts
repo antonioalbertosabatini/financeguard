@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   createCategory as dbCreateCategory,
   deleteCategory as dbDeleteCategory,
@@ -19,18 +16,12 @@ export async function getCategories() {
 
 export async function createCategory(data: CategoryInput) {
   const parsed = categoryInputSchema.parse(data);
-  const category = await dbCreateCategory(parsed);
-  revalidatePath("/categories");
-  revalidatePath("/");
-  return category;
+  return dbCreateCategory(parsed);
 }
 
 export async function updateCategory(id: string, data: CategoryInput) {
   const parsed = categoryInputSchema.parse(data);
-  const category = await dbUpdateCategory(id, parsed);
-  revalidatePath("/categories");
-  revalidatePath("/");
-  return category;
+  return dbUpdateCategory(id, parsed);
 }
 
 export async function deleteCategory(id: string) {
@@ -39,6 +30,4 @@ export async function deleteCategory(id: string) {
     throw new Error("Impossibile eliminare: categoria usata in transazioni");
   }
   await dbDeleteCategory(id);
-  revalidatePath("/categories");
-  revalidatePath("/");
 }

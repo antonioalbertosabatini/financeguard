@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ function passwordStrength(pw: string): number {
 export function SetupForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const strength = passwordStrength(password);
@@ -93,11 +95,34 @@ export function SetupForm() {
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <p className="text-xs text-muted-foreground">
-            Usa almeno {MIN_PASSWORD_LENGTH} caratteri. Conserva la password con
-            cura: senza di essa i dati non sono recuperabili.
-          </p>
-          <Button type="submit" className="w-full" disabled={pending}>
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">Nessun recupero possibile</p>
+              <p>
+                FinanceGuard è zero-knowledge: la password non è memorizzata da
+                nessuna parte, nemmeno sul cloud. Se la dimentichi, i dati sono
+                persi per sempre. Usa almeno {MIN_PASSWORD_LENGTH} caratteri,
+                conservala con cura ed esporta regolarmente un backup criptato.
+              </p>
+            </div>
+          </div>
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+            />
+            <span>
+              Ho capito: se perdo la password, perdo l&apos;accesso ai miei dati.
+            </span>
+          </label>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={pending || !acknowledged}
+          >
             {pending ? "Creazione…" : "Imposta password"}
           </Button>
         </form>

@@ -1,27 +1,35 @@
+"use client";
+
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
+import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAccounts } from "@/lib/actions/accounts";
 import { getCategories } from "@/lib/actions/categories";
 import { getAvailableTags } from "@/lib/actions/transactions";
-import { currentYear } from "@/lib/utils/dates";
+import { useAsyncData } from "@/lib/storage/use-async-data";
+import { useYear } from "@/providers/year-provider";
 
-export default async function AddPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  const params = await searchParams;
-  const year = params.year ? parseInt(params.year, 10) : currentYear();
-  const yearQuery = params.year ? `?year=${params.year}` : "";
-  const [accounts, categories, availableTags] = await Promise.all([
-    getAccounts(),
-    getCategories(),
-    getAvailableTags(year),
-  ]);
+export default function AddPage() {
+  const { year } = useYear();
+  const yearQuery = `?year=${year}`;
+  const { data } = useAsyncData(
+    async () => {
+      const [accounts, categories, availableTags] = await Promise.all([
+        getAccounts(),
+        getCategories(),
+        getAvailableTags(year),
+      ]);
+      return { accounts, categories, availableTags };
+    },
+    [year]
+  );
 
+  if (!data) return <FullScreenLoader />;
+
+  const { accounts, categories, availableTags } = data;
   const hasExpenseCategories = categories.some((c) => c.type === "expense");
   const hasIncomeCategories = categories.some((c) => c.type === "income");
 

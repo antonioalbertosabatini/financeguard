@@ -1,14 +1,22 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SetupForm } from "@/components/auth/setup-form";
-import { vaultExists } from "@/lib/crypto/vault";
+import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { useDataStore } from "@/lib/storage/data-store";
 
-export const dynamic = "force-dynamic";
+export default function SetupPage() {
+  const { status } = useDataStore();
+  const router = useRouter();
 
-export default async function SetupPage() {
-  if (await vaultExists()) {
-    redirect("/unlock");
-  }
+  useEffect(() => {
+    if (status === "unlocked") router.replace("/");
+    else if (status === "locked") router.replace("/unlock");
+  }, [status, router]);
+
+  if (status !== "needs-setup") return <FullScreenLoader />;
 
   return (
     <AuthShell

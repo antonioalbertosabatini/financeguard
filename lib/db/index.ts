@@ -1,128 +1,45 @@
-import crypto from "crypto";
-import fs from "fs/promises";
-import path from "path";
-import { Low, type Adapter } from "lowdb";
-import {
-  ACCOUNT_TRANSFERS_DIR,
-  DATA_DIR,
-  TMP_DIR,
-  TRANSACTIONS_DIR,
-} from "@/lib/constants";
-import { decryptJson, encryptJson } from "@/lib/crypto/cipher";
-import { getSessionKey } from "@/lib/crypto/session";
-import { markDataWritten } from "@/lib/db/sync-guard";
-
-export async function ensureDataDir(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.mkdir(TRANSACTIONS_DIR, { recursive: true });
-  await fs.mkdir(ACCOUNT_TRANSFERS_DIR, { recursive: true });
-}
-
-export async function ensureFile<T extends object>(
-  filePath: string,
-  defaultData: T
-): Promise<void> {
-  await ensureDataDir();
-  try {
-    await fs.access(filePath);
-  } catch {
-    await writeJsonAtomic(filePath, defaultData);
-  }
-}
-
 /**
- * Scrittura robusta rispetto alla sincronizzazione cloud: il file temporaneo
- * viene creato in una sottocartella dedicata (stesso volume di DATA_DIR),
- * forzato su disco con fsync e poi spostato in modo atomico con rename. Questo
- * riduce il rischio che OneDrive sincronizzi un file parziale. Non incrementa
- * la revisione: usala per scritture "raw" (vault, metadati).
+ * Helper del data layer client-side. Prima questo modulo leggeva/scriveva file
+ * cifrati su disco (fs + lowdb); ora i moduli di lib/db operano sul Dataset in
+ * memoria gestito da lib/storage/data-store, che pensa lui a cifrare e persistere
+ * il bundle. Qui restano solo le utility condivise (id, anno, accesso alle
+ * transazioni per anno).
  */
-export async function writeFileRobust(
-  filePath: string,
-  content: string
-): Promise<void> {
-  await fs.mkdir(TMP_DIR, { recursive: true });
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const tempPath = path.join(
-    TMP_DIR,
-    `${path.basename(filePath)}.${crypto.randomUUID()}.tmp`
-  );
-  const fh = await fs.open(tempPath, "w");
-  try {
-    await fh.writeFile(content, "utf-8");
-    await fh.sync();
-  } finally {
-    await fh.close();
-  }
-  await fs.rename(tempPath, filePath);
-}
+import { commit, getDataset } from "@/lib/storage/data-store";
+import type { Transaction } from "@/lib/schemas/transaction";
 
-export async function writeJsonAtomic<T>(
-  filePath: string,
-  data: T
-): Promise<void> {
-  const content = encryptJson(data, getSessionKey());
-  await writeFileRobust(filePath, content);
-  await markDataWritten();
-}
-
-export async function readJsonFile<T>(filePath: string): Promise<T> {
-  const content = await fs.readFile(filePath, "utf-8");
-  return decryptJson<T>(content, getSessionKey());
-}
-
-class EncryptedAdapter<T> implements Adapter<T> {
-  constructor(
-    private readonly filePath: string,
-    private readonly defaultData: T
-  ) {}
-
-  async read(): Promise<T | null> {
-    let content: string;
-    try {
-      content = await fs.readFile(this.filePath, "utf-8");
-    } catch {
-      return null;
-    }
-    if (content.trim() === "") return this.defaultData;
-    return decryptJson<T>(content, getSessionKey());
-  }
-
-  async write(data: T): Promise<void> {
-    await writeJsonAtomic(this.filePath, data);
-  }
-}
-
-export async function getDb<T extends object>(
-  filePath: string,
-  defaultData: T
-) {
-  await ensureFile(filePath, defaultData);
-  return new Low<T>(new EncryptedAdapter<T>(filePath, defaultData), defaultData);
+export function generateId(prefix: string): string {
+  const uuid =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}_${uuid.slice(0, 8)}`;
 }
 
 export function getYearFromDate(date: string): number {
   return parseInt(date.slice(0, 4), 10);
 }
 
-export function getTransactionFilePath(year: number): string {
-  return path.join(TRANSACTIONS_DIR, `${year}.json`);
-}
-
+/** Anni che hanno transazioni nel dataset, dal piu' recente. */
 export async function listTransactionYears(): Promise<number[]> {
-  await ensureDataDir();
-  try {
-    const files = await fs.readdir(TRANSACTIONS_DIR);
-    return files
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => parseInt(f.replace(".json", ""), 10))
-      .filter((y) => !Number.isNaN(y))
-      .sort((a, b) => b - a);
-  } catch {
-    return [];
-  }
+  const dataset = getDataset();
+  return Object.keys(dataset.transactionsByYear)
+    .map((year) => parseInt(year, 10))
+    .filter((year) => !Number.isNaN(year))
+    .sort((a, b) => b - a);
 }
 
-export function generateId(prefix: string): string {
-  return `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
+/** Transazioni dell'anno (array vuoto se l'anno non esiste ancora). */
+export function getYearTransactions(year: number): Transaction[] {
+  return getDataset().transactionsByYear[String(year)] ?? [];
+}
+
+/**
+ * Sostituisce le transazioni dell'anno e segnala la mutazione (persist con
+ * debounce). L'anno resta presente anche se l'array e' vuoto, coerentemente con
+ * il vecchio comportamento a file (un anno svuotato restava elencato).
+ */
+export function setYearTransactions(year: number, transactions: Transaction[]): void {
+  getDataset().transactionsByYear[String(year)] = transactions;
+  commit();
 }

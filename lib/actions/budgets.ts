@@ -1,6 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
 import {
   deleteBudget as dbDeleteBudget,
   getBudgets as dbGetBudgets,
@@ -28,22 +25,14 @@ async function validateBudgetInput(data: BudgetInput) {
 
 export async function upsertBudget(data: BudgetInput) {
   const parsed = await validateBudgetInput(data);
-  const budget = await dbUpsertBudget(parsed);
-  revalidatePath("/budget");
-  revalidatePath("/");
-  return budget;
+  return dbUpsertBudget(parsed);
 }
 
 export async function updateBudget(id: string, data: BudgetInput) {
   const parsed = await validateBudgetInput(data);
-  const budget = await dbUpdateBudget(id, parsed);
-  revalidatePath("/budget");
-  revalidatePath("/");
-  return budget;
+  return dbUpdateBudget(id, parsed);
 }
 
 export async function deleteBudget(id: string) {
   await dbDeleteBudget(id);
-  revalidatePath("/budget");
-  revalidatePath("/");
 }

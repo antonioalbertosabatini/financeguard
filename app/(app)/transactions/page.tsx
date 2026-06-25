@@ -1,35 +1,42 @@
+"use client";
+
 import { TransactionsView } from "@/components/transactions/transactions-view";
+import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { getAccounts } from "@/lib/actions/accounts";
 import { getCategories } from "@/lib/actions/categories";
 import { getSettings } from "@/lib/actions/settings";
 import { getAvailableTags, getTransactions } from "@/lib/actions/transactions";
-import { currentYear } from "@/lib/utils/dates";
+import { useAsyncData } from "@/lib/storage/use-async-data";
+import { useYear } from "@/providers/year-provider";
 
-export default async function TransactionsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ year?: string }>;
-}) {
-  const params = await searchParams;
-  const year = params.year ? parseInt(params.year, 10) : currentYear();
-  const [transactions, accounts, categories, settings, availableTags] =
-    await Promise.all([
-    getTransactions(year),
-    getAccounts(),
-    getCategories(),
-    getSettings(),
-    getAvailableTags(year),
-  ]);
+export default function TransactionsPage() {
+  const { year } = useYear();
+  const { data } = useAsyncData(
+    async () => {
+      const [transactions, accounts, categories, settings, availableTags] =
+        await Promise.all([
+          getTransactions(year),
+          getAccounts(),
+          getCategories(),
+          getSettings(),
+          getAvailableTags(year),
+        ]);
+      return { transactions, accounts, categories, settings, availableTags };
+    },
+    [year]
+  );
+
+  if (!data) return <FullScreenLoader />;
 
   return (
     <TransactionsView
-      transactions={transactions}
-      accounts={accounts}
-      categories={categories}
-      availableTags={availableTags}
+      transactions={data.transactions}
+      accounts={data.accounts}
+      categories={data.categories}
+      availableTags={data.availableTags}
       year={year}
-      currency={settings.defaultCurrency}
-      locale={settings.locale}
+      currency={data.settings.defaultCurrency}
+      locale={data.settings.locale}
     />
   );
 }

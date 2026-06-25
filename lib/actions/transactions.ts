@@ -1,8 +1,3 @@
-"use server";
-
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
-import { isUnlocked } from "@/lib/crypto/session";
 import { getAccounts } from "@/lib/db/accounts";
 import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getCategories } from "@/lib/db/categories";
@@ -51,13 +46,7 @@ export async function getExpandedTransactions(
 
 export async function createTransaction(data: TransactionInput) {
   const parsed = transactionInputSchema.parse(data);
-  const tx = await dbCreateTransaction(parsed);
-  revalidatePath("/");
-  revalidatePath("/transactions");
-  revalidatePath("/add");
-  revalidatePath("/reports");
-  revalidatePath("/budget");
-  return tx;
+  return dbCreateTransaction(parsed);
 }
 
 export async function updateTransaction(
@@ -66,34 +55,18 @@ export async function updateTransaction(
   data: TransactionInput
 ) {
   const parsed = transactionInputSchema.parse(data);
-  const tx = await dbUpdateTransaction(id, year, parsed);
-  revalidatePath("/");
-  revalidatePath("/transactions");
-  revalidatePath("/reports");
-  revalidatePath("/budget");
-  return tx;
+  return dbUpdateTransaction(id, year, parsed);
 }
 
 export async function deleteTransaction(id: string, year: number) {
   await dbDeleteTransaction(id, year);
-  revalidatePath("/");
-  revalidatePath("/transactions");
-  revalidatePath("/reports");
-  revalidatePath("/budget");
 }
 
 export async function copyRecurringFromPreviousYear(toYear: number) {
-  const copied = await copyRecurringRules(toYear - 1, toYear);
-  revalidatePath("/transactions");
-  revalidatePath("/");
-  return copied;
+  return copyRecurringRules(toYear - 1, toYear);
 }
 
 export async function getDashboardData(year: number) {
-  if (!isUnlocked()) {
-    redirect("/unlock");
-  }
-
   const [accounts, categories, settings, transfers] = await Promise.all([
     getAccounts(),
     getCategories(),

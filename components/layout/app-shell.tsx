@@ -1,24 +1,23 @@
+"use client";
+
 import { AppShellLayout } from "@/components/layout/app-shell-layout";
 import { Toaster } from "@/components/ui/sonner";
 import { AmountVisibilityProvider } from "@/providers/amount-visibility-provider";
 import { SidebarProvider } from "@/providers/sidebar-provider";
 import { YearProviderWrapper } from "@/providers/year-provider-wrapper";
 import { getAvailableYears } from "@/lib/actions/transactions";
-import { getSyncStatus } from "@/lib/db/sync-guard";
+import { useAsyncData } from "@/lib/storage/use-async-data";
+import { currentYear } from "@/lib/utils/dates";
 
-export async function AppShell({ children }: { children: React.ReactNode }) {
-  const [availableYears, syncStatus] = await Promise.all([
-    getAvailableYears(),
-    getSyncStatus(),
-  ]);
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { data } = useAsyncData(() => getAvailableYears(), []);
+  const availableYears = data ?? [currentYear()];
 
   return (
     <YearProviderWrapper availableYears={availableYears}>
       <AmountVisibilityProvider>
         <SidebarProvider>
-          <AppShellLayout syncWarnings={syncStatus.warnings}>
-            {children}
-          </AppShellLayout>
+          <AppShellLayout syncWarnings={[]}>{children}</AppShellLayout>
         </SidebarProvider>
         <Toaster richColors closeButton />
       </AmountVisibilityProvider>
