@@ -118,6 +118,7 @@ function CategoryBarChart({
 }) {
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
+  const [activeIndex, setActiveIndex] = useState<number | undefined>();
 
   const chartData = data.map((c) => ({
     name: c.name,
@@ -127,7 +128,12 @@ function CategoryBarChart({
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+      <BarChart
+        data={chartData}
+        layout="vertical"
+        margin={{ left: 8, right: 8 }}
+        onMouseLeave={() => setActiveIndex(undefined)}
+      >
         <XAxis
           type="number"
           fontSize={12}
@@ -142,14 +148,57 @@ function CategoryBarChart({
           dataKey="name"
           fontSize={12}
           width={100}
-          tick={{ fontSize: 11 }}
+          tick={({ x, y, payload, index }) => {
+            const entry = chartData[index];
+            const isActive = activeIndex === index;
+            return (
+              <text
+                x={x}
+                y={y}
+                dy={4}
+                textAnchor="end"
+                fill={
+                  isActive ? entry.color : "var(--muted-foreground)"
+                }
+                fontSize={11}
+              >
+                {payload.value}
+              </text>
+            );
+          }}
         />
         <Tooltip
-          formatter={(value) =>
-            formatAmount(Number(value) * 100, currency, locale)
-          }
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          content={({ active, payload }) => {
+            if (!active || !payload?.length) return null;
+            const entry = payload[0].payload as {
+              name: string;
+              color: string;
+              amount: number;
+            };
+            return (
+              <div className="rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-md">
+                <p className="flex items-center gap-2 font-medium">
+                  <span
+                    className="size-2.5 shrink-0 rounded-sm"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span style={{ color: entry.color }}>{entry.name}</span>
+                  <span className="tabular-nums text-foreground">
+                    {amountsHidden
+                      ? "••"
+                      : formatAmount(entry.amount * 100, currency, locale)}
+                  </span>
+                </p>
+              </div>
+            );
+          }}
         />
-        <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
+        <Bar
+          dataKey="amount"
+          radius={[0, 4, 4, 0]}
+          onMouseEnter={(_, index) => setActiveIndex(index)}
+        >
           {chartData.map((entry) => (
             <Cell key={entry.name} fill={entry.color} />
           ))}
@@ -187,7 +236,10 @@ function CategoryPieChart({
           ))}
         </Pie>
         <Tooltip
-          formatter={(value) => formatAmount(Number(value), currency, locale)}
+          formatter={(value, name) => [
+            formatAmount(Number(value), currency, locale),
+            name,
+          ]}
         />
       </PieChart>
     </ResponsiveContainer>

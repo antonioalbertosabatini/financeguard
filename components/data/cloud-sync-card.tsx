@@ -11,6 +11,7 @@ import { getPasswordError } from "@/lib/constants";
 import { persistNow } from "@/lib/storage/data-store";
 import {
   hasCloudSession,
+  getCloudUserEmail,
   pull,
   push,
   signInCloud,
@@ -30,11 +31,22 @@ export function CloudSyncCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [loggedInEmail, setLoggedInEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (configured) hasCloudSession().then(setSignedIn).catch(() => {});
   }, [configured]);
+
+  useEffect(() => {
+    if (!configured || !signedIn) {
+      setLoggedInEmail(null);
+      return;
+    }
+    getCloudUserEmail()
+      .then(setLoggedInEmail)
+      .catch(() => setLoggedInEmail(null));
+  }, [configured, signedIn]);
 
   if (!configured) {
     return (
@@ -113,6 +125,7 @@ export function CloudSyncCard() {
     withBusy(async () => {
       await signOutCloud();
       setSignedIn(false);
+      setLoggedInEmail(null);
       toast.success("Disconnesso dal cloud");
     });
 
@@ -179,7 +192,13 @@ export function CloudSyncCard() {
             </div>
           </form>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-3">
+            {loggedInEmail && (
+              <p className="text-sm text-muted-foreground">
+                Connesso come: {loggedInEmail}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
             <Button type="button" disabled={busy} onClick={handlePush}>
               <UploadCloud className="size-4" />
               Carica su cloud
@@ -201,6 +220,7 @@ export function CloudSyncCard() {
             >
               Disconnetti
             </Button>
+          </div>
           </div>
         )}
       </CardContent>

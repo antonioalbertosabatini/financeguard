@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   Wallet,
-  Tags,
   PiggyBank,
   BarChart3,
   Settings,
@@ -26,7 +25,6 @@ const navGroups = [
     items: [
       { href: "/transactions", label: "Transazioni", icon: ArrowLeftRight },
       { href: "/accounts", label: "Conti", icon: Wallet },
-      { href: "/categories", label: "Categorie", icon: Tags },
       { href: "/budget", label: "Budget", icon: PiggyBank },
       { href: "/reports", label: "Report", icon: BarChart3 },
     ],

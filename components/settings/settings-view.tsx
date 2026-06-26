@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { KeyRound, Lock } from "lucide-react";
+import { KeyRound, Lock, Tags } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +92,26 @@ export function SettingsView({ settings }: { settings: Settings }) {
             </div>
             <Button type="submit">Salva impostazioni</Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tags className="size-4" />
+            Categorie
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Organizza le tue spese e entrate con categorie personalizzate.
+          </p>
+          <Button variant="outline" asChild>
+            <Link href="/categories">
+              <Tags className="size-4" />
+              Gestisci categorie
+            </Link>
+          </Button>
         </CardContent>
       </Card>
 

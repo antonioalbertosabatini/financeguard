@@ -104,6 +104,12 @@ export async function hasCloudSession(): Promise<boolean> {
   return Boolean(data.session);
 }
 
+export async function getCloudUserEmail(): Promise<string | null> {
+  const { data, error } = await getSupabase().auth.getUser();
+  if (error || !data.user) return null;
+  return data.user.email ?? null;
+}
+
 // --- Metadati ----------------------------------------------------------------
 
 async function getRemoteRevision(userId: string): Promise<number | null> {
