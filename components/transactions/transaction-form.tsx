@@ -44,6 +44,7 @@ import type { Transaction } from "@/lib/schemas/transaction";
 import { todayISO } from "@/lib/utils/dates";
 import { toCents } from "@/lib/utils/money";
 import { dedupeTags } from "@/lib/utils/tags";
+import { cn } from "@/lib/utils";
 
 const TYPE_ICONS: Record<(typeof TRANSACTION_TYPES)[number], LucideIcon> = {
   income: TrendingUp,
@@ -156,7 +157,6 @@ export function TransactionForm({
 
   const watchType = form.watch("type");
   const watchRecurring = form.watch("isRecurring");
-  const TypeIcon = TYPE_ICONS[watchType];
 
   const filteredCategories = categories.filter((c) => {
     if (watchType === "income") return c.type === "income";
@@ -213,50 +213,52 @@ export function TransactionForm({
   const formBody = (
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <FieldLabel htmlFor="date" icon={Calendar}>Data</FieldLabel>
-              <Input id="date" type="date" {...form.register("date")} />
-            </div>
-
-            <div className="space-y-2">
+            {/* Type segmented control */}
+            <div className="space-y-2 md:col-span-2">
               <FieldLabel icon={ArrowLeftRight}>Tipo</FieldLabel>
-              <Select
-                value={watchType}
-                onValueChange={(v) => {
-                  form.setValue("type", v as FormValues["type"]);
-                  form.setValue("categoryId", undefined);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    <span className="flex items-center gap-2">
-                      <TypeIcon className="size-3.5" />
-                      {TRANSACTION_TYPE_LABELS[watchType]}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {TRANSACTION_TYPES.map((t) => {
-                    const Icon = TYPE_ICONS[t];
-                    return (
-                      <SelectItem key={t} value={t}>
-                        <span className="flex items-center gap-2">
-                          <Icon className="size-3.5" />
-                          {TRANSACTION_TYPE_LABELS[t]}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted p-1">
+                {TRANSACTION_TYPES.map((t) => {
+                  const Icon = TYPE_ICONS[t];
+                  const active = watchType === t;
+                  const activeTone =
+                    t === "income"
+                      ? "text-success"
+                      : t === "expense"
+                        ? "text-danger"
+                        : "text-foreground";
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        form.setValue("type", t);
+                        form.setValue("categoryId", undefined);
+                      }}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-all md:h-9",
+                        active
+                          ? `bg-card shadow-sm ring-1 ring-foreground/10 ${activeTone}`
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="size-4" />
+                      <span className="hidden sm:inline">
+                        {TRANSACTION_TYPE_LABELS[t]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">
               <FieldLabel htmlFor="amount" icon={Euro}>Importo (€)</FieldLabel>
               <Input
                 id="amount"
-                placeholder="0.00"
-                className="text-xl font-semibold tabular-nums"
+                inputMode="decimal"
+                placeholder="0,00"
+                className="h-14 text-2xl font-semibold tabular-nums md:h-14"
                 {...form.register("amountEuro")}
               />
               {form.formState.errors.amountEuro && (
@@ -264,6 +266,11 @@ export function TransactionForm({
                   {form.formState.errors.amountEuro.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <FieldLabel htmlFor="date" icon={Calendar}>Data</FieldLabel>
+              <Input id="date" type="date" {...form.register("date")} />
             </div>
 
             {watchType !== "transfer" && (

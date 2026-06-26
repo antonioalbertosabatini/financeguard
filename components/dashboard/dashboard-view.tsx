@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { TrendingDown, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
+import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAmountVisibility } from "@/hooks/use-amount-visibility";
@@ -33,35 +33,36 @@ type DashboardProps = {
   monthlyTrend: { month: number; income: number; expense: number }[];
 };
 
-function StatCard({
+function FlowTile({
   title,
   value,
   icon: Icon,
-  iconClassName,
-  valueClassName,
-  borderClassName,
+  tone,
 }: {
   title: string;
   value: string;
   icon: LucideIcon;
-  iconClassName: string;
-  valueClassName?: string;
-  borderClassName?: string;
+  tone: "success" | "danger";
 }) {
+  const toneClasses =
+    tone === "success"
+      ? "bg-success/10 text-success"
+      : "bg-danger/10 text-danger";
+  const valueTone = tone === "success" ? "text-success" : "text-danger";
   return (
-    <Card className={`shadow-sm ${borderClassName ?? ""}`}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        <div
-          className={`flex size-9 items-center justify-center rounded-xl ${iconClassName}`}
-        >
-          <Icon className="size-4" />
+    <Card className="shadow-soft">
+      <CardContent className="flex flex-col gap-2 py-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex size-8 items-center justify-center rounded-lg ${toneClasses}`}
+          >
+            <Icon className="size-4" />
+          </span>
+          <span className="text-xs font-medium text-muted-foreground">
+            {title}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent>
-        <p className={`text-3xl font-bold tracking-tight tabular-nums ${valueClassName ?? ""}`}>
+        <p className={`text-xl font-semibold tabular-nums sm:text-2xl ${valueTone}`}>
           {value}
         </p>
       </CardContent>
@@ -88,45 +89,53 @@ export function DashboardView({
   }));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Dashboard"
         description="Panoramica finanziaria dell'anno selezionato"
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard
-          title="Saldo totale"
-          value={formatAmount(totalBalance, currency, locale)}
-          icon={Wallet}
-          iconClassName="bg-primary/10 text-primary"
+      {/* Hero: total balance */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-primary/75 p-6 text-primary-foreground shadow-card">
+        <div
+          aria-hidden
+          className="absolute -top-16 -right-12 size-48 rounded-full bg-white/10 blur-2xl"
         />
-        <StatCard
-          title="Entrate mese corrente"
+        <div className="relative">
+          <p className="text-sm font-medium text-primary-foreground/80">
+            Saldo totale
+          </p>
+          <p className="mt-2 text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">
+            {formatAmount(totalBalance, currency, locale)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <FlowTile
+          title="Entrate del mese"
           value={formatAmount(monthlyIncome, currency, locale)}
           icon={TrendingUp}
-          iconClassName="bg-emerald-500/10 text-emerald-600"
-          valueClassName="text-emerald-600"
-          borderClassName="border-emerald-200/60"
+          tone="success"
         />
-        <StatCard
-          title="Uscite mese corrente"
+        <FlowTile
+          title="Uscite del mese"
           value={formatAmount(monthlyExpense, currency, locale)}
           icon={TrendingDown}
-          iconClassName="bg-rose-500/10 text-rose-600"
-          valueClassName="text-rose-600"
-          borderClassName="border-rose-200/60"
+          tone="danger"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-sm">
+        <Card className="shadow-soft">
           <CardHeader>
             <CardTitle>Spese per categoria</CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px] sm:h-[300px]">
             {expensesByCategory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nessuna spesa registrata</p>
+              <p className="text-sm text-muted-foreground">
+                Nessuna spesa registrata
+              </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -136,11 +145,12 @@ export function DashboardView({
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    outerRadius={100}
-                    label={({ name }) => name}
+                    innerRadius={56}
+                    outerRadius={96}
+                    paddingAngle={2}
                   >
                     {expensesByCategory.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
+                      <Cell key={entry.name} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
                   <Tooltip
@@ -148,22 +158,29 @@ export function DashboardView({
                       formatAmount(Number(value), currency, locale)
                     }
                   />
+                  <Legend
+                    iconType="circle"
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
+        <Card className="shadow-soft">
           <CardHeader>
             <CardTitle>Andamento mensile</CardTitle>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[280px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendData}>
-                <XAxis dataKey="name" fontSize={12} />
+              <BarChart data={trendData} barGap={2}>
+                <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis
-                  fontSize={12}
+                  fontSize={11}
+                  width={44}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(value) =>
                     amountsHidden
                       ? "••"
@@ -171,13 +188,14 @@ export function DashboardView({
                   }
                 />
                 <Tooltip
+                  cursor={{ fill: "var(--muted)", opacity: 0.4 }}
                   formatter={(value) =>
                     formatAmount(Number(value) * 100, currency, locale)
                   }
                 />
-                <Legend />
-                <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="Entrate" fill="var(--success)" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="Uscite" fill="var(--danger)" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

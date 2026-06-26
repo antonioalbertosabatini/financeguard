@@ -176,7 +176,7 @@ export function DataView() {
             Scarica tutti i dati in un archivio ZIP leggibile, senza
             crittografia.
           </p>
-          <Button onClick={handlePlainExport} disabled={exportingPlain}>
+          <Button onClick={handlePlainExport} disabled={exportingPlain} className="w-full sm:w-auto">
             <Download className="size-4" />
             {exportingPlain ? "Esportazione…" : "Esporta in chiaro"}
           </Button>
@@ -216,7 +216,7 @@ export function DataView() {
                 onChange={(e) => setExportConfirm(e.target.value)}
               />
             </div>
-            <Button type="submit" disabled={exporting}>
+            <Button type="submit" disabled={exporting} className="w-full sm:w-auto">
               <Lock className="size-4" />
               {exporting ? "Creazione…" : "Esporta criptato"}
             </Button>
@@ -284,7 +284,7 @@ export function DataView() {
                 onChange={(e) => setImportPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" variant="outline" disabled={importingEnc}>
+            <Button type="submit" variant="outline" disabled={importingEnc} className="w-full sm:w-auto">
               <Unlock className="size-4" />
               {importingEnc ? "Import in corso…" : "Importa criptato"}
             </Button>

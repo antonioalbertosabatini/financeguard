@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { StoreBootstrap } from "@/components/providers/store-bootstrap";
@@ -12,6 +12,23 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "FinanceGuard",
   description: "Gestione finanze personali locale",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FinanceGuard",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f6fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#16151d" },
+  ],
 };
 
 export default function RootLayout({

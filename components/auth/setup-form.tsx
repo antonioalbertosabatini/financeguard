@@ -15,8 +15,8 @@ const STRENGTH_COLORS = [
   "bg-destructive",
   "bg-destructive",
   "bg-amber-500",
-  "bg-emerald-500",
-  "bg-emerald-600",
+  "bg-success",
+  "bg-success",
 ];
 
 function passwordStrength(pw: string): number {

@@ -8,12 +8,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateSettings } from "@/lib/actions/settings";
@@ -90,7 +90,9 @@ export function SettingsView({ settings }: { settings: Settings }) {
                 onChange={(e) => setLocale(e.target.value)}
               />
             </div>
-            <Button type="submit">Salva impostazioni</Button>
+            <Button type="submit" className="w-full sm:w-auto">
+              Salva impostazioni
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -154,15 +156,15 @@ export function SettingsView({ settings }: { settings: Settings }) {
         </CardContent>
       </Card>
 
-      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <Sheet open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
               <KeyRound className="size-4" />
               Cambia password
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleChangePassword} className="space-y-4">
+            </SheetTitle>
+          </SheetHeader>
+          <form onSubmit={handleChangePassword} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="old-password">Vecchia password</Label>
               <Input
@@ -199,14 +201,14 @@ export function SettingsView({ settings }: { settings: Settings }) {
             {passwordError && (
               <p className="text-sm text-destructive">{passwordError}</p>
             )}
-            <DialogFooter>
-              <Button type="submit" disabled={changingPassword}>
+            <SheetFooter>
+              <Button type="submit" disabled={changingPassword} className="w-full sm:w-auto">
                 {changingPassword ? "Salvataggio…" : "Salva"}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

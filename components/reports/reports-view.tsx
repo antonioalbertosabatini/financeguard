@@ -98,7 +98,7 @@ function StatCard({
       </CardHeader>
       <CardContent>
         <p
-          className={`text-3xl font-bold tracking-tight tabular-nums ${valueClassName ?? ""}`}
+          className={`text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${valueClassName ?? ""}`}
         >
           {value}
         </p>
@@ -352,9 +352,13 @@ export function ReportsView({
       <PageHeader title="Report" description={`Anno ${year}`} />
 
       <Tabs defaultValue="monthly">
-        <TabsList>
-          <TabsTrigger value="monthly">Resoconto mensile</TabsTrigger>
-          <TabsTrigger value="annual">Resoconto annuale</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="monthly" className="flex-1 sm:flex-none">
+            Resoconto mensile
+          </TabsTrigger>
+          <TabsTrigger value="annual" className="flex-1 sm:flex-none">
+            Resoconto annuale
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="monthly" className="space-y-4">
@@ -381,17 +385,17 @@ export function ReportsView({
               title={`Entrate — ${monthLabel}`}
               value={formatAmount(monthlyReport.income, currency, locale)}
               icon={TrendingUp}
-              iconClassName="bg-emerald-500/10 text-emerald-600"
-              valueClassName="text-emerald-600"
-              borderClassName="border-emerald-200/60"
+              iconClassName="bg-success/10 text-success"
+              valueClassName="text-success"
+              borderClassName="border-success/30"
             />
             <StatCard
               title={`Uscite — ${monthLabel}`}
               value={formatAmount(monthlyReport.expense, currency, locale)}
               icon={TrendingDown}
-              iconClassName="bg-rose-500/10 text-rose-600"
-              valueClassName="text-rose-600"
-              borderClassName="border-rose-200/60"
+              iconClassName="bg-danger/10 text-danger"
+              valueClassName="text-danger"
+              borderClassName="border-danger/30"
             />
             <StatCard
               title="Saldo netto"
@@ -475,17 +479,17 @@ export function ReportsView({
               title={`Entrate totali ${year}`}
               value={formatAmount(annualReport.income, currency, locale)}
               icon={TrendingUp}
-              iconClassName="bg-emerald-500/10 text-emerald-600"
-              valueClassName="text-emerald-600"
-              borderClassName="border-emerald-200/60"
+              iconClassName="bg-success/10 text-success"
+              valueClassName="text-success"
+              borderClassName="border-success/30"
             />
             <StatCard
               title={`Uscite totali ${year}`}
               value={formatAmount(annualReport.expense, currency, locale)}
               icon={TrendingDown}
-              iconClassName="bg-rose-500/10 text-rose-600"
-              valueClassName="text-rose-600"
-              borderClassName="border-rose-200/60"
+              iconClassName="bg-danger/10 text-danger"
+              valueClassName="text-danger"
+              borderClassName="border-danger/30"
             />
             <StatCard
               title="Saldo netto annuale"
@@ -517,8 +521,8 @@ export function ReportsView({
                     }
                   />
                   <Legend />
-                  <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Entrate" fill="var(--success)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Uscite" fill="var(--danger)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

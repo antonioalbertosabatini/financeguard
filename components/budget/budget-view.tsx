@@ -17,12 +17,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -263,17 +263,17 @@ export function BudgetView({
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={(nextOpen) => {
+      <Sheet open={open} onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (!nextOpen) resetForm();
       }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>
               {editingBudget ? "Modifica budget" : "Nuovo budget"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-5">
+            </SheetTitle>
+          </SheetHeader>
+          <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="budget-name">Nome budget</Label>
               <Input
@@ -355,14 +355,14 @@ export function BudgetView({
                 : "Lascia vuoto uno dei due campi per creare un budget solo categoria o solo tag."}
             </div>
 
-            <DialogFooter>
+            <SheetFooter>
               <Button type="submit" disabled={!canSubmit}>
                 {editingBudget ? "Aggiorna" : "Salva"}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -450,7 +450,7 @@ function BudgetCard({
           <Metric
             label={overBudget ? "Superato di" : "Residuo"}
             value={formatAmount(Math.abs(remaining), currency, locale)}
-            className={overBudget ? "text-destructive" : "text-emerald-600"}
+            className={overBudget ? "text-destructive" : "text-success"}
           />
         </div>
 
@@ -511,7 +511,7 @@ function BudgetCard({
                         <TableCell className="max-w-[180px] truncate">
                           {expense.notes || "—"}
                         </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums text-rose-600">
+                        <TableCell className="text-right font-medium tabular-nums text-danger">
                           -{formatAmount(expense.amount, currency, locale)}
                         </TableCell>
                       </TableRow>
