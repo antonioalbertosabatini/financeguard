@@ -12,6 +12,8 @@ import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/schemas/settings";
 import type { Transaction } from "@/lib/schemas/transaction";
+import type { SyncMetadata } from "@/lib/sync/sync-metadata";
+import { emptySyncMetadata } from "@/lib/sync/sync-metadata";
 
 export interface Dataset {
   accounts: Account[];
@@ -22,6 +24,8 @@ export interface Dataset {
   transactionsByYear: Record<string, Transaction[]>;
   /** Trasferimenti tra conti raggruppati per anno (chiave = anno come stringa). */
   accountTransfersByYear: Record<string, AccountTransfer[]>;
+  /** Metadati di sync cifrati nel bundle (timestamp per campo, tombstone). */
+  syncMeta?: SyncMetadata;
 }
 
 /**
@@ -37,5 +41,6 @@ export function emptyDataset(): Dataset {
     settings: { ...DEFAULT_SETTINGS },
     transactionsByYear: {},
     accountTransfersByYear: {},
+    syncMeta: emptySyncMetadata(),
   };
 }

@@ -22,6 +22,7 @@ import {
 import { emptyDataset, type Dataset } from "@/lib/storage/dataset";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
+import { migrateSyncMetadataIfNeeded } from "@/lib/sync/sync-metadata";
 
 export type StoreStatus = "loading" | "needs-setup" | "locked" | "unlocked";
 
@@ -104,6 +105,10 @@ export async function unlockApp(password: string): Promise<AuthError | void> {
   vault = opened.vault;
   revision = opened.revision;
   dataset = opened.dataset;
+  if (migrateSyncMetadataIfNeeded(dataset, deviceId)) {
+    emit({ version: snapshot.version + 1 });
+    await persistNow();
+  }
   emit({ status: "unlocked", version: snapshot.version + 1 });
 }
 
@@ -177,6 +182,47 @@ export async function replaceDatasetWithPassword(
 
 export function isUnlocked(): boolean {
   return dataset !== null;
+}
+
+export function getDeviceId(): string {
+  return deviceId;
+}
+
+export function getRevision(): number {
+  return revision;
+}
+
+/** Contesto per sync cloud (solo con vault sbloccato). */
+export function getSyncContext(): {
+  key: Uint8Array;
+  vault: VaultFile;
+  revision: number;
+  dataset: Dataset;
+  deviceId: string;
+} | null {
+  if (!key || !vault || !dataset) return null;
+  return { key, vault, revision, dataset, deviceId };
+}
+
+/**
+ * Applica un dataset merged dal sync cloud, persiste e aggiorna la revisione.
+ */
+export async function applySyncedDataset(
+  next: Dataset,
+  baseRevision: number
+): Promise<number> {
+  if (!key || !vault || !dataset) throw new Error("App bloccata.");
+  dataset = next;
+  revision = baseRevision;
+  emit({ version: snapshot.version + 1 });
+  const newRevision = await saveBundle(
+    getAdapter(),
+    { key, vault, revision },
+    dataset,
+    deviceId
+  );
+  revision = newRevision;
+  return newRevision;
 }
 
 /**

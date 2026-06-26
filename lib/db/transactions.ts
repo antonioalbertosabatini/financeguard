@@ -5,6 +5,11 @@ import {
   listTransactionYears,
   setYearTransactions,
 } from "@/lib/db/index";
+import { getDataset, getDeviceId } from "@/lib/storage/data-store";
+import {
+  trackDelete,
+  trackTransactionUpsert,
+} from "@/lib/sync/sync-metadata";
 import {
   transactionSchema,
   transactionsFileSchema,
@@ -50,6 +55,7 @@ export async function createTransaction(
     ...input,
     id: generateId("tx"),
   });
+  trackTransactionUpsert(getDataset(), transaction, getDeviceId());
   const year = getYearFromDate(transaction.date);
   setYearTransactions(year, [...getYearTransactions(year), transaction]);
   return transaction;
@@ -64,7 +70,9 @@ export async function updateTransaction(
   const index = list.findIndex((t) => t.id === id);
   if (index === -1) throw new Error("Transazione non trovata");
 
+  const previous = list[index];
   const updated = sanitizeTransaction({ ...input, id });
+  trackTransactionUpsert(getDataset(), updated, getDeviceId(), previous);
   const newYear = getYearFromDate(updated.date);
 
   if (newYear === year) {
@@ -82,6 +90,7 @@ export async function deleteTransaction(
   id: string,
   year: number
 ): Promise<void> {
+  trackDelete(getDataset(), "transaction", id, getDeviceId());
   setYearTransactions(
     year,
     getYearTransactions(year).filter((t) => t.id !== id)
@@ -118,7 +127,9 @@ export async function copyRecurringRules(
         : undefined,
     };
     if (!existingIds.has(newTx.id)) {
-      target.push(sanitizeTransaction(newTx));
+      const sanitized = sanitizeTransaction(newTx);
+      trackTransactionUpsert(getDataset(), sanitized, getDeviceId());
+      target.push(sanitized);
       copied++;
     }
   }

@@ -4,8 +4,12 @@
  * file: i trasferimenti vivono in dataset.accountTransfersByYear, partizionati
  * per anno come le transazioni.
  */
-import { commit, getDataset } from "@/lib/storage/data-store";
+import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
 import { generateId, getYearFromDate } from "@/lib/db/index";
+import {
+  trackDelete,
+  trackTransferUpsert,
+} from "@/lib/sync/sync-metadata";
 import {
   accountTransferSchema,
   accountTransfersFileSchema,
@@ -56,6 +60,7 @@ export async function createAccountTransfer(
     notes: input.notes ?? "",
     id: generateId("trf"),
   });
+  trackTransferUpsert(getDataset(), transfer, getDeviceId());
   const year = getYearFromDate(transfer.date);
   setYearTransfers(year, [...getYearTransfers(year), transfer]);
   return transfer;
@@ -70,11 +75,13 @@ export async function updateAccountTransfer(
   const index = list.findIndex((t) => t.id === id);
   if (index === -1) throw new Error("Trasferimento non trovato");
 
+  const previous = list[index];
   const updated = accountTransferSchema.parse({
     ...input,
     notes: input.notes ?? "",
     id,
   });
+  trackTransferUpsert(getDataset(), updated, getDeviceId(), previous);
   const newYear = getYearFromDate(updated.date);
 
   if (newYear === year) {
@@ -92,6 +99,7 @@ export async function deleteAccountTransfer(
   id: string,
   year: number
 ): Promise<void> {
+  trackDelete(getDataset(), "accountTransfer", id, getDeviceId());
   setYearTransfers(
     year,
     getYearTransfers(year).filter((t) => t.id !== id)

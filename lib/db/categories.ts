@@ -1,4 +1,8 @@
-import { commit, getDataset } from "@/lib/storage/data-store";
+import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import {
+  trackCategoryUpsert,
+  trackDelete,
+} from "@/lib/sync/sync-metadata";
 import {
   categoryInputSchema,
   categorySchema,
@@ -19,7 +23,9 @@ export async function createCategory(input: CategoryInput): Promise<Category> {
     ...parsedInput,
     id: generateId("cat"),
   });
-  getDataset().categories.push(category);
+  const dataset = getDataset();
+  dataset.categories.push(category);
+  trackCategoryUpsert(dataset, category, getDeviceId());
   commit();
   return category;
 }
@@ -32,8 +38,10 @@ export async function updateCategory(
   const categories = getDataset().categories;
   const index = categories.findIndex((c) => c.id === id);
   if (index === -1) throw new Error("Categoria non trovata");
+  const previous = categories[index];
   const updated = categorySchema.parse({ ...parsedInput, id });
   categories[index] = updated;
+  trackCategoryUpsert(getDataset(), updated, getDeviceId(), previous);
   commit();
   return updated;
 }
@@ -41,5 +49,6 @@ export async function updateCategory(
 export async function deleteCategory(id: string): Promise<void> {
   const dataset = getDataset();
   dataset.categories = dataset.categories.filter((c) => c.id !== id);
+  trackDelete(dataset, "category", id, getDeviceId());
   commit();
 }

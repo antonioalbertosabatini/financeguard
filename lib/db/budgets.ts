@@ -1,4 +1,8 @@
-import { commit, getDataset } from "@/lib/storage/data-store";
+import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import {
+  trackBudgetUpsert,
+  trackDelete,
+} from "@/lib/sync/sync-metadata";
 import {
   budgetInputSchema,
   budgetSchema,
@@ -31,7 +35,9 @@ export async function upsertBudget(input: BudgetInput): Promise<Budget> {
     ...parsedInput,
     id: generateId("bud"),
   });
-  budgets.push(budget);
+  const dataset = getDataset();
+  dataset.budgets.push(budget);
+  trackBudgetUpsert(dataset, budget, getDeviceId());
   commit();
   return budget;
 }
@@ -54,8 +60,10 @@ export async function updateBudget(
     throw new Error("Esiste già un budget con questa combinazione");
   }
 
+  const previous = budgets[index];
   const updated = budgetSchema.parse({ ...parsedInput, id });
   budgets[index] = updated;
+  trackBudgetUpsert(getDataset(), updated, getDeviceId(), previous);
   commit();
   return updated;
 }
@@ -63,5 +71,6 @@ export async function updateBudget(
 export async function deleteBudget(id: string): Promise<void> {
   const dataset = getDataset();
   dataset.budgets = dataset.budgets.filter((b) => b.id !== id);
+  trackDelete(dataset, "budget", id, getDeviceId());
   commit();
 }

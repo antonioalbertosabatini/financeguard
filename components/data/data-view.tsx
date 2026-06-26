@@ -13,7 +13,6 @@ import {
   Unlock,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { CloudSyncCard } from "@/components/data/cloud-sync-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -161,8 +160,6 @@ export function DataView() {
         title="Backup"
         description="Esporta e importa i tuoi dati, in chiaro o criptati"
       />
-
-      <CloudSyncCard />
 
       <Card>
         <CardHeader>

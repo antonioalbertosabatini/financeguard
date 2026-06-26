@@ -11,6 +11,7 @@ import {
   setupPassword as storeSetupPassword,
   unlockApp as storeUnlockApp,
 } from "@/lib/storage/data-store";
+import { releaseSessionLock } from "@/lib/sync/session-lock";
 
 export type AuthResult = { error: string } | undefined;
 
@@ -34,5 +35,6 @@ export async function changePassword(
 }
 
 export async function lockApp(): Promise<void> {
+  await releaseSessionLock().catch(() => {});
   storeLockApp();
 }
