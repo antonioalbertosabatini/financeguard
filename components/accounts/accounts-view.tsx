@@ -17,12 +17,12 @@ import { AccountIcon } from "@/components/accounts/account-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -329,9 +329,9 @@ export function AccountsView({
                     className={cn(
                       "flex size-10 items-center justify-center rounded-lg border",
                       account.balance > 0
-                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-200"
+                        ? "border-success/20 bg-success/10 text-success"
                         : account.balance < 0
-                          ? "bg-rose-500/10 text-rose-700 border-rose-200"
+                          ? "border-danger/20 bg-danger/10 text-danger"
                           : TYPE_STYLE[account.type].icon
                     )}
                   >
@@ -371,12 +371,12 @@ export function AccountsView({
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Modifica conto" : "Nuovo conto"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{editing ? "Modifica conto" : "Nuovo conto"}</SheetTitle>
+          </SheetHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
@@ -447,19 +447,19 @@ export function AccountsView({
                 />
               </div>
             </div>
-            <DialogFooter>
+            <SheetFooter>
               <Button type="submit">Salva</Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Trasferimento tra conti</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleTransferSubmit} className="space-y-4">
+      <Sheet open={transferOpen} onOpenChange={setTransferOpen}>
+        <SheetContent className="sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Trasferimento tra conti</SheetTitle>
+          </SheetHeader>
+          <form onSubmit={handleTransferSubmit} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="tr-date">Data</Label>
               <Input
@@ -544,12 +544,12 @@ export function AccountsView({
                 placeholder="Es. giroconto risparmio"
               />
             </div>
-            <DialogFooter>
+            <SheetFooter>
               <Button type="submit">Salva</Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <Card className="shadow-sm">
         <Collapsible open={transfersOpen} onOpenChange={setTransfersOpen}>
@@ -817,9 +817,9 @@ export function AccountsView({
                         className={cn(
                           "text-right tabular-nums",
                           hasFutureDelta && analysis.totalAll - analysis.totalAsOf > 0
-                            ? "text-emerald-600"
+                            ? "text-success"
                             : hasFutureDelta && analysis.totalAll - analysis.totalAsOf < 0
-                              ? "text-rose-600"
+                              ? "text-danger"
                               : ""
                         )}
                       >
@@ -851,9 +851,9 @@ export function AccountsView({
                           className={cn(
                             "text-right tabular-nums",
                             row.delta > 0
-                              ? "text-emerald-600"
+                              ? "text-success"
                               : row.delta < 0
-                                ? "text-rose-600"
+                                ? "text-danger"
                                 : ""
                           )}
                         >

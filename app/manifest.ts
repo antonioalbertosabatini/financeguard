@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Gestione finanze personali, locale e cifrata.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0b0b0c",
-    theme_color: "#0b0b0c",
+    background_color: "#16151d",
+    theme_color: "#16151d",
     icons: [
       {
         src: "/icon.svg",
