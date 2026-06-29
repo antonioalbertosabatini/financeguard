@@ -1,31 +1,23 @@
 /**
  * Sync cloud zero-knowledge (opt-in).
  *
- * Sul cloud finisce SOLO il bundle cifrato (stesso formato di lib/storage/bundle):
- * Supabase non possiede mai la chiave, quindi non puo' leggere i dati. Il bundle
- * vive in Storage (bucket privato `vaults`, path `<uid>/bundle.fgv`); una riga
- * `vault_meta` tiene la revisione per la guardia anti-conflitto (last-write-wins,
- * coerente con l'uso "un dispositivo alla volta").
- *
- * Flusso tipico:
- *   signInCloud(email, pwd) -> pull() -> [data-store] unlockApp(pwd)
- *   ...mutazioni locali -> persistNow() -> push()
- *
- * NB: l'autenticazione usa `authHash` (vedi auth-derive), non la master password.
+ * Sul cloud finisce SOLO il bundle cifrato: Supabase non possiede mai la chiave.
+ * Il merge avviene client-side (vedi sync-orchestrator e merge-datasets).
  */
 import { getPasswordError } from "@/lib/constants";
 import { ConflictError } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { deriveAuthHash, normalizeEmail } from "@/lib/sync/auth-derive";
-import { getSupabase } from "@/lib/sync/supabase-client";
+import {
+  acquireSessionLock,
+  releaseSessionLock,
+  SessionLockedError,
+} from "@/lib/sync/session-lock";
+import { getSupabase, isCloudConfigured } from "@/lib/sync/supabase-client";
 
-/**
- * Guardia condivisa: una master password vuota o troppo corta non deve MAI
- * generare una credenziale cloud (ne' in sign-up ne' in sign-in). authHash e'
- * sempre lungo 64 hex, quindi Supabase non rifiuterebbe da solo le password
- * deboli: la validazione va fatta qui, prima della derivazione.
- */
+export { ConflictError, SessionLockedError, isCloudConfigured };
+
 function assertValidPassword(password: string): void {
   const error = getPasswordError(password);
   if (error) throw new Error(error);
@@ -75,13 +67,15 @@ export async function signInCloud(
     password: authHash,
   });
   if (error) throw new Error(error.message);
+
+  await acquireSessionLock();
 }
 
 export async function signOutCloud(): Promise<void> {
+  await releaseSessionLock().catch(() => {});
   await getSupabase().auth.signOut();
 }
 
-/** Aggiorna la credenziale cloud dopo un cambio di master password. */
 export async function updateCloudAuth(
   email: string,
   newPassword: string
@@ -110,9 +104,10 @@ export async function getCloudUserEmail(): Promise<string | null> {
   return data.user.email ?? null;
 }
 
-// --- Metadati ----------------------------------------------------------------
+// --- Metadati bundle ---------------------------------------------------------
 
-async function getRemoteRevision(userId: string): Promise<number | null> {
+export async function getRemoteRevision(): Promise<number | null> {
+  const userId = await requireUserId();
   const { data, error } = await getSupabase()
     .from("vault_meta")
     .select("revision")
@@ -136,51 +131,24 @@ async function setRemoteRevision(
   if (error) throw new Error(error.message);
 }
 
-// --- Pull / Push -------------------------------------------------------------
-
-/**
- * Scarica il bundle remoto (se piu' recente del locale) e lo scrive in IndexedDB,
- * pronto per essere aperto da unlockApp. Ritorna true se il locale e' stato
- * aggiornato.
- */
-export async function pull(): Promise<boolean> {
+export async function downloadRemoteBundle(): Promise<string | null> {
   const userId = await requireUserId();
-  const remoteRevision = await getRemoteRevision(userId);
-  if (remoteRevision === null) return false; // niente sul cloud
-
-  const adapter = new IndexedDbAdapter();
-  const local = await adapter.load();
-  const localRevision = local ? revisionOf(local) : 0;
-  if (local && localRevision >= remoteRevision) return false;
+  const remoteRevision = await getRemoteRevision();
+  if (remoteRevision === null) return null;
 
   const { data, error } = await getSupabase()
     .storage.from(BUCKET)
     .download(bundlePath(userId));
   if (error) throw new Error(error.message);
-
-  await adapter.save(await data.text());
-  return true;
+  return data.text();
 }
 
-/**
- * Carica il bundle locale sul cloud. Se la revisione remota e' piu' avanti,
- * lancia ConflictError (un altro dispositivo ha scritto): la UI deve invitare a
- * fare pull prima. Carica prima il blob, poi aggiorna la revisione, cosi' non si
- * pubblicizza mai una revisione il cui blob non e' stato salvato.
- */
-export async function push(): Promise<void> {
+export async function uploadBundle(
+  bundleText: string,
+  revision: number
+): Promise<void> {
   const userId = await requireUserId();
-  const adapter = new IndexedDbAdapter();
-  const local = await adapter.load();
-  if (!local) throw new Error("Nessun bundle locale da sincronizzare.");
-  const localRevision = revisionOf(local);
-
-  const remoteRevision = await getRemoteRevision(userId);
-  if (remoteRevision !== null && remoteRevision > localRevision) {
-    throw new ConflictError(localRevision, remoteRevision);
-  }
-
-  const blob = new Blob([local], { type: "application/json" });
+  const blob = new Blob([bundleText], { type: "application/json" });
   const { error } = await getSupabase()
     .storage.from(BUCKET)
     .upload(bundlePath(userId), blob, {
@@ -188,6 +156,39 @@ export async function push(): Promise<void> {
       contentType: "application/json",
     });
   if (error) throw new Error(error.message);
+  await setRemoteRevision(userId, revision);
+}
 
-  await setRemoteRevision(userId, localRevision);
+// --- Pull / Push manuali (retrocompatibilità / debug) ------------------------
+
+export async function pull(): Promise<boolean> {
+  await requireUserId();
+  const remoteRevision = await getRemoteRevision();
+  if (remoteRevision === null) return false;
+
+  const adapter = new IndexedDbAdapter();
+  const local = await adapter.load();
+  const localRevision = local ? revisionOf(local) : 0;
+  if (local && localRevision >= remoteRevision) return false;
+
+  const remoteText = await downloadRemoteBundle();
+  if (!remoteText) return false;
+
+  await adapter.save(remoteText);
+  return true;
+}
+
+export async function push(): Promise<void> {
+  await requireUserId();
+  const adapter = new IndexedDbAdapter();
+  const local = await adapter.load();
+  if (!local) throw new Error("Nessun bundle locale da sincronizzare.");
+  const localRevision = revisionOf(local);
+
+  const remoteRevision = await getRemoteRevision();
+  if (remoteRevision !== null && remoteRevision > localRevision) {
+    throw new ConflictError(localRevision, remoteRevision);
+  }
+
+  await uploadBundle(local, localRevision);
 }

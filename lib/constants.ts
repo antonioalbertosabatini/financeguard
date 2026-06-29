@@ -35,6 +35,10 @@ export const CATEGORY_TYPES = ["income", "expense"] as const;
 
 export const TRANSACTION_TYPES = ["income", "expense", "transfer"] as const;
 
+export const TRANSACTION_FORM_TYPES = ["income", "expense"] as const;
+
+export const TRANSACTION_FILTER_TYPES = ["income", "expense"] as const;
+
 export const ACCOUNT_TYPE_LABELS: Record<
   (typeof ACCOUNT_TYPES)[number],
   string

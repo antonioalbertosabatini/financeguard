@@ -49,7 +49,7 @@ import {
   copyRecurringFromPreviousYear,
   deleteTransaction,
 } from "@/lib/actions/transactions";
-import { MONTH_LABELS_FULL, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
+import { MONTH_LABELS_FULL, TRANSACTION_FILTER_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
@@ -263,7 +263,7 @@ export function TransactionsView({
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti</SelectItem>
-            {TRANSACTION_TYPES.map((t) => (
+            {TRANSACTION_FILTER_TYPES.map((t) => (
               <SelectItem key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</SelectItem>
             ))}
           </SelectContent>

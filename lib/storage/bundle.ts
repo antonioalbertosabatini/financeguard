@@ -85,11 +85,29 @@ export async function openBundle<T>(
 ): Promise<OpenedBundle<T> | null> {
   const text = await adapter.load();
   if (!text) return null;
+  return openBundleText<T>(text, password);
+}
+
+/** Apre e decifra un bundle già in memoria (sync cloud). */
+export async function openBundleText<T>(
+  text: string,
+  password: string
+): Promise<OpenedBundle<T> | null> {
   const bundle = parseBundle(text);
   const key = await verifyVaultPasswordWeb(bundle.vault, password);
   if (!key) throw new Error("Password errata per questo file.");
   const dataset = await decryptJsonWeb<T>(bundle.data, key);
   return { key, vault: bundle.vault, revision: bundle.revision, dataset };
+}
+
+/** Decifra un bundle con la chiave di sessione già in memoria. */
+export async function decryptBundleWithKey<T>(
+  text: string,
+  key: Uint8Array
+): Promise<{ revision: number; dataset: T; vault: VaultFile }> {
+  const bundle = parseBundle(text);
+  const dataset = await decryptJsonWeb<T>(bundle.data, key);
+  return { revision: bundle.revision, dataset, vault: bundle.vault };
 }
 
 /**

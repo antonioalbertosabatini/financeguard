@@ -2,37 +2,62 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Cloud, CloudOff, LogIn, RefreshCw, UploadCloud } from "lucide-react";
+import { Cloud, CloudOff, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getPasswordError } from "@/lib/constants";
-import { persistNow } from "@/lib/storage/data-store";
 import {
-  hasCloudSession,
   getCloudUserEmail,
-  pull,
-  push,
+  hasCloudSession,
   signInCloud,
   signOutCloud,
   signUpCloud,
+  isCloudConfigured,
 } from "@/lib/sync/cloud-sync";
-import { isCloudConfigured } from "@/lib/sync/supabase-client";
+import { getActiveSessionInfo } from "@/lib/sync/session-lock";
+import { useSyncState } from "@/lib/sync/use-sync-state";
+import { syncNow } from "@/lib/sync/sync-orchestrator";
+import { formatDistanceToNow } from "date-fns";
+import { it } from "date-fns/locale";
 
-/**
- * Sync cloud zero-knowledge (opt-in). Solo il bundle cifrato lascia il
- * dispositivo: Supabase non ha la chiave, quindi non puo' leggere i dati.
- * Accesso con email + master password (da cui si deriva una credenziale auth
- * separata dalla chiave di cifratura — vedi lib/sync/auth-derive).
- */
-export function CloudSyncCard() {
+function formatLastSync(iso: string | null): string {
+  if (!iso) return "Mai";
+  try {
+    return formatDistanceToNow(new Date(iso), {
+      addSuffix: true,
+      locale: it,
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function syncStatusLabel(status: string): string {
+  switch (status) {
+    case "syncing":
+      return "Sincronizzazione in corso…";
+    case "offline":
+      return "Offline — le modifiche verranno inviate al ritorno online";
+    case "blocked":
+      return "Sessione attiva su un altro dispositivo";
+    case "error":
+      return "Errore di sincronizzazione";
+    default:
+      return "Sincronizzazione automatica attiva";
+  }
+}
+
+export function CloudAccountSection() {
   const configured = isCloudConfigured();
+  const syncState = useSyncState();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [loggedInEmail, setLoggedInEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activeDevice, setActiveDevice] = useState<string | null>(null);
 
   useEffect(() => {
     if (configured) hasCloudSession().then(setSignedIn).catch(() => {});
@@ -41,12 +66,24 @@ export function CloudSyncCard() {
   useEffect(() => {
     if (!configured || !signedIn) {
       setLoggedInEmail(null);
+      setActiveDevice(null);
       return;
     }
     getCloudUserEmail()
       .then(setLoggedInEmail)
       .catch(() => setLoggedInEmail(null));
-  }, [configured, signedIn]);
+    getActiveSessionInfo()
+      .then(({ session, isOwner }) => {
+        if (session && isOwner) {
+          setActiveDevice(session.device_name ?? "Questo dispositivo");
+        } else if (session) {
+          setActiveDevice(session.device_name ?? "Altro dispositivo");
+        } else {
+          setActiveDevice(null);
+        }
+      })
+      .catch(() => setActiveDevice(null));
+  }, [configured, signedIn, syncState.status, syncState.lastSyncedAt]);
 
   if (!configured) {
     return (
@@ -54,17 +91,15 @@ export function CloudSyncCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CloudOff className="size-4" />
-            Sync cloud (non configurato)
+            Account cloud (non configurato)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Per attivare il sync cloud zero-knowledge crea un progetto Supabase,
-            esegui <code>supabase/migrations/0001_vault.sql</code> e imposta{" "}
+            esegui le migrazioni in <code>supabase/migrations/</code> e imposta{" "}
             <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
-            <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>{" "}
-            (vedi <code>.env.local.example</code>). L&apos;app continua a
-            funzionare al 100% in locale senza cloud.
+            <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>.
           </p>
         </CardContent>
       </Card>
@@ -92,6 +127,7 @@ export function CloudSyncCard() {
       setSignedIn(true);
       setPassword("");
       toast.success("Accesso cloud effettuato");
+      await syncNow("login");
     });
 
   const handleSignUp = () =>
@@ -101,24 +137,6 @@ export function CloudSyncCard() {
       toast.success(
         "Account cloud creato. Controlla l'email se è richiesta la conferma, poi accedi."
       );
-    });
-
-  const handlePush = () =>
-    withBusy(async () => {
-      await persistNow();
-      await push();
-      toast.success("Dati caricati sul cloud");
-    });
-
-  const handlePull = () =>
-    withBusy(async () => {
-      const updated = await pull();
-      if (!updated) {
-        toast.info("Il cloud non ha una versione più recente");
-        return;
-      }
-      toast.success("Versione cloud scaricata. Ricarico l'app…");
-      setTimeout(() => window.location.reload(), 800);
     });
 
   const handleSignOut = () =>
@@ -134,14 +152,14 @@ export function CloudSyncCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Cloud className="size-4" />
-          Sync cloud (zero-knowledge)
+          Account cloud
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Sincronizza il vault cifrato tra i dispositivi. Sul cloud finiscono
-          solo dati cifrati: senza la tua master password nessuno (server
-          incluso) può leggerli.
+          Sincronizza automaticamente il vault cifrato tra i dispositivi. Sul
+          cloud finiscono solo dati cifrati: senza la master password nessuno
+          può leggerli.
         </p>
 
         {!signedIn ? (
@@ -198,20 +216,25 @@ export function CloudSyncCard() {
                 Connesso come: {loggedInEmail}
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
-            <Button type="button" disabled={busy} onClick={handlePush}>
-              <UploadCloud className="size-4" />
-              Carica su cloud
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={handlePull}
-            >
-              <RefreshCw className="size-4" />
-              Scarica da cloud
-            </Button>
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm space-y-1">
+              <div className="flex items-center gap-2">
+                {syncState.status === "syncing" && (
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                )}
+                <span>{syncStatusLabel(syncState.status)}</span>
+              </div>
+              <p className="text-muted-foreground">
+                Ultimo sync: {formatLastSync(syncState.lastSyncedAt)}
+              </p>
+              {activeDevice && (
+                <p className="text-muted-foreground">
+                  Dispositivo attivo: {activeDevice}
+                </p>
+              )}
+              {syncState.lastError && (
+                <p className="text-destructive text-xs">{syncState.lastError}</p>
+              )}
+            </div>
             <Button
               type="button"
               variant="ghost"
@@ -220,7 +243,6 @@ export function CloudSyncCard() {
             >
               Disconnetti
             </Button>
-          </div>
           </div>
         )}
       </CardContent>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Shield } from "lucide-react";
+import { AppLogo } from "@/components/layout/app-logo";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { isActivePath, navGroups } from "@/components/layout/nav-config";
 import { cn } from "@/lib/utils";
@@ -24,9 +24,7 @@ export function AppSidebar() {
     >
       <div className="border-b border-sidebar-border px-5 py-6">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
-            <Shield className="size-5" />
-          </div>
+          <AppLogo className="size-10" />
           <div>
             <h1 className="text-base font-semibold tracking-tight text-sidebar-foreground">
               FinanceGuard

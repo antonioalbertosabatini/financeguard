@@ -72,7 +72,7 @@ export default function AddPage() {
               : !hasExpenseCategories
                 ? "uscita"
                 : "entrata"}
-            . Puoi comunque inserire trasferimenti o aggiungere categorie in{" "}
+            . Aggiungi categorie in{" "}
             <Link href="/categories" className="font-medium underline">
               Categorie
             </Link>

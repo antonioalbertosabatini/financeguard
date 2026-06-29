@@ -1,75 +1,70 @@
 /**
- * Genera le sorgenti icona/splash (scudo) per @capacitor/assets, l'icona
- * Electron e l'icona web, a partire da SVG inline. Usa `sharp` (gia' presente).
+ * Genera le sorgenti icona/splash per @capacitor/assets, l'icona
+ * Electron e i PNG web, a partire da public/icon.svg. Usa `sharp`.
  *
  *   node assets/generate-icons.mjs
- *   npx @capacitor/assets generate   # poi distribuisce su iOS/Android
+ *   npx @capacitor/assets generate --android
  */
 import sharp from "sharp";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BG = "#0b0b0c";
-const EMERALD = "#34d399";
-const EMERALD_DARK = "#059669";
+const SOURCE_SVG = join(root, "public/icon.svg");
 
-// Scudo centrato in un viewBox 1024. Sagoma classica + check di sicurezza.
-function shield(scale = 1, cx = 512, cy = 512) {
-  // path costruito attorno a (512,512) con dimensione base ~ 760 di altezza
-  return `
-    <g transform="translate(${cx} ${cy}) scale(${scale}) translate(-512 -512)">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="${EMERALD}"/>
-          <stop offset="1" stop-color="${EMERALD_DARK}"/>
-        </linearGradient>
-      </defs>
-      <path d="M512 132 L838 244 V520 C838 716 702 838 512 900 C322 838 186 716 186 520 V244 Z"
-            fill="url(#g)"/>
-      <path d="M512 188 L786 282 V520 C786 686 672 792 512 846 C352 792 238 686 238 520 V282 Z"
-            fill="${BG}" opacity="0.18"/>
-      <path d="M412 512 l66 70 138 -150" fill="none" stroke="#ffffff" stroke-width="56"
-            stroke-linecap="round" stroke-linejoin="round"/>
-    </g>`;
-}
+const png = (input, size) =>
+  sharp(input, { density: 300 }).resize(size, size).png().toBuffer();
 
-function svgDoc(inner, bg = "none") {
-  const rect =
-    bg === "none"
-      ? ""
-      : `<rect width="1024" height="1024" rx="0" fill="${bg}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${rect}${inner}</svg>`;
-}
-
-const png = (svg, size) =>
+const pngFromSvgString = (svg, size) =>
   sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
 
 const out = async (name, buf) => {
-  await writeFile(join(root, name), buf);
+  const path = join(root, name);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, buf);
   console.log("wrote", name);
 };
 
-// Adaptive icon: foreground nella safe zone centrale (~62%).
-const foreground = svgDoc(shield(0.62));
-// Background: tinta piena.
-const background = svgDoc("", BG);
-// Icona piena (iOS / legacy): bg scuro + scudo.
-const iconOnly = svgDoc(shield(0.82), BG);
-// Splash: scudo piccolo centrato su bg scuro (2732x2732 lo fa @capacitor/assets,
-// ma forniamo una sorgente 1024 quadrata; verra' centrata).
-const splash = svgDoc(shield(0.42), BG);
+const sourceSvg = await readFile(SOURCE_SVG);
 
-await out("assets/icon-foreground.png", await png(foreground, 1024));
-await out("assets/icon-background.png", await png(background, 1024));
-await out("assets/icon-only.png", await png(iconOnly, 1024));
-await out("assets/splash.png", await png(splash, 2732));
-await out("assets/splash-dark.png", await png(splash, 2732));
+// Icona piena (iOS / legacy / Electron).
+await out("assets/icon-only.png", await png(sourceSvg, 1024));
+
+// Adaptive icon Android: foreground nella safe zone centrale (~62%).
+await out(
+  "assets/icon-foreground.png",
+  await png(sourceSvg, Math.round(1024 * 0.62))
+);
+
+// Background: tinta piena coerente con il logo.
+const backgroundSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="${BG}"/></svg>`;
+await out("assets/icon-background.png", await pngFromSvgString(backgroundSvg, 1024));
+
+// Splash: logo centrato su sfondo scuro.
+const splashSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="${BG}"/>
+</svg>`;
+const splashBase = await pngFromSvgString(splashSvg, 2732);
+const logoSmall = await png(sourceSvg, Math.round(2732 * 0.42));
+await out(
+  "assets/splash.png",
+  await sharp(splashBase)
+    .composite([{ input: logoSmall, gravity: "center" }])
+    .png()
+    .toBuffer()
+);
+await out(
+  "assets/splash-dark.png",
+  await sharp(splashBase)
+    .composite([{ input: logoSmall, gravity: "center" }])
+    .png()
+    .toBuffer()
+);
 
 // Icona Electron (build/ e' la cartella di default di electron-builder).
-await out("build/icon.png", await png(iconOnly, 1024));
+await out("build/icon.png", await png(sourceSvg, 1024));
 
-// Icona web / PWA (manifest punta a /icon.svg).
-await writeFile(join(root, "public/icon.svg"), svgDoc(shield(0.82), BG));
-console.log("wrote public/icon.svg");
+console.log("Done. Run: npx @capacitor/assets generate --android");

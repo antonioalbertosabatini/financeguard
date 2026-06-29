@@ -1,4 +1,8 @@
-import { commit, getDataset } from "@/lib/storage/data-store";
+import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import {
+  trackAccountUpsert,
+  trackDelete,
+} from "@/lib/sync/sync-metadata";
 import {
   accountsFileSchema,
   type Account,
@@ -12,7 +16,9 @@ export async function getAccounts(): Promise<Account[]> {
 
 export async function createAccount(input: AccountInput): Promise<Account> {
   const account: Account = { ...input, id: generateId("acc") };
-  getDataset().accounts.push(account);
+  const dataset = getDataset();
+  dataset.accounts.push(account);
+  trackAccountUpsert(dataset, account, getDeviceId());
   commit();
   return account;
 }
@@ -24,8 +30,10 @@ export async function updateAccount(
   const accounts = getDataset().accounts;
   const index = accounts.findIndex((a) => a.id === id);
   if (index === -1) throw new Error("Conto non trovato");
+  const previous = accounts[index];
   const updated = { ...input, id };
   accounts[index] = updated;
+  trackAccountUpsert(getDataset(), updated, getDeviceId(), previous);
   commit();
   return updated;
 }
@@ -33,5 +41,6 @@ export async function updateAccount(
 export async function deleteAccount(id: string): Promise<void> {
   const dataset = getDataset();
   dataset.accounts = dataset.accounts.filter((a) => a.id !== id);
+  trackDelete(dataset, "account", id, getDeviceId());
   commit();
 }

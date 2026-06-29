@@ -7,6 +7,7 @@ import {
   Settings,
   DatabaseBackup,
   Shapes,
+  UserCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -56,6 +57,11 @@ export const BACKUP: NavItem = {
   label: "Backup",
   icon: DatabaseBackup,
 };
+export const PROFILE: NavItem = {
+  href: "/profile",
+  label: "Profilo",
+  icon: UserCircle,
+};
 export const SETTINGS: NavItem = {
   href: "/settings",
   label: "Impostazioni",
@@ -66,7 +72,7 @@ export const SETTINGS: NavItem = {
 export const navGroups: NavGroup[] = [
   { label: "Principale", items: [DASHBOARD] },
   { label: "Gestione", items: [TRANSACTIONS, ACCOUNTS, BUDGET, REPORTS, CATEGORIES] },
-  { label: "Sistema", items: [BACKUP, SETTINGS] },
+  { label: "Sistema", items: [BACKUP, PROFILE, SETTINGS] },
 ];
 
 /** Primary destinations shown directly in the mobile bottom bar (around the FAB). */
@@ -74,7 +80,7 @@ export const bottomNavLeft: NavItem[] = [DASHBOARD, TRANSACTIONS];
 export const bottomNavRight: NavItem[] = [ACCOUNTS];
 
 /** Secondary destinations surfaced in the mobile "Altro" sheet. */
-export const moreNavItems: NavItem[] = [BUDGET, REPORTS, CATEGORIES, BACKUP, SETTINGS];
+export const moreNavItems: NavItem[] = [BUDGET, REPORTS, CATEGORIES, BACKUP, PROFILE, SETTINGS];
 
 export function isActivePath(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
