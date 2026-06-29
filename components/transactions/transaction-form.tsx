@@ -37,7 +37,10 @@ import { CategorySelectItem } from "@/components/categories/category-select-item
 import { TagInput } from "@/components/tags/tag-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTransaction, updateTransaction } from "@/lib/actions/transactions";
-import { TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES } from "@/lib/constants";
+import {
+  TRANSACTION_FORM_TYPES,
+  TRANSACTION_TYPE_LABELS,
+} from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
@@ -46,17 +49,16 @@ import { toCents } from "@/lib/utils/money";
 import { dedupeTags } from "@/lib/utils/tags";
 import { cn } from "@/lib/utils";
 
-const TYPE_ICONS: Record<(typeof TRANSACTION_TYPES)[number], LucideIcon> = {
+const TYPE_ICONS: Record<(typeof TRANSACTION_FORM_TYPES)[number], LucideIcon> = {
   income: TrendingUp,
   expense: TrendingDown,
-  transfer: ArrowLeftRight,
 };
 
 const formSchema = z
   .object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     amountEuro: z.string().min(1, "Importo obbligatorio"),
-    type: z.enum(TRANSACTION_TYPES),
+    type: z.enum(TRANSACTION_FORM_TYPES),
     categoryId: z.string().optional(),
     accountId: z.string().min(1),
     notes: z.string(),
@@ -66,7 +68,7 @@ const formSchema = z
     recurrenceEnd: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.type !== "transfer" && !data.categoryId) {
+    if (!data.categoryId) {
       ctx.addIssue({
         code: "custom",
         message: "Seleziona una categoria",
@@ -136,6 +138,7 @@ export function TransactionForm({
   compact = false,
 }: TransactionFormProps) {
   const isEdit = !!transaction;
+  const isLegacyTransfer = transaction?.type === "transfer";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -144,7 +147,7 @@ export function TransactionForm({
       amountEuro: transaction
         ? (transaction.amount / 100).toFixed(2)
         : "",
-      type: transaction?.type ?? "expense",
+      type: transaction?.type === "transfer" ? "expense" : (transaction?.type ?? "expense"),
       categoryId: transaction?.categoryId ?? undefined,
       accountId: transaction?.accountId ?? accounts[0]?.id ?? "",
       notes: transaction?.notes ?? "",
@@ -158,6 +161,18 @@ export function TransactionForm({
   const watchType = form.watch("type");
   const watchRecurring = form.watch("isRecurring");
 
+  if (isLegacyTransfer) {
+    return (
+      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        I trasferimenti si gestiscono dalla sezione{" "}
+        <Link href={`/accounts?year=${year}`} className="font-medium text-primary underline">
+          Conti
+        </Link>
+        .
+      </div>
+    );
+  }
+
   const filteredCategories = categories.filter((c) => {
     if (watchType === "income") return c.type === "income";
     if (watchType === "expense") return c.type === "expense";
@@ -169,7 +184,7 @@ export function TransactionForm({
       date: values.date,
       amount: toCents(values.amountEuro),
       type: values.type,
-      categoryId: values.type === "transfer" ? null : values.categoryId ?? null,
+      categoryId: values.categoryId ?? null,
       accountId: values.accountId,
       notes: values.notes,
       tags: dedupeTags(values.tags),
@@ -216,16 +231,12 @@ export function TransactionForm({
             {/* Type segmented control */}
             <div className="space-y-2 md:col-span-2">
               <FieldLabel icon={ArrowLeftRight}>Tipo</FieldLabel>
-              <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted p-1">
-                {TRANSACTION_TYPES.map((t) => {
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-muted p-1">
+                {TRANSACTION_FORM_TYPES.map((t) => {
                   const Icon = TYPE_ICONS[t];
                   const active = watchType === t;
                   const activeTone =
-                    t === "income"
-                      ? "text-success"
-                      : t === "expense"
-                        ? "text-danger"
-                        : "text-foreground";
+                    t === "income" ? "text-success" : "text-danger";
                   return (
                     <button
                       key={t}
@@ -273,40 +284,38 @@ export function TransactionForm({
               <Input id="date" type="date" {...form.register("date")} />
             </div>
 
-            {watchType !== "transfer" && (
-              <div className="space-y-2">
-                <FieldLabel icon={Tags}>Categoria</FieldLabel>
-                {filteredCategories.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                    Nessuna categoria per questo tipo.{" "}
-                    <Link href="/categories" className="font-medium text-primary underline">
-                      Aggiungine una
-                    </Link>
-                  </div>
-                ) : (
-                  <>
-                    <Select
-                      value={form.watch("categoryId") ?? ""}
-                      onValueChange={(v) => form.setValue("categoryId", v)}
-                    >
-                      <SelectTrigger className="w-full" aria-invalid={!!form.formState.errors.categoryId}>
-                        <SelectValue placeholder="Seleziona categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredCategories.map((c) => (
-                          <CategorySelectItem key={c.id} category={c} />
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.categoryId && (
-                      <p className="text-xs text-destructive">
-                        {form.formState.errors.categoryId.message}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            <div className="space-y-2">
+              <FieldLabel icon={Tags}>Categoria</FieldLabel>
+              {filteredCategories.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                  Nessuna categoria per questo tipo.{" "}
+                  <Link href="/categories" className="font-medium text-primary underline">
+                    Aggiungine una
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <Select
+                    value={form.watch("categoryId") ?? ""}
+                    onValueChange={(v) => form.setValue("categoryId", v)}
+                  >
+                    <SelectTrigger className="w-full" aria-invalid={!!form.formState.errors.categoryId}>
+                      <SelectValue placeholder="Seleziona categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredCategories.map((c) => (
+                        <CategorySelectItem key={c.id} category={c} />
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.categoryId && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.categoryId.message}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
 
             <div className="space-y-2">
               <FieldLabel icon={Wallet}>Conto</FieldLabel>

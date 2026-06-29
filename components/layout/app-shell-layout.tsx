@@ -1,8 +1,8 @@
 "use client";
 
 import { Suspense, type ReactNode } from "react";
-import { Shield } from "lucide-react";
 import { AmountVisibilityToggle } from "@/components/layout/amount-visibility-toggle";
+import { AppLogo } from "@/components/layout/app-logo";
 import { AddTransactionButton } from "@/components/layout/add-transaction-button";
 import { AppSidebarWrapper } from "@/components/layout/app-sidebar-wrapper";
 import { BottomNav } from "@/components/layout/bottom-nav";
@@ -34,9 +34,7 @@ export function AppShellLayout({
           {/* Mobile: brand mark. Desktop: sidebar toggle + add button. */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 md:hidden">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
-                <Shield className="size-4" />
-              </div>
+              <AppLogo className="size-8" />
               <span className="font-heading text-base font-semibold tracking-tight">
                 FinanceGuard
               </span>

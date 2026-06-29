@@ -14,7 +14,8 @@
     "electron:build": "next build && electron-builder",
     "cap:sync": "next build && cap sync",
     "cap:ios": "next build && cap sync ios && cap open ios",
-    "cap:android": "next build && cap sync android && cap open android"
+    "cap:android": "next build && cap sync android && cap open android",
+    "icons:generate": "node assets/generate-icons.mjs && npx @capacitor/assets generate --android"
   },
   "dependencies": {
     "@capacitor/core": "^8.4.1",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^8.4.1",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/ios": "^8.4.1",
     "@tailwindcss/postcss": "^4",
@@ -55,6 +57,7 @@
     "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.6"
