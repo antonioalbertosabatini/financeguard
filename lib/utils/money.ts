@@ -1,3 +1,18 @@
+const formatterCache = new Map<string, Intl.NumberFormat>();
+
+function getFormatter(locale: string, currency: string): Intl.NumberFormat {
+  const key = `${locale}:${currency}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+    });
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function toCents(euroString: string): number {
   const normalized = euroString.replace(",", ".").trim();
   if (!normalized) return 0;
@@ -17,10 +32,7 @@ export function formatCents(
   currency = "EUR",
   locale = "it-IT"
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-  }).format(cents / 100);
+  return getFormatter(locale, currency).format(cents / 100);
 }
 
 export function formatCentsMasked(
@@ -33,6 +45,15 @@ export function formatCentsMasked(
   return formatCents(cents, currency, locale);
 }
 
-export function parseEuroInput(value: string): number {
-  return toCents(value);
+export function formatSignedCents(
+  cents: number,
+  type: "income" | "expense" | "transfer",
+  currency = "EUR",
+  locale = "it-IT",
+  hidden = false
+): string {
+  const formatted = formatCentsMasked(cents, currency, locale, hidden);
+  if (type === "income") return `+${formatted}`;
+  if (type === "expense") return `-${formatted}`;
+  return formatted;
 }

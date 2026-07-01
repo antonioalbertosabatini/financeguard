@@ -29,7 +29,7 @@ export function useAsyncData<T>(
   useEffect(() => {
     if (status !== "unlocked") return;
     let cancelled = false;
-    setState((prev) => ({ ...prev, loading: true }));
+    setState((prev) => ({ ...prev, loading: prev.data === null, error: null }));
     loader().then(
       (data) => {
         if (!cancelled) setState({ data, loading: false, error: null });

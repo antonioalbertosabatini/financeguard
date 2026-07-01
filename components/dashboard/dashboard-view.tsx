@@ -15,7 +15,7 @@ import {
 import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { MONTH_LABELS } from "@/lib/constants";
 

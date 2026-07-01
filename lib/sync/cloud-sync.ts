@@ -6,7 +6,6 @@
  */
 import { getPasswordError } from "@/lib/constants";
 import { ConflictError } from "@/lib/storage/bundle";
-import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { deriveAuthHash, normalizeEmail } from "@/lib/sync/auth-derive";
 import {
@@ -28,15 +27,6 @@ const OBJECT = "bundle.fgv";
 
 function bundlePath(userId: string): string {
   return `${userId}/${OBJECT}`;
-}
-
-function revisionOf(bundleText: string): number {
-  try {
-    const rev = (JSON.parse(bundleText) as { revision?: number }).revision;
-    return typeof rev === "number" ? rev : 0;
-  } catch {
-    return 0;
-  }
 }
 
 // --- Auth --------------------------------------------------------------------
@@ -157,38 +147,4 @@ export async function uploadBundle(
     });
   if (error) throw new Error(error.message);
   await setRemoteRevision(userId, revision);
-}
-
-// --- Pull / Push manuali (retrocompatibilità / debug) ------------------------
-
-export async function pull(): Promise<boolean> {
-  await requireUserId();
-  const remoteRevision = await getRemoteRevision();
-  if (remoteRevision === null) return false;
-
-  const adapter = new IndexedDbAdapter();
-  const local = await adapter.load();
-  const localRevision = local ? revisionOf(local) : 0;
-  if (local && localRevision >= remoteRevision) return false;
-
-  const remoteText = await downloadRemoteBundle();
-  if (!remoteText) return false;
-
-  await adapter.save(remoteText);
-  return true;
-}
-
-export async function push(): Promise<void> {
-  await requireUserId();
-  const adapter = new IndexedDbAdapter();
-  const local = await adapter.load();
-  if (!local) throw new Error("Nessun bundle locale da sincronizzare.");
-  const localRevision = revisionOf(local);
-
-  const remoteRevision = await getRemoteRevision();
-  if (remoteRevision !== null && remoteRevision > localRevision) {
-    throw new ConflictError(localRevision, remoteRevision);
-  }
-
-  await uploadBundle(local, localRevision);
 }

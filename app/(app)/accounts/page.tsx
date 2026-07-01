@@ -26,7 +26,6 @@ export default function AccountsPage() {
 
   return (
     <AccountsView
-      accounts={data.analysis.accountsAsOf}
       analysis={data.analysis}
       transfers={data.transfers}
       currency={data.settings.defaultCurrency}

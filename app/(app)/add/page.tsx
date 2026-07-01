@@ -6,26 +6,14 @@ import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAccounts } from "@/lib/actions/accounts";
-import { getCategories } from "@/lib/actions/categories";
-import { getAvailableTags } from "@/lib/actions/transactions";
+import { loadTransactionFormDeps } from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { useYear } from "@/providers/year-provider";
 
 export default function AddPage() {
   const { year } = useYear();
   const yearQuery = `?year=${year}`;
-  const { data } = useAsyncData(
-    async () => {
-      const [accounts, categories, availableTags] = await Promise.all([
-        getAccounts(),
-        getCategories(),
-        getAvailableTags(year),
-      ]);
-      return { accounts, categories, availableTags };
-    },
-    [year]
-  );
+  const { data } = useAsyncData(() => loadTransactionFormDeps(year), [year]);
 
   if (!data) return <FullScreenLoader />;
 

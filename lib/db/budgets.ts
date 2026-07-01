@@ -4,7 +4,6 @@ import {
   trackDelete,
 } from "@/lib/sync/sync-metadata";
 import {
-  budgetInputSchema,
   budgetSchema,
   budgetsFileSchema,
   normalizeBudgetTag,
@@ -23,8 +22,7 @@ export async function getBudgets(): Promise<Budget[]> {
 
 export async function upsertBudget(input: BudgetInput): Promise<Budget> {
   const budgets = getDataset().budgets;
-  const parsedInput = budgetInputSchema.parse(input);
-  const inputKey = budgetKey(parsedInput);
+  const inputKey = budgetKey(input);
   const existing = budgets.findIndex(
     (b) => budgetKey(budgetSchema.parse(b)) === inputKey
   );
@@ -32,7 +30,7 @@ export async function upsertBudget(input: BudgetInput): Promise<Budget> {
     throw new Error("Esiste già un budget con questa combinazione");
   }
   const budget: Budget = budgetSchema.parse({
-    ...parsedInput,
+    ...input,
     id: generateId("bud"),
   });
   const dataset = getDataset();
@@ -50,8 +48,7 @@ export async function updateBudget(
   const index = budgets.findIndex((b) => b.id === id);
   if (index === -1) throw new Error("Budget non trovato");
 
-  const parsedInput = budgetInputSchema.parse(input);
-  const inputKey = budgetKey(parsedInput);
+  const inputKey = budgetKey(input);
   const duplicate = budgets.some((budget) => {
     const parsedBudget = budgetSchema.parse(budget);
     return parsedBudget.id !== id && budgetKey(parsedBudget) === inputKey;
@@ -61,7 +58,7 @@ export async function updateBudget(
   }
 
   const previous = budgets[index];
-  const updated = budgetSchema.parse({ ...parsedInput, id });
+  const updated = budgetSchema.parse({ ...input, id });
   budgets[index] = updated;
   trackBudgetUpsert(getDataset(), updated, getDeviceId(), previous);
   commit();

@@ -31,8 +31,7 @@ Uses [sharp](https://sharp.pixelplumbing.com/) to produce:
 
 | Output | Purpose |
 |--------|---------|
-| `public/icon.svg` | In-app logo (sidebar, auth screens) and PWA SVG icon |
-| `public/icons/icon-*.webp` | PWA raster icons (48–512 px) for `app/manifest.ts` |
+| `public/icons/icon-*.webp` | PWA raster icons (48–512 px); manifest references 192 and 512 |
 | `assets/icon-only.png` | Source for Capacitor iOS icon |
 | `assets/icon-foreground.png` | Android adaptive icon foreground |
 | `assets/icon-background.png` | Android adaptive icon background |
@@ -82,11 +81,6 @@ Development:
 - **PWA still shows old icon** — Browsers cache manifest icons aggressively. Clear site data, reinstall the PWA, or bump cache by redeploying.
 - **iOS icon unchanged in simulator** — Clean build folder in Xcode (Product → Clean Build Folder) and reinstall the app.
 
-## Files you should edit
-
-- `public/icon.svg` — always edit this
-- `assets/generate-icons.mjs` — only if background color or splash layout needs tuning
-
 ## Files you should not edit manually
 
 - `public/icons/*.webp`
@@ -94,5 +88,3 @@ Development:
 - `build/icon.png`
 - `ios/App/App/Assets.xcassets/**`
 - `android/app/src/main/res/mipmap-*/**`
-
-Regenerate them with `npm run icons:generate` instead.

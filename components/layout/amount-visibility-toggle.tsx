@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 
 export function AmountVisibilityToggle() {
   const { amountsHidden, toggleAmountsVisibility } = useAmountVisibility();

@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useYear } from "@/hooks/use-year";
+import { useYear } from "@/providers/year-provider";
 
 export function YearSelector() {
   const { year, setYear, availableYears } = useYear();

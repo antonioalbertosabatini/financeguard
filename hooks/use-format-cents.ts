@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { formatCentsMasked } from "@/lib/utils/money";
 
 export function useFormatCents() {

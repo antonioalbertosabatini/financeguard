@@ -62,8 +62,6 @@ export async function idbDelete(key: string): Promise<void> {
 }
 
 const DEVICE_ID_KEY = "device-id";
-const LAST_SEEN_KEY = "last-seen-revision";
-const FILE_HANDLE_KEY = "file-handle";
 const APP_MODE_KEY = "app-mode";
 
 export type AppMode = "local" | "cloud";
@@ -86,20 +84,4 @@ export async function getLocalDeviceId(): Promise<string> {
       : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   await idbSet(DEVICE_ID_KEY, id);
   return id;
-}
-
-export async function getLastSeenRevision(): Promise<number> {
-  return (await idbGet<number>(LAST_SEEN_KEY)) ?? 0;
-}
-
-export async function setLastSeenRevision(revision: number): Promise<void> {
-  await idbSet(LAST_SEEN_KEY, revision);
-}
-
-export async function rememberFileHandle<T>(handle: T): Promise<void> {
-  await idbSet(FILE_HANDLE_KEY, handle);
-}
-
-export async function recallFileHandle<T>(): Promise<T | undefined> {
-  return idbGet<T>(FILE_HANDLE_KEY);
 }

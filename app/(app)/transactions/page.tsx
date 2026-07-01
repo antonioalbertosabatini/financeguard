@@ -2,10 +2,11 @@
 
 import { TransactionsView } from "@/components/transactions/transactions-view";
 import { FullScreenLoader } from "@/components/providers/full-screen-loader";
-import { getAccounts } from "@/lib/actions/accounts";
-import { getCategories } from "@/lib/actions/categories";
 import { getSettings } from "@/lib/actions/settings";
-import { getAvailableTags, getTransactionsForListView } from "@/lib/actions/transactions";
+import {
+  getTransactionsForListView,
+  loadTransactionFormDeps,
+} from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { useYear } from "@/providers/year-provider";
 
@@ -13,15 +14,12 @@ export default function TransactionsPage() {
   const { year } = useYear();
   const { data } = useAsyncData(
     async () => {
-      const [{ transactions, occurrences }, accounts, categories, settings, availableTags] =
-        await Promise.all([
-          getTransactionsForListView(year),
-          getAccounts(),
-          getCategories(),
-          getSettings(),
-          getAvailableTags(year),
-        ]);
-      return { transactions, occurrences, accounts, categories, settings, availableTags };
+      const [{ transactions, occurrences }, formDeps, settings] = await Promise.all([
+        getTransactionsForListView(year),
+        loadTransactionFormDeps(year),
+        getSettings(),
+      ]);
+      return { transactions, occurrences, settings, ...formDeps };
     },
     [year]
   );

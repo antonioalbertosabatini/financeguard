@@ -82,20 +82,19 @@ type AccountsAnalysis = {
 };
 
 export function AccountsView({
-  accounts,
   analysis,
   transfers,
   currency,
   locale,
   year,
 }: {
-  accounts: AccountWithBalance[];
   analysis: AccountsAnalysis;
   transfers: AccountTransfer[];
   currency: string;
   locale: string;
   year: number;
 }) {
+  const accounts = analysis.accountsAsOf;
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);

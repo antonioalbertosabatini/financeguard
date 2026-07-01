@@ -1,6 +1,8 @@
 import { getAccounts } from "@/lib/db/accounts";
 import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
+import { getBudgets } from "@/lib/db/budgets";
 import { getCategories } from "@/lib/db/categories";
+import { getSettings } from "@/lib/db/settings";
 import {
   copyRecurringRules,
   createTransaction as dbCreateTransaction,
@@ -9,19 +11,51 @@ import {
   listTransactionYears,
   updateTransaction as dbUpdateTransaction,
 } from "@/lib/db/transactions";
+import type { Category } from "@/lib/schemas/category";
 import {
   transactionInputSchema,
   type TransactionFilters,
   type TransactionInput,
 } from "@/lib/schemas/transaction";
 import {
+  calculateAccountBalance,
+  calculateTotalBalance,
+  filterByMonth,
+  sumByType,
+  sumExpensesByCategory,
+  sumExpensesByDayAndCategory,
+  sumByMonth,
+} from "@/lib/utils/balance";
+import { currentYear } from "@/lib/utils/dates";
+import {
   expandRecurrences,
   filterExpandedTransactions,
   filterOccurrencesForListView,
   filterRawTransactions,
 } from "@/lib/utils/recurrence";
-import { currentYear } from "@/lib/utils/dates";
 import { normalizeTag } from "@/lib/utils/tags";
+
+function mapCategoryExpenses(
+  categories: Category[],
+  amounts: Record<string, number>,
+  sort = false
+) {
+  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const items = Object.entries(amounts).map(([categoryId, amount]) => ({
+    categoryId,
+    name: categoryMap[categoryId]?.name ?? categoryId,
+    color: categoryMap[categoryId]?.color ?? "#888",
+    amount,
+  }));
+  return sort ? items.sort((a, b) => b.amount - a.amount) : items;
+}
+
+async function expandedForYear(year: number, asOfISO?: string) {
+  const raw = await getTransactionsForYear(year);
+  let expanded = expandRecurrences(raw, year);
+  if (asOfISO) expanded = expanded.filter((tx) => tx.date <= asOfISO);
+  return expanded;
+}
 
 export async function getAvailableYears() {
   const years = await listTransactionYears();
@@ -56,6 +90,15 @@ export async function getTransactionsForListView(year: number) {
   return { transactions, occurrences };
 }
 
+export async function loadTransactionFormDeps(year: number) {
+  const [accounts, categories, availableTags] = await Promise.all([
+    getAccounts(),
+    getCategories(),
+    getAvailableTags(year),
+  ]);
+  return { accounts, categories, availableTags };
+}
+
 export async function createTransaction(data: TransactionInput) {
   const parsed = transactionInputSchema.parse(data);
   return dbCreateTransaction(parsed);
@@ -79,40 +122,26 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
 }
 
 export async function getDashboardData(year: number) {
-  const [accounts, categories, settings, transfers] = await Promise.all([
+  const [accounts, categories, settings, transfers, expanded] = await Promise.all([
     getAccounts(),
     getCategories(),
-    import("@/lib/db/settings").then((m) => m.getSettings()),
+    getSettings(),
     getAccountTransfersForYear(year),
+    expandedForYear(year),
   ]);
 
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year);
   const now = new Date();
   const monthPrefix = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const monthTxs = expanded.filter((tx) => tx.date.startsWith(monthPrefix));
-
-  const {
-    calculateTotalBalance,
-    sumByType,
-    sumExpensesByCategory,
-    sumByMonth,
-  } = await import("@/lib/utils/balance");
-
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
   return {
     settings,
     totalBalance: calculateTotalBalance(accounts, expanded, transfers),
     monthlyIncome: sumByType(monthTxs, "income"),
     monthlyExpense: sumByType(monthTxs, "expense"),
-    expensesByCategory: Object.entries(sumExpensesByCategory(expanded)).map(
-      ([categoryId, amount]) => ({
-        categoryId,
-        name: categoryMap[categoryId]?.name ?? categoryId,
-        color: categoryMap[categoryId]?.color ?? "#888",
-        amount,
-      })
+    expensesByCategory: mapCategoryExpenses(
+      categories,
+      sumExpensesByCategory(expanded)
     ),
     monthlyTrend: sumByMonth(expanded, year),
   };
@@ -126,55 +155,41 @@ export async function getAvailableTags(year?: number) {
           ys.length > 0 ? ys : [currentYear()]
         );
 
-  const allExpanded = await Promise.all(
-    years.map(async (y) => {
-      const raw = await getTransactionsForYear(y);
-      return expandRecurrences(raw, y);
-    })
-  );
+  const tags = new Set<string>();
+  for (const y of years) {
+    for (const tx of await getTransactionsForYear(y)) {
+      if (tx.type !== "expense") continue;
+      for (const tag of tx.tags) {
+        const normalized = normalizeTag(tag);
+        if (normalized) tags.add(normalized);
+      }
+    }
+  }
 
-  return Array.from(
-    new Set(
-      allExpanded
-        .flat()
-        .filter((tx) => tx.type === "expense")
-        .flatMap((tx) => tx.tags.map(normalizeTag))
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" }));
+  return Array.from(tags).sort((a, b) =>
+    a.localeCompare(b, "it", { sensitivity: "base" })
+  );
 }
 
 export async function getMonthlyReport(year: number, month: number) {
-  const [categories, settings] = await Promise.all([
+  const [categories, settings, expanded] = await Promise.all([
     getCategories(),
-    import("@/lib/db/settings").then((m) => m.getSettings()),
+    getSettings(),
+    expandedForYear(year),
   ]);
 
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year);
-  const {
-    filterByMonth,
-    sumByType,
-    sumExpensesByCategory,
-    sumExpensesByDayAndCategory,
-  } = await import("@/lib/utils/balance");
-
   const monthTxs = filterByMonth(expanded, year, month);
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
   return {
     settings,
     income: sumByType(monthTxs, "income"),
     expense: sumByType(monthTxs, "expense"),
     net: sumByType(monthTxs, "income") - sumByType(monthTxs, "expense"),
-    expensesByCategory: Object.entries(sumExpensesByCategory(monthTxs))
-      .map(([categoryId, amount]) => ({
-        categoryId,
-        name: categoryMap[categoryId]?.name ?? categoryId,
-        color: categoryMap[categoryId]?.color ?? "#888",
-        amount,
-      }))
-      .sort((a, b) => b.amount - a.amount),
+    expensesByCategory: mapCategoryExpenses(
+      categories,
+      sumExpensesByCategory(monthTxs),
+      true
+    ),
     dailyExpenses: sumExpensesByDayAndCategory(
       monthTxs,
       year,
@@ -185,18 +200,11 @@ export async function getMonthlyReport(year: number, month: number) {
 }
 
 export async function getAnnualReport(year: number) {
-  const [categories, settings] = await Promise.all([
+  const [categories, settings, expanded] = await Promise.all([
     getCategories(),
-    import("@/lib/db/settings").then((m) => m.getSettings()),
+    getSettings(),
+    expandedForYear(year),
   ]);
-
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year);
-  const { sumByType, sumExpensesByCategory, sumByMonth } = await import(
-    "@/lib/utils/balance"
-  );
-
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
 
   return {
     settings,
@@ -204,23 +212,20 @@ export async function getAnnualReport(year: number) {
     expense: sumByType(expanded, "expense"),
     net: sumByType(expanded, "income") - sumByType(expanded, "expense"),
     monthlyTrend: sumByMonth(expanded, year),
-    expensesByCategory: Object.entries(sumExpensesByCategory(expanded))
-      .map(([categoryId, amount]) => ({
-        categoryId,
-        name: categoryMap[categoryId]?.name ?? categoryId,
-        color: categoryMap[categoryId]?.color ?? "#888",
-        amount,
-      }))
-      .sort((a, b) => b.amount - a.amount),
+    expensesByCategory: mapCategoryExpenses(
+      categories,
+      sumExpensesByCategory(expanded),
+      true
+    ),
   };
 }
 
 export async function getAccountsWithBalances(year: number) {
-  const accounts = await getAccounts();
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year);
-  const transfers = await getAccountTransfersForYear(year);
-  const { calculateAccountBalance } = await import("@/lib/utils/balance");
+  const [accounts, expanded, transfers] = await Promise.all([
+    getAccounts(),
+    expandedForYear(year),
+    getAccountTransfersForYear(year),
+  ]);
 
   return accounts.map((account) => ({
     ...account,
@@ -229,13 +234,13 @@ export async function getAccountsWithBalances(year: number) {
 }
 
 export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string) {
-  const accounts = await getAccounts();
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year).filter((tx) => tx.date <= asOfISO);
-  const transfers = (await getAccountTransfersForYear(year)).filter(
-    (tr) => tr.date <= asOfISO
-  );
-  const { calculateAccountBalance } = await import("@/lib/utils/balance");
+  const [accounts, expanded, transfers] = await Promise.all([
+    getAccounts(),
+    expandedForYear(year, asOfISO),
+    getAccountTransfersForYear(year).then((items) =>
+      items.filter((tr) => tr.date <= asOfISO)
+    ),
+  ]);
 
   return accounts.map((account) => ({
     ...account,
@@ -244,15 +249,11 @@ export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string)
 }
 
 export async function getAccountsAnalysisSummary(year: number, asOfISO: string) {
-  const accounts = await getAccounts();
-  const raw = await getTransactionsForYear(year);
-  const expandedAll = expandRecurrences(raw, year);
-  const transfersAll = await getAccountTransfersForYear(year);
-
-  const {
-    calculateAccountBalance,
-    calculateTotalBalance,
-  } = await import("@/lib/utils/balance");
+  const [accounts, expandedAll, transfersAll] = await Promise.all([
+    getAccounts(),
+    expandedForYear(year),
+    getAccountTransfersForYear(year),
+  ]);
 
   const expandedAsOf = expandedAll.filter((tx) => tx.date <= asOfISO);
   const transfersAsOf = transfersAll.filter((tr) => tr.date <= asOfISO);
@@ -277,15 +278,12 @@ export async function getAccountsAnalysisSummary(year: number, asOfISO: string) 
 }
 
 export async function getBudgetProgress(year: number, month: number) {
-  const [budgets, categories, settings] = await Promise.all([
-    import("@/lib/db/budgets").then((m) => m.getBudgets()),
+  const [budgets, categories, settings, expanded] = await Promise.all([
+    getBudgets(),
     getCategories(),
-    import("@/lib/db/settings").then((m) => m.getSettings()),
+    getSettings(),
+    expandedForYear(year),
   ]);
-
-  const raw = await getTransactionsForYear(year);
-  const expanded = expandRecurrences(raw, year);
-  const { filterByMonth } = await import("@/lib/utils/balance");
 
   const monthTxs = filterByMonth(expanded, year, month);
   const expenseTxs = monthTxs.filter((tx) => tx.type === "expense");

@@ -3,12 +3,17 @@ import type {
   Transaction,
   TransactionFilters,
 } from "@/lib/schemas/transaction";
+import { MONTH_LABELS } from "@/lib/constants";
 import {
   getDayFromDate,
   getDaysInMonth,
   getMonthFromDate,
   toISODate,
 } from "@/lib/utils/dates";
+
+function monthLabel(month: number): string {
+  return MONTH_LABELS[month - 1].toLowerCase();
+}
 
 export function getRecurrenceIntervalLabel(
   transaction: Transaction,
@@ -28,25 +33,10 @@ export function getRecurrenceIntervalLabel(
   startMonth = Math.max(1, Math.min(12, startMonth));
   endMonth = Math.max(1, Math.min(12, endMonth));
 
-  const monthNames = [
-    "gen",
-    "feb",
-    "mar",
-    "apr",
-    "mag",
-    "giu",
-    "lug",
-    "ago",
-    "set",
-    "ott",
-    "nov",
-    "dic",
-  ];
-
   if (startMonth === endMonth) {
-    return `${monthNames[startMonth - 1]} ${y}`;
+    return `${monthLabel(startMonth)} ${y}`;
   }
-  return `${monthNames[startMonth - 1]}–${monthNames[endMonth - 1]} ${y}`;
+  return `${monthLabel(startMonth)}–${monthLabel(endMonth)} ${y}`;
 }
 
 export function expandRecurrences(
@@ -136,22 +126,7 @@ export function filterOccurrencesForListView(
 }
 
 export function getOccurrenceMonthLabel(date: string, year: number): string {
-  const monthNames = [
-    "gen",
-    "feb",
-    "mar",
-    "apr",
-    "mag",
-    "giu",
-    "lug",
-    "ago",
-    "set",
-    "ott",
-    "nov",
-    "dic",
-  ];
-  const month = getMonthFromDate(date);
-  return `${monthNames[month - 1]} ${year}`;
+  return `${monthLabel(getMonthFromDate(date))} ${year}`;
 }
 
 export function filterRawTransactions(

@@ -18,6 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  getPasswordError,
+} from "@/lib/constants";
+import {
   buildEncryptedBackup,
   buildPlainBackup,
   readEncryptedBackup,
@@ -28,8 +31,8 @@ import {
   replaceDataset,
   replaceDatasetWithPassword,
 } from "@/lib/storage/data-store";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { todayISO } from "@/lib/utils/dates";
+import { toastActionError } from "@/lib/utils/toast";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -43,7 +46,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return todayISO();
 }
 
 export function DataView() {
@@ -65,7 +68,7 @@ export function DataView() {
       downloadBlob(blob, `financeguard-export-${today()}.zip`);
       toast.success("Dati esportati");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore export");
+      toastActionError(err, "Errore export");
     } finally {
       setExportingPlain(false);
     }
@@ -86,7 +89,7 @@ export function DataView() {
       await replaceDataset(dataset);
       toast.success("Dati importati con successo");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore import");
+      toastActionError(err, "Errore import");
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -95,14 +98,13 @@ export function DataView() {
 
   async function handleEncryptedExport(e: React.FormEvent) {
     e.preventDefault();
-    if (exportPassword.length < MIN_PASSWORD_LENGTH) {
-      toast.error(
-        `La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`
-      );
-      return;
-    }
     if (exportPassword !== exportConfirm) {
       toast.error("Le password non coincidono.");
+      return;
+    }
+    const passwordError = getPasswordError(exportPassword);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
@@ -114,7 +116,7 @@ export function DataView() {
       setExportPassword("");
       setExportConfirm("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore export");
+      toastActionError(err, "Errore export");
     } finally {
       setExporting(false);
     }
@@ -148,7 +150,7 @@ export function DataView() {
       setEncFile(null);
       setImportPassword("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore import");
+      toastActionError(err, "Errore import");
     } finally {
       setImportingEnc(false);
     }

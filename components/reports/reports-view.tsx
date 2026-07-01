@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { getMonthlyReport } from "@/lib/actions/transactions";
 import { MONTH_LABELS, MONTH_LABELS_FULL } from "@/lib/constants";

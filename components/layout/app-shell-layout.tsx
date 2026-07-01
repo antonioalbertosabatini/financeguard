@@ -10,17 +10,13 @@ import { CloudSyncAlert } from "@/components/layout/cloud-sync-alert";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { SyncWarnings } from "@/components/layout/sync-warnings";
 import { YearSelector } from "@/components/layout/year-selector";
-import { useSidebar } from "@/hooks/use-sidebar";
+import { useSidebar } from "@/providers/sidebar-provider";
+import { useSyncState } from "@/lib/sync/use-sync-state";
 import { cn } from "@/lib/utils";
 
-export function AppShellLayout({
-  children,
-  syncWarnings = [],
-}: {
-  children: ReactNode;
-  syncWarnings?: string[];
-}) {
+export function AppShellLayout({ children }: { children: ReactNode }) {
   const { sidebarOpen } = useSidebar();
+  const { warnings: syncWarnings } = useSyncState();
 
   return (
     <div

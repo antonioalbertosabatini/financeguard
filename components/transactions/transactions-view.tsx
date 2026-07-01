@@ -53,10 +53,10 @@ import { MONTH_LABELS_FULL, TRANSACTION_FILTER_TYPES, TRANSACTION_TYPE_LABELS } 
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { ExpandedTransaction, Transaction } from "@/lib/schemas/transaction";
-import { useAmountVisibility } from "@/hooks/use-amount-visibility";
+import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { formatDate } from "@/lib/utils/dates";
-import { HIDDEN_AMOUNT } from "@/lib/utils/money";
+import { formatSignedCents } from "@/lib/utils/money";
 import {
   getOccurrenceMonthLabel,
   getRecurrenceIntervalLabel,
@@ -281,11 +281,13 @@ export function TransactionsView({
   }
 
   function formatAmount(tx: Transaction) {
-    if (amountsHidden) return HIDDEN_AMOUNT;
-    const formatted = formatCentsDisplay(tx.amount, currency, locale);
-    if (tx.type === "income") return `+${formatted}`;
-    if (tx.type === "expense") return `-${formatted}`;
-    return formatted;
+    return formatSignedCents(
+      tx.amount,
+      tx.type,
+      currency,
+      locale,
+      amountsHidden
+    );
   }
 
   const filterFields = (
@@ -453,10 +455,10 @@ export function TransactionsView({
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
                 <span className="text-success">
-                  {amountsHidden ? HIDDEN_AMOUNT : `+${formatCentsDisplay(totals.income, currency, locale)}`}
+                  {formatSignedCents(totals.income, "income", currency, locale, amountsHidden)}
                 </span>
                 <span className="text-danger">
-                  {amountsHidden ? HIDDEN_AMOUNT : `-${formatCentsDisplay(totals.expense, currency, locale)}`}
+                  {formatSignedCents(totals.expense, "expense", currency, locale, amountsHidden)}
                 </span>
                 <span className="font-medium">
                   Saldo: {formatCentsDisplay(totals.net, currency, locale)}

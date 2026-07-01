@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/layout/app-logo";
-import { useSidebar } from "@/hooks/use-sidebar";
+import { useSidebar } from "@/providers/sidebar-provider";
 import { isActivePath, navGroups } from "@/components/layout/nav-config";
 import { cn } from "@/lib/utils";
 

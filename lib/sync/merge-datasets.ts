@@ -8,6 +8,7 @@ import type { Category } from "@/lib/schemas/category";
 import type { Settings } from "@/lib/schemas/settings";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { Dataset } from "@/lib/storage/dataset";
+import { getYearFromDate } from "@/lib/db/index";
 import {
   emptySyncMetadata,
   recordKey,
@@ -16,10 +17,6 @@ import {
   type SyncEntityType,
   type SyncMetadata,
 } from "@/lib/sync/sync-metadata";
-
-function getYearFromDate(date: string): number {
-  return parseInt(date.slice(0, 4), 10);
-}
 
 function fieldTimestamp(
   meta: RecordSyncMeta | undefined,

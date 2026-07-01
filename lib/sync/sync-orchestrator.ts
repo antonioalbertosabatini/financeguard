@@ -1,7 +1,7 @@
 /**
  * Orchestratore sync automatico: pull, merge client-side, push.
  */
-import { decryptBundleWithKey } from "@/lib/storage/bundle";
+import { decryptBundleWithKey, revisionOf } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import {
   applySyncedDataset,
@@ -45,15 +45,6 @@ let syncChain: Promise<SyncResult> = Promise.resolve({
   pushed: false,
 });
 let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-function revisionOf(bundleText: string): number {
-  try {
-    const rev = (JSON.parse(bundleText) as { revision?: number }).revision;
-    return typeof rev === "number" ? rev : 0;
-  } catch {
-    return 0;
-  }
-}
 
 export async function syncNow(reason?: string): Promise<SyncResult> {
   void reason;

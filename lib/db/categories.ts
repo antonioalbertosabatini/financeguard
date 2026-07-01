@@ -4,7 +4,6 @@ import {
   trackDelete,
 } from "@/lib/sync/sync-metadata";
 import {
-  categoryInputSchema,
   categorySchema,
   type Category,
   type CategoryInput,
@@ -18,9 +17,8 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function createCategory(input: CategoryInput): Promise<Category> {
-  const parsedInput = categoryInputSchema.parse(input);
   const category: Category = categorySchema.parse({
-    ...parsedInput,
+    ...input,
     id: generateId("cat"),
   });
   const dataset = getDataset();
@@ -34,12 +32,11 @@ export async function updateCategory(
   id: string,
   input: CategoryInput
 ): Promise<Category> {
-  const parsedInput = categoryInputSchema.parse(input);
   const categories = getDataset().categories;
   const index = categories.findIndex((c) => c.id === id);
   if (index === -1) throw new Error("Categoria non trovata");
   const previous = categories[index];
-  const updated = categorySchema.parse({ ...parsedInput, id });
+  const updated = categorySchema.parse({ ...input, id });
   categories[index] = updated;
   trackCategoryUpsert(getDataset(), updated, getDeviceId(), previous);
   commit();

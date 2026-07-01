@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
+import { Suspense, createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { currentYear } from "@/lib/utils/dates";
 
@@ -48,9 +42,11 @@ export function YearProvider({
   );
 
   return (
-    <YearContext.Provider value={{ year, setYear, availableYears }}>
-      {children}
-    </YearContext.Provider>
+    <Suspense fallback={null}>
+      <YearContext.Provider value={{ year, setYear, availableYears }}>
+        {children}
+      </YearContext.Provider>
+    </Suspense>
   );
 }
 

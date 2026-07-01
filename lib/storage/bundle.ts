@@ -50,6 +50,15 @@ export class ConflictError extends Error {
   }
 }
 
+export function revisionOf(bundleText: string): number {
+  try {
+    const rev = (JSON.parse(bundleText) as { revision?: number }).revision;
+    return typeof rev === "number" ? rev : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function parseBundle(text: string): Bundle {
   const parsed = JSON.parse(text) as Bundle;
   if (parsed.app !== "financeguard" || typeof parsed.revision !== "number") {
