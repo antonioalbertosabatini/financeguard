@@ -64,6 +64,18 @@ export async function idbDelete(key: string): Promise<void> {
 const DEVICE_ID_KEY = "device-id";
 const LAST_SEEN_KEY = "last-seen-revision";
 const FILE_HANDLE_KEY = "file-handle";
+const APP_MODE_KEY = "app-mode";
+
+export type AppMode = "local" | "cloud";
+
+/** Modalita' scelta al primo avvio (locale o cloud). Per-dispositivo, mai sul cloud. */
+export async function getAppMode(): Promise<AppMode | undefined> {
+  return idbGet<AppMode>(APP_MODE_KEY);
+}
+
+export async function setAppMode(mode: AppMode): Promise<void> {
+  await idbSet(APP_MODE_KEY, mode);
+}
 
 export async function getLocalDeviceId(): Promise<string> {
   const existing = await idbGet<string>(DEVICE_ID_KEY);

@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setupPassword } from "@/lib/actions/auth";
+import { getSettings, updateSettings } from "@/lib/actions/settings";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import type { AppMode } from "@/lib/storage/local-store";
 import { cn } from "@/lib/utils";
 
 const STRENGTH_LABELS = ["Molto debole", "Debole", "Sufficiente", "Buona", "Ottima"];
@@ -30,7 +33,7 @@ function passwordStrength(pw: string): number {
   return Math.min(score, 4);
 }
 
-export function SetupForm() {
+export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -43,7 +46,20 @@ export function SetupForm() {
     setError(null);
     startTransition(async () => {
       const result = await setupPassword(password, confirm);
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      // Onboarding in locale: l'utente non ha scelto il cloud, quindi non lo
+      // infastidiamo con il banner rosso (resta attivabile dal Profilo).
+      if (mode === "local") {
+        const settings = await getSettings();
+        await updateSettings({ ...settings, showSyncWarning: false });
+      } else {
+        toast.info(
+          "Attiva la sincronizzazione dal Profilo: crea o accedi al tuo account cloud."
+        );
+      }
     });
   }
 

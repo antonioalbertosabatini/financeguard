@@ -15,7 +15,7 @@
     "cap:sync": "next build && cap sync",
     "cap:ios": "next build && cap sync ios && cap open ios",
     "cap:android": "next build && cap sync android && cap open android",
-    "icons:generate": "node assets/generate-icons.mjs && npx @capacitor/assets generate --android"
+    "icons:generate": "node assets/generate-icons.mjs && npx @capacitor/assets generate --ios --android"
   },
   "dependencies": {
     "@capacitor/core": "^8.4.1",

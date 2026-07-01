@@ -19,7 +19,7 @@ export function SettingsView({ settings }: { settings: Settings }) {
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await updateSettings({ defaultCurrency: currency, locale });
+      await updateSettings({ ...settings, defaultCurrency: currency, locale });
       toast.success("Impostazioni salvate");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");

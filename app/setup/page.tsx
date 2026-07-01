@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AuthShell } from "@/components/auth/auth-shell";
-import { SetupForm } from "@/components/auth/setup-form";
+import { SetupFlow } from "@/components/auth/setup-flow";
 import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { useDataStore } from "@/lib/storage/data-store";
 
@@ -18,12 +17,5 @@ export default function SetupPage() {
 
   if (status !== "needs-setup") return <FullScreenLoader />;
 
-  return (
-    <AuthShell
-      title="Benvenuto in FinanceGuard"
-      description="Imposta una password per proteggere i tuoi dati con la crittografia."
-    >
-      <SetupForm />
-    </AuthShell>
-  );
+  return <SetupFlow />;
 }
