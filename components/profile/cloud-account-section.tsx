@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { getSettings, updateSettings } from "@/lib/actions/settings";
+import { useAsyncData } from "@/lib/storage/use-async-data";
 import { getPasswordError } from "@/lib/constants";
 import {
   getCloudUserEmail,
@@ -32,6 +35,43 @@ function formatLastSync(iso: string | null): string {
   } catch {
     return "—";
   }
+}
+
+function SyncWarningToggle() {
+  const { data: settings } = useAsyncData(() => getSettings(), []);
+  const [busy, setBusy] = useState(false);
+
+  async function handleChange(next: boolean) {
+    if (!settings) return;
+    setBusy(true);
+    try {
+      await updateSettings({ ...settings, showSyncWarning: next });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+      <div className="space-y-0.5">
+        <Label htmlFor="show-sync-warning" className="text-sm font-medium">
+          Avvisami se il cloud non è sincronizzato
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          Mostra un banner rosso nella dashboard quando la sincronizzazione cloud
+          non è attiva o è fallita.
+        </p>
+      </div>
+      <Switch
+        id="show-sync-warning"
+        checked={settings?.showSyncWarning ?? true}
+        disabled={busy || !settings}
+        onCheckedChange={handleChange}
+      />
+    </div>
+  );
 }
 
 function syncStatusLabel(status: string): string {
@@ -94,13 +134,14 @@ export function CloudAccountSection() {
             Account cloud (non configurato)
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Per attivare il sync cloud zero-knowledge crea un progetto Supabase,
             esegui le migrazioni in <code>supabase/migrations/</code> e imposta{" "}
             <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
             <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>.
           </p>
+          <SyncWarningToggle />
         </CardContent>
       </Card>
     );
@@ -245,6 +286,8 @@ export function CloudAccountSection() {
             </Button>
           </div>
         )}
+
+        <SyncWarningToggle />
       </CardContent>
     </Card>
   );

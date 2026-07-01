@@ -1,75 +1,141 @@
 # FinanceGuard
 
-Gestione delle finanze personali, **locale e cifrata**. App [Next.js](https://nextjs.org) (App Router) che salva i dati come file JSON cifrati sul tuo disco: niente database remoto, niente account, niente telemetria.
+**Zero-knowledge personal finance tracker.** Your financial data is encrypted on your device with your master password. Without that password, nobody — not even a cloud server — can read or recover your data.
 
-## Avvio
+FinanceGuard runs fully offline as a local-only app, or optionally syncs an **encrypted** vault across your devices through a Supabase project you control. In cloud mode the server only ever stores ciphertext: it never sees your password or your data.
+
+- 🔐 **Zero-knowledge** — AES-256-GCM encryption, key derived from your password with scrypt. The key never leaves memory and is never persisted.
+- 💻 **Local-first** — works 100% offline, no account required.
+- ☁️ **Optional cloud sync** — bring your own Supabase project; only the encrypted bundle is uploaded.
+- 🖥️ **Multi-platform** — web (PWA), desktop (Electron), mobile scaffolding (Capacitor).
+
+> ⚠️ **There is no password recovery.** Because the app is zero-knowledge, a forgotten master password means the data is unrecoverable. Choose a strong password and export encrypted backups regularly.
+
+---
+
+## Features
+
+- **Dashboard** — total balance, monthly income/expense, category breakdown and trends.
+- **Accounts** — checking, cash, savings, credit card; per-account currency and initial balance.
+- **Transactions** — income, expenses and inter-account transfers, with tags, search and year filtering.
+- **Recurrences** — recurring transactions with start/end dates.
+- **Categories** — customizable income/expense categories (sensible defaults seeded).
+- **Budgets** — set limits per category and track actual vs. budgeted spending.
+- **Reports** — analytics on spending by category and over time.
+- **Backups** — export/import an encrypted (or cleartext) ZIP; a backup can use its own password.
+- **Profile** — cloud account management and sync status.
+
+---
+
+## Local vs. Cloud mode
+
+On first launch you choose how to use the app:
+
+- **Local only** — set a master password and you're done. No account, no network, no configuration. Data lives encrypted in your browser (IndexedDB) or, on desktop, in a file. You can still export encrypted backups.
+- **Cloud** — sync the encrypted vault between devices via Supabase. This requires configuring environment variables (see below). If the cloud isn't configured yet, the app tells you how and lets you continue locally.
+
+A red banner appears on the dashboard whenever cloud sync is **not** active — no account configured, not signed in, or a failed sync. You can toggle this warning off in **Profile → Cloud account** (it starts off automatically if you chose local-only mode).
+
+---
+
+## Tech stack
+
+- [Next.js 16](https://nextjs.org/) (App Router, static export) + [React 19](https://react.dev/) + TypeScript
+- [Tailwind CSS 4](https://tailwindcss.com/) with [shadcn/ui](https://ui.shadcn.com/) (Radix primitives)
+- Crypto: [@noble/hashes](https://github.com/paulmillr/noble-hashes) (scrypt) + Web Crypto API (AES-256-GCM)
+- [Zod](https://zod.dev/) + [React Hook Form](https://react-hook-form.com/) for validation/forms
+- [Supabase](https://supabase.com/) for optional cloud sync
+- [Recharts](https://recharts.org/), [date-fns](https://date-fns.org/), [Sonner](https://sonner.emilkowal.ski/)
+- [Electron](https://www.electronjs.org/) (desktop) and [Capacitor](https://capacitorjs.com/) (mobile)
+- [Vitest](https://vitest.dev/) for tests
+
+---
+
+## Quick start
+
+Requirements: **Node.js 20+**.
 
 ```bash
+git clone <your-repo-url> financeguard
+cd financeguard
 npm install
 npm run dev
 ```
 
-Apri [http://localhost:3000](http://localhost:3000). Al primo avvio imposti una password; da quel momento i dati vengono cifrati con essa.
+Open <http://localhost:3000>. On first launch you'll pick **Local** or **Cloud** and set your master password. No `.env` is needed for local mode — the app runs and builds fine without one.
 
-## Modello di sicurezza
+Useful scripts:
 
-- **Cifratura**: AES-256-GCM con IV casuale e tag di autenticazione per ogni file (`lib/crypto/cipher.ts`).
-- **Derivazione chiave**: `scrypt` (parametri in `SCRYPT_PARAMS`) a partire dalla password, con salt casuale. La chiave **non viene mai salvata su disco**: resta solo in memoria dopo lo sblocco (`lib/crypto/session.ts`).
-- **Vault**: `data/vault.json` contiene solo il salt (in chiaro), un verificatore cifrato e i parametri KDF. Non rivela la password.
-- **Nessun vincolo al dispositivo**: i file sono portabili. Chi ottiene i file dal cloud vede solo blob cifrati.
-- **Lunghezza minima password**: `MIN_PASSWORD_LENGTH` in `lib/constants.ts` (12). Usa una passphrase robusta: il vault, se finisce sul cloud, e' soggetto ad attacchi offline a forza bruta.
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build (static export to `out/`) |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run the Vitest suite |
 
-## Uso su piu' dispositivi con cartella cloud (OneDrive, ecc.)
+---
 
-Stato attuale: **supportato su desktop, un dispositivo alla volta.**
+## Enabling cloud sync (optional)
 
-### Puntare i dati alla cartella cloud
+Cloud sync is bring-your-own-backend: you run your own Supabase project, so you stay in control of your (encrypted) data.
 
-Imposta la variabile d'ambiente `FG_DATA_DIR` sulla cartella sincronizzata:
+1. **Create a Supabase project** at <https://supabase.com>.
+2. **Run the migrations** in [`supabase/migrations/`](supabase/migrations/) against your project (Supabase SQL editor or CLI):
+   - `0001_vault.sql` — `vault_meta` table + private `vaults` storage bucket, with Row Level Security so each user can only reach their own encrypted bundle.
+   - `0002_active_session.sql` — `active_sessions` table (heartbeat) to avoid concurrent edits from multiple devices.
+3. **Configure environment variables.** Copy [`.env.example`](.env.example) to `.env.local` and fill in:
+
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+   These are `NEXT_PUBLIC_*` variables, so they are compiled into the client **at build time** — restart the dev server or rebuild after changing them.
+4. Restart the app, open **Profile → Cloud account**, and create or sign in to your cloud account.
+
+> The Supabase anon key is public by design. Security does not rely on keeping it secret: the vault is encrypted client-side and Row Level Security scopes every row/object to the authenticated user. The master password and encryption key are never sent to Supabase.
+
+If `.env.local` is missing or the variables are empty, cloud features are simply hidden and the app stays 100% local — nothing breaks.
+
+---
+
+## Desktop (Electron)
 
 ```bash
-# macOS / Linux
-FG_DATA_DIR="$HOME/OneDrive/FinanceGuard" npm run start
-
-# Windows (PowerShell)
-$env:FG_DATA_DIR="C:\Users\<utente>\OneDrive\FinanceGuard"; npm run start
+npm run electron:dev     # run the desktop app in dev
+npm run electron:build   # build a distributable (dmg / nsis / AppImage)
 ```
 
-Lo stato locale per-dispositivo (device id, ultima revisione vista) viene tenuto **fuori** dalla cartella sincronizzata, in `~/.financeguard` (override con `FG_LOCAL_DIR`).
+Optional desktop env vars `FG_DATA_DIR` / `FG_LOCAL_DIR` (see `.env.example`) let you point the encrypted bundle and per-device state at custom folders — e.g. a synced cloud folder.
 
-### Protezioni contro i conflitti di sincronizzazione
+## Mobile (Capacitor)
 
-Anche usando un dispositivo alla volta, il client cloud sincronizza in background. FinanceGuard aggiunge alcune salvaguardie (`lib/db/sync-guard.ts`):
+Mobile support is scaffolded via Capacitor:
 
-- **Scritture robuste**: file temporaneo in `data/.fg-tmp`, `fsync` e poi `rename` atomico, per non far sincronizzare file parziali.
-- **Revisione**: `data/sync-meta.json` traccia un contatore monotono e l'ultimo dispositivo che ha scritto.
-- **Guardia anti-stale**: se i dati sul disco risultano piu' vecchi dell'ultima versione vista da questo dispositivo, compare un avviso che invita ad attendere la sincronizzazione.
-- **Lock di sessione**: `data/app.lock` con heartbeat; se un altro dispositivo risulta attivo di recente, compare un avviso.
-- **Rilevamento copie di conflitto**: se il cloud crea file duplicati, vengono segnalati.
+```bash
+npm run cap:ios       # build, sync and open the iOS project
+npm run cap:android   # build, sync and open the Android project
+```
 
-Regola pratica: **attendi che la sincronizzazione sia completa prima di aprire l'app su un altro dispositivo.**
+---
 
-### Aggiornamento automatico dei parametri di sicurezza
+## Security model
 
-Se il costo `scrypt` viene aumentato, al primo sblocco i vault esistenti vengono ri-cifrati con i nuovi parametri (`upgradeVaultKdf` in `lib/crypto/vault.ts`), in modo trasparente.
+- **Key derivation:** scrypt (`N=131072, r=8, p=1`) over your master password + a random per-vault salt. Legacy vaults are auto-upgraded on unlock.
+- **Encryption:** AES-256-GCM with a random IV and authentication tag. The entire dataset is stored as a single encrypted bundle (`.fgv`).
+- **Session key:** held in memory only; never written to disk.
+- **Cloud auth:** a separate auth hash is derived from your credentials (the master password itself is never sent). Only the encrypted bundle is uploaded; merges happen client-side after decryption.
+- **Isolation:** Supabase Row Level Security ensures each account can only access its own bundle and metadata.
 
-## Roadmap multi-piattaforma (FASE 2)
+---
 
-Obiettivo: app installabile su desktop **e mobile** (iOS/Android), local-first, con il bundle cifrato in una cartella cloud. Le fondamenta sono gia' nel repository:
+## Contributing
 
-- **Crittografia lato client** (`lib/crypto/web-crypto.ts`): AES-GCM via Web Crypto + `scrypt` (`@noble/hashes`), **formato envelope/vault identico** a quello server (verificato compatibile).
-- **Astrazione di storage** (`lib/storage/adapter.ts`): interfaccia `StorageAdapter` con implementazione `FileSystemAccessAdapter` (desktop) e selezione file; su mobile si aggiunge un adapter basato sul document picker nativo.
-- **Stato locale client** (`lib/storage/local-store.ts`): IndexedDB per device id, ultima revisione e handle del file scelto.
-- **Bundle cifrato unico** (`lib/storage/bundle.ts`): un solo file `.fgv` con vault + `revision` + dataset cifrato e guardia anti-conflitto (`ConflictError`).
-- **PWA**: `app/manifest.ts` + `public/icon.svg` rendono l'app installabile.
-- **Capacitor**: `capacitor.config.ts` (template) per impacchettare l'app web come app nativa.
+Issues and pull requests are welcome. Please run `npm run lint` and `npm run test` before opening a PR.
 
-Passi rimanenti per completare la FASE 2:
+> Note: this project pins a specific Next.js version whose conventions may differ from older releases — check the guides bundled under `node_modules/next/dist/docs/` when working on Next.js-specific code.
 
-1. Spostare il data layer da server (`lib/db/*`, server actions) a client, usando `lib/storage/bundle.ts` come persistenza e IndexedDB come copia di lavoro.
-2. Configurare l'export statico (`output: "export"`) e un service worker per l'uso offline.
-3. Installare Capacitor (`npm i -D @capacitor/cli @capacitor/core`) e generare i progetti nativi, aggiungendo icone PNG 192/512.
+## License
 
-## Backup
-
-Dalla sezione Dati puoi esportare/importare backup in chiaro o cifrati (ZIP). Il backup cifrato puo' usare una password diversa da quella dell'app.
+[MIT](LICENSE) © 2026 Antonio Alberto Sabatini

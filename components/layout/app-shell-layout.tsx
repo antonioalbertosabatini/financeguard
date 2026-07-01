@@ -6,6 +6,7 @@ import { AppLogo } from "@/components/layout/app-logo";
 import { AddTransactionButton } from "@/components/layout/add-transaction-button";
 import { AppSidebarWrapper } from "@/components/layout/app-sidebar-wrapper";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { CloudSyncAlert } from "@/components/layout/cloud-sync-alert";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { SyncWarnings } from "@/components/layout/sync-warnings";
 import { YearSelector } from "@/components/layout/year-selector";
@@ -57,6 +58,7 @@ export function AppShellLayout({
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 p-4 pb-bottom-nav sm:p-6 md:p-8 md:pb-8">
+          <CloudSyncAlert />
           <SyncWarnings warnings={syncWarnings} />
           {children}
         </main>
