@@ -41,6 +41,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -50,7 +58,10 @@ import {
   deleteAccount,
   updateAccount,
 } from "@/lib/actions/accounts";
-import { createAccountTransfer } from "@/lib/actions/account-transfers";
+import {
+  createAccountTransfer,
+  deleteAccountTransfer,
+} from "@/lib/actions/account-transfers";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants";
 import { ACCOUNT_ICON_NAMES } from "@/lib/constants/account-icons";
 import type { Account } from "@/lib/schemas/account";
@@ -102,6 +113,9 @@ export function AccountsView({
   const [fromAccountId, setFromAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [transferNotes, setTransferNotes] = useState("");
+  const [deletingTransfer, setDeletingTransfer] = useState<AccountTransfer | null>(
+    null
+  );
 
   const [transfersOpen, setTransfersOpen] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -276,6 +290,18 @@ export function AccountsView({
       setTransfersOpen(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore");
+    }
+  }
+
+  async function handleDeleteTransfer() {
+    if (!deletingTransfer) return;
+    try {
+      await deleteAccountTransfer(deletingTransfer.id, year);
+      toast.success("Trasferimento eliminato");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore");
+    } finally {
+      setDeletingTransfer(null);
     }
   }
 
@@ -714,6 +740,7 @@ export function AccountsView({
                       <TableHead>A</TableHead>
                       <TableHead className="text-right">Importo</TableHead>
                       <TableHead>Note</TableHead>
+                      <TableHead className="w-[60px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -757,6 +784,15 @@ export function AccountsView({
                           </TableCell>
                           <TableCell className="max-w-[320px] truncate">
                             {tr.notes || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setDeletingTransfer(tr)}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -868,6 +904,28 @@ export function AccountsView({
           </Collapsible>
         </Card>
       )}
+
+      <Dialog
+        open={!!deletingTransfer}
+        onOpenChange={(open) => !open && setDeletingTransfer(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminare il trasferimento?</DialogTitle>
+            <DialogDescription>
+              L&apos;operazione non puo&apos; essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingTransfer(null)}>
+              Annulla
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteTransfer}>
+              Elimina
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
