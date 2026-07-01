@@ -52,16 +52,24 @@ import {
 import { MONTH_LABELS_FULL, TRANSACTION_FILTER_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
-import type { Transaction } from "@/lib/schemas/transaction";
+import type { ExpandedTransaction, Transaction } from "@/lib/schemas/transaction";
 import { useAmountVisibility } from "@/hooks/use-amount-visibility";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { formatDate } from "@/lib/utils/dates";
 import { HIDDEN_AMOUNT } from "@/lib/utils/money";
-import { getRecurrenceIntervalLabel } from "@/lib/utils/recurrence";
+import {
+  getOccurrenceMonthLabel,
+  getRecurrenceIntervalLabel,
+} from "@/lib/utils/recurrence";
 import { cn } from "@/lib/utils";
+
+type ListRow =
+  | { kind: "rule"; tx: Transaction }
+  | { kind: "occurrence"; tx: ExpandedTransaction };
 
 type TransactionsViewProps = {
   transactions: Transaction[];
+  occurrences: ExpandedTransaction[];
   accounts: Account[];
   categories: Category[];
   availableTags: string[];
@@ -94,8 +102,45 @@ function formatMonthGroup(date: string): string {
   return `${MONTH_LABELS_FULL[month - 1]} ${year}`;
 }
 
+function resolveSourceTransaction(
+  row: ListRow,
+  transactions: Transaction[]
+): Transaction {
+  if (row.kind === "rule") return row.tx;
+  return (
+    transactions.find((t) => t.id === row.tx.sourceTransactionId) ?? row.tx
+  );
+}
+
+function listRowKey(row: ListRow): string {
+  return row.kind === "rule" ? row.tx.id : row.tx.occurrenceId;
+}
+
+function matchesFilters(
+  tx: Pick<Transaction, "date" | "categoryId" | "accountId" | "type">,
+  filters: {
+    dateFrom: string;
+    dateTo: string;
+    categoryId: string;
+    accountId: string;
+    type: string;
+  }
+): boolean {
+  if (filters.dateFrom && tx.date < filters.dateFrom) return false;
+  if (filters.dateTo && tx.date > filters.dateTo) return false;
+  if (filters.categoryId !== "all" && tx.categoryId !== filters.categoryId) {
+    return false;
+  }
+  if (filters.accountId !== "all" && tx.accountId !== filters.accountId) {
+    return false;
+  }
+  if (filters.type !== "all" && tx.type !== filters.type) return false;
+  return true;
+}
+
 export function TransactionsView({
   transactions,
+  occurrences,
   accounts,
   categories,
   availableTags,
@@ -124,16 +169,36 @@ export function TransactionsView({
     [categories]
   );
 
+  const filterState = useMemo(
+    () => ({ dateFrom, dateTo, categoryId, accountId, type }),
+    [dateFrom, dateTo, categoryId, accountId, type]
+  );
+
   const filtered = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (dateFrom && tx.date < dateFrom) return false;
-      if (dateTo && tx.date > dateTo) return false;
-      if (categoryId !== "all" && tx.categoryId !== categoryId) return false;
-      if (accountId !== "all" && tx.accountId !== accountId) return false;
-      if (type !== "all" && tx.type !== type) return false;
-      return true;
+    return transactions.filter((tx) => matchesFilters(tx, filterState));
+  }, [transactions, filterState]);
+
+  const filteredOccurrences = useMemo(() => {
+    return occurrences.filter((tx) => matchesFilters(tx, filterState));
+  }, [occurrences, filterState]);
+
+  const ruleAnchorMonthById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tx of transactions) {
+      if (tx.isRecurring) {
+        map.set(tx.id, tx.date.slice(0, 7));
+      }
+    }
+    return map;
+  }, [transactions]);
+
+  const displayOccurrences = useMemo(() => {
+    return filteredOccurrences.filter((tx) => {
+      const anchorMonth = ruleAnchorMonthById.get(tx.sourceTransactionId);
+      if (!anchorMonth) return true;
+      return tx.date.slice(0, 7) !== anchorMonth;
     });
-  }, [transactions, dateFrom, dateTo, categoryId, accountId, type]);
+  }, [filteredOccurrences, ruleAnchorMonthById]);
 
   const totals = useMemo(() => {
     let income = 0;
@@ -146,16 +211,21 @@ export function TransactionsView({
   }, [filtered]);
 
   const groupedByMonth = useMemo(() => {
-    const groups: { monthKey: string; label: string; items: Transaction[] }[] = [];
-    const map = new Map<string, Transaction[]>();
+    const rows: ListRow[] = [
+      ...filtered.map((tx) => ({ kind: "rule" as const, tx })),
+      ...displayOccurrences.map((tx) => ({ kind: "occurrence" as const, tx })),
+    ];
 
-    for (const tx of filtered) {
-      const key = tx.date.slice(0, 7);
+    const map = new Map<string, ListRow[]>();
+    for (const row of rows) {
+      const key = row.tx.date.slice(0, 7);
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(tx);
+      map.get(key)!.push(row);
     }
 
+    const groups: { monthKey: string; label: string; items: ListRow[] }[] = [];
     for (const [monthKey, items] of map) {
+      items.sort((a, b) => b.tx.date.localeCompare(a.tx.date));
       groups.push({
         monthKey,
         label: formatMonthGroup(`${monthKey}-01`),
@@ -163,8 +233,11 @@ export function TransactionsView({
       });
     }
 
+    groups.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
     return groups;
-  }, [filtered]);
+  }, [filtered, displayOccurrences]);
+
+  const hasDisplayRows = groupedByMonth.length > 0;
 
   const activeFilterCount =
     (dateFrom !== "" ? 1 : 0) +
@@ -314,7 +387,7 @@ export function TransactionsView({
     <div className="space-y-5">
       <PageHeader
         title="Transazioni"
-        description={`Anno ${year} — regole e transazioni singole`}
+        description={`Anno ${year} — regole, occorrenze e transazioni singole`}
         actions={
           <>
             <Button variant="outline" className="hidden sm:inline-flex" asChild>
@@ -356,11 +429,11 @@ export function TransactionsView({
       </div>
       <div className="sm:hidden">{activeChips}</div>
 
-      {filtered.length === 0 ? (
+      {!hasDisplayRows ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <p>
-              {transactions.length === 0
+              {transactions.length === 0 && occurrences.length === 0
                 ? "Nessuna transazione registrata per questo anno."
                 : "Nessuna transazione trovata per i filtri selezionati."}
             </p>
@@ -404,14 +477,16 @@ export function TransactionsView({
                   </span>
                 </div>
                 <Card className="divide-y divide-border/70 py-0">
-                  {group.items.map((tx) => {
+                  {group.items.map((row) => {
+                    const tx = row.tx;
+                    const source = resolveSourceTransaction(row, transactions);
                     const category = tx.categoryId ? categoryMap[tx.categoryId] : undefined;
                     const account = accountMap[tx.accountId];
                     return (
                       <button
-                        key={tx.id}
+                        key={listRowKey(row)}
                         type="button"
-                        onClick={() => setEditing(tx)}
+                        onClick={() => setEditing(source)}
                         className={cn(
                           "flex w-full items-center gap-3 border-l-2 px-3 py-3 text-left transition-colors active:bg-muted/60",
                           TYPE_BORDER_CLASS[tx.type]
@@ -440,9 +515,14 @@ export function TransactionsView({
                             <span className="truncate font-medium">
                               {category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
                             </span>
-                            {tx.isRecurring && (
+                            {row.kind === "rule" && tx.isRecurring && (
                               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
-                                {getRecurrenceIntervalLabel(tx, year)}
+                                Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
+                              </Badge>
+                            )}
+                            {row.kind === "occurrence" && (
+                              <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
+                                Occorrenza · {getOccurrenceMonthLabel(tx.date, year)}
                               </Badge>
                             )}
                           </div>
@@ -478,13 +558,13 @@ export function TransactionsView({
                             aria-label="Elimina"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setDeleting(tx);
+                              setDeleting(source);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                setDeleting(tx);
+                                setDeleting(source);
                               }
                             }}
                             className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-danger"
@@ -527,11 +607,13 @@ export function TransactionsView({
                         </span>
                       </TableCell>
                     </TableRow>
-                    {group.items.map((tx) => {
+                    {group.items.map((row) => {
+                      const tx = row.tx;
+                      const source = resolveSourceTransaction(row, transactions);
                       const category = tx.categoryId ? categoryMap[tx.categoryId] : undefined;
                       return (
                         <TableRow
-                          key={tx.id}
+                          key={listRowKey(row)}
                           className={cn("border-l-2 hover:bg-muted/50", TYPE_BORDER_CLASS[tx.type])}
                         >
                           <TableCell className="tabular-nums">{formatDate(tx.date)}</TableCell>
@@ -540,9 +622,14 @@ export function TransactionsView({
                               <Badge variant="secondary" className={cn("w-fit", TYPE_BADGE_CLASS[tx.type])}>
                                 {TRANSACTION_TYPE_LABELS[tx.type]}
                               </Badge>
-                              {tx.isRecurring && (
+                              {row.kind === "rule" && tx.isRecurring && (
                                 <Badge variant="outline" className="w-fit text-xs">
                                   Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
+                                </Badge>
+                              )}
+                              {row.kind === "occurrence" && (
+                                <Badge variant="outline" className="w-fit text-xs">
+                                  Occorrenza · {getOccurrenceMonthLabel(tx.date, year)}
                                 </Badge>
                               )}
                             </div>
@@ -583,10 +670,10 @@ export function TransactionsView({
                           <TableCell className="max-w-[200px] truncate">{tx.notes || "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon-sm" onClick={() => setEditing(tx)}>
+                              <Button variant="ghost" size="icon-sm" onClick={() => setEditing(source)}>
                                 <Pencil className="size-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(tx)}>
+                              <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(source)}>
                                 <Trash2 className="size-3.5" />
                               </Button>
                             </div>

@@ -119,6 +119,41 @@ export function filterExpandedTransactions(
   });
 }
 
+export function filterOccurrencesForListView(
+  occurrences: ExpandedTransaction[],
+  year: number,
+  referenceDate: Date = new Date()
+): ExpandedTransaction[] {
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth() + 1;
+
+  if (year > refYear) return [];
+  if (year < refYear) return occurrences;
+
+  return occurrences.filter(
+    (tx) => getMonthFromDate(tx.date) <= refMonth
+  );
+}
+
+export function getOccurrenceMonthLabel(date: string, year: number): string {
+  const monthNames = [
+    "gen",
+    "feb",
+    "mar",
+    "apr",
+    "mag",
+    "giu",
+    "lug",
+    "ago",
+    "set",
+    "ott",
+    "nov",
+    "dic",
+  ];
+  const month = getMonthFromDate(date);
+  return `${monthNames[month - 1]} ${year}`;
+}
+
 export function filterRawTransactions(
   transactions: Transaction[],
   filters?: Omit<TransactionFilters, "dateFrom" | "dateTo">

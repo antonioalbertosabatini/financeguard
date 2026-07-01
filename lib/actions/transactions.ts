@@ -17,6 +17,7 @@ import {
 import {
   expandRecurrences,
   filterExpandedTransactions,
+  filterOccurrencesForListView,
   filterRawTransactions,
 } from "@/lib/utils/recurrence";
 import { currentYear } from "@/lib/utils/dates";
@@ -42,6 +43,17 @@ export async function getExpandedTransactions(
   const raw = await getTransactionsForYear(year);
   const expanded = expandRecurrences(raw, year);
   return filterExpandedTransactions(expanded, filters);
+}
+
+export async function getTransactionsForListView(year: number) {
+  const raw = await getTransactionsForYear(year);
+  const transactions = [...raw].sort((a, b) => b.date.localeCompare(a.date));
+  const expanded = expandRecurrences(raw, year);
+  const occurrences = filterOccurrencesForListView(
+    expanded.filter((tx) => tx.isOccurrence),
+    year
+  );
+  return { transactions, occurrences };
 }
 
 export async function createTransaction(data: TransactionInput) {

@@ -5,7 +5,7 @@ import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { getAccounts } from "@/lib/actions/accounts";
 import { getCategories } from "@/lib/actions/categories";
 import { getSettings } from "@/lib/actions/settings";
-import { getAvailableTags, getTransactions } from "@/lib/actions/transactions";
+import { getAvailableTags, getTransactionsForListView } from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { useYear } from "@/providers/year-provider";
 
@@ -13,15 +13,15 @@ export default function TransactionsPage() {
   const { year } = useYear();
   const { data } = useAsyncData(
     async () => {
-      const [transactions, accounts, categories, settings, availableTags] =
+      const [{ transactions, occurrences }, accounts, categories, settings, availableTags] =
         await Promise.all([
-          getTransactions(year),
+          getTransactionsForListView(year),
           getAccounts(),
           getCategories(),
           getSettings(),
           getAvailableTags(year),
         ]);
-      return { transactions, accounts, categories, settings, availableTags };
+      return { transactions, occurrences, accounts, categories, settings, availableTags };
     },
     [year]
   );
@@ -31,6 +31,7 @@ export default function TransactionsPage() {
   return (
     <TransactionsView
       transactions={data.transactions}
+      occurrences={data.occurrences}
       accounts={data.accounts}
       categories={data.categories}
       availableTags={data.availableTags}
