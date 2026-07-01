@@ -1,9 +1,8 @@
 /**
- * Genera le sorgenti icona/splash per @capacitor/assets, l'icona
- * Electron e i PNG web, a partire da public/icon.svg. Usa `sharp`.
+ * Generate icon/splash sources for @capacitor/assets, Electron, and PWA
+ * web icons from public/icon.svg. Requires `sharp`.
  *
- *   node assets/generate-icons.mjs
- *   npx @capacitor/assets generate --android
+ *   npm run icons:generate
  */
 import sharp from "sharp";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -14,8 +13,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BG = "#0b0b0c";
 const SOURCE_SVG = join(root, "public/icon.svg");
 
+const PWA_WEBP_SIZES = [48, 72, 96, 128, 192, 256, 512];
+
 const png = (input, size) =>
   sharp(input, { density: 300 }).resize(size, size).png().toBuffer();
+
+const webp = (input, size) =>
+  sharp(input, { density: 300 }).resize(size, size).webp().toBuffer();
 
 const pngFromSvgString = (svg, size) =>
   sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
@@ -29,20 +33,20 @@ const out = async (name, buf) => {
 
 const sourceSvg = await readFile(SOURCE_SVG);
 
-// Icona piena (iOS / legacy / Electron).
+// Full icon (iOS / legacy / Electron).
 await out("assets/icon-only.png", await png(sourceSvg, 1024));
 
-// Adaptive icon Android: foreground nella safe zone centrale (~62%).
+// Adaptive icon Android: foreground in central safe zone (~62%).
 await out(
   "assets/icon-foreground.png",
   await png(sourceSvg, Math.round(1024 * 0.62))
 );
 
-// Background: tinta piena coerente con il logo.
+// Background: solid fill matching the logo backdrop.
 const backgroundSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="${BG}"/></svg>`;
 await out("assets/icon-background.png", await pngFromSvgString(backgroundSvg, 1024));
 
-// Splash: logo centrato su sfondo scuro.
+// Splash: logo centered on dark background.
 const splashSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <rect width="1024" height="1024" fill="${BG}"/>
@@ -64,7 +68,15 @@ await out(
     .toBuffer()
 );
 
-// Icona Electron (build/ e' la cartella di default di electron-builder).
+// Electron icon (build/ is electron-builder default).
 await out("build/icon.png", await png(sourceSvg, 1024));
 
-console.log("Done. Run: npx @capacitor/assets generate --android");
+// PWA raster icons for the web manifest.
+for (const size of PWA_WEBP_SIZES) {
+  await out(
+    `public/icons/icon-${size}.webp`,
+    await webp(sourceSvg, size)
+  );
+}
+
+console.log("Done. Run: npx @capacitor/assets generate --ios --android");
