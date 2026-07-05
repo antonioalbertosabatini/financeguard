@@ -65,16 +65,23 @@
   "build": {
     "appId": "app.financeguard",
     "productName": "FinanceGuard",
+    "beforeBuild": "electron/before-build.cjs",
     "directories": {
       "output": "dist-electron"
     },
     "files": [
       "electron/**",
-      "out/**"
+      "out/**",
+      "!electron/before-build.cjs",
+      "!**/node_modules/**"
     ],
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.finance"
+      "category": "public.app-category.finance",
+      "electronLanguages": [
+        "en",
+        "it"
+      ]
     },
     "win": {
       "target": "nsis"
