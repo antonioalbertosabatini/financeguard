@@ -48,3 +48,6 @@ next-env.d.ts
 # local finance data
 /data/*
 !/data/.gitkeep
+
+# android studio
+android/.idea
