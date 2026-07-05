@@ -1,9 +1,10 @@
 /**
  * Orchestratore sync automatico: pull, merge client-side, push.
  */
-import { decryptBundleWithKey, revisionOf } from "@/lib/storage/bundle";
+import { openBundleText, revisionOf } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import {
+  adoptCloudVault,
   applySyncedDataset,
   getSyncContext,
   isUnlocked,
@@ -19,11 +20,8 @@ import {
   refreshSessionHeartbeat,
   SessionLockedError,
 } from "@/lib/sync/session-lock";
-import {
-  addSyncWarning,
-  clearSyncWarnings,
-  patchSyncState,
-} from "@/lib/sync/sync-state";
+import { formatSyncError } from "@/lib/sync/format-sync-error";
+import { clearSyncWarnings, patchSyncState } from "@/lib/sync/sync-state";
 import {
   downloadRemoteBundle,
   getRemoteRevision,
@@ -85,6 +83,12 @@ async function runSync(): Promise<SyncResult> {
     return { ok: true, merged: false, pushed: false };
   }
 
+  if (!ctx.password) {
+    throw new Error(
+      "Blocca e sblocca l'app per attivare la sincronizzazione cloud."
+    );
+  }
+
   patchSyncState({ status: "syncing", lastError: null });
   clearSyncWarnings();
 
@@ -111,18 +115,51 @@ async function runSync(): Promise<SyncResult> {
     if (remoteRevision !== null) {
       const remoteText = await downloadRemoteBundle();
       if (remoteText) {
-        const remoteOpened = await decryptBundleWithKey<Dataset>(
+        const remoteOpened = await openBundleText<Dataset>(
           remoteText,
-          ctx.key
+          ctx.password
         );
+        if (!remoteOpened) {
+          throw new Error(
+            "Impossibile decifrare il vault sul cloud. Usa la stessa master password del primo dispositivo."
+          );
+        }
+
         const mergedDataset = mergeDatasets(ctx.dataset, remoteOpened.dataset);
+        const vaultMismatch = remoteOpened.vault.salt !== ctx.vault.salt;
 
         if (datasetsDiffer(ctx.dataset, mergedDataset)) {
           const baseRevision = Math.max(localRevision, remoteOpened.revision);
-          await applySyncedDataset(mergedDataset, baseRevision);
+          if (vaultMismatch) {
+            await adoptCloudVault(
+              mergedDataset,
+              baseRevision,
+              remoteOpened.key,
+              remoteOpened.vault
+            );
+          } else {
+            await applySyncedDataset(mergedDataset, baseRevision);
+          }
           merged = true;
         } else if (remoteOpened.revision > localRevision) {
-          await applySyncedDataset(mergedDataset, remoteOpened.revision);
+          if (vaultMismatch) {
+            await adoptCloudVault(
+              mergedDataset,
+              remoteOpened.revision,
+              remoteOpened.key,
+              remoteOpened.vault
+            );
+          } else {
+            await applySyncedDataset(mergedDataset, remoteOpened.revision);
+          }
+          merged = true;
+        } else if (vaultMismatch && localRevision <= 1) {
+          await adoptCloudVault(
+            remoteOpened.dataset,
+            remoteOpened.revision,
+            remoteOpened.key,
+            remoteOpened.vault
+          );
           merged = true;
         }
       }
@@ -145,20 +182,19 @@ async function runSync(): Promise<SyncResult> {
 
     return { ok: true, merged, pushed: true };
   } catch (err) {
+    const message = formatSyncError(err);
+
     if (err instanceof SessionLockedError) {
       patchSyncState({
         status: "blocked",
-        lastError: err.message,
+        lastError: message,
         isSessionOwner: false,
         activeDeviceName: err.activeDeviceName,
       });
-      addSyncWarning(err.message);
-      return { ok: false, merged: false, pushed: false, error: err.message };
+      return { ok: false, merged: false, pushed: false, error: message };
     }
 
-    const message = err instanceof Error ? err.message : "Errore sync";
     patchSyncState({ status: "error", lastError: message });
-    addSyncWarning(message);
     return { ok: false, merged: false, pushed: false, error: message };
   }
 }

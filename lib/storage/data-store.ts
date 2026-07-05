@@ -42,6 +42,8 @@ let key: Uint8Array | null = null;
 let vault: VaultFile | null = null;
 let revision = 0;
 let dataset: Dataset | null = null;
+/** Master password in memoria (solo sessione sbloccata) per decifrare il bundle cloud. */
+let sessionPassword: string | null = null;
 
 let initPromise: Promise<void> | null = null;
 let saveChain: Promise<void> = Promise.resolve();
@@ -91,6 +93,7 @@ export async function setupPassword(
   vault = created.vault;
   revision = 1;
   dataset = data;
+  sessionPassword = password;
   emit({ status: "unlocked", version: snapshot.version + 1 });
 }
 
@@ -105,6 +108,7 @@ export async function unlockApp(password: string): Promise<AuthError | void> {
   vault = opened.vault;
   revision = opened.revision;
   dataset = opened.dataset;
+  sessionPassword = password;
   if (migrateSyncMetadataIfNeeded(dataset, deviceId)) {
     emit({ version: snapshot.version + 1 });
     await persistNow();
@@ -118,6 +122,7 @@ export function lockApp(): void {
   vault = null;
   dataset = null;
   revision = 0;
+  sessionPassword = null;
   emit({ status: "locked", version: snapshot.version + 1 });
 }
 
@@ -142,6 +147,7 @@ export async function changePassword(
   key = created.key;
   vault = created.vault;
   revision = 1;
+  sessionPassword = newPassword;
 }
 
 /** Restituisce il dataset vivo (muta in place); lancia se l'app e' bloccata. */
@@ -177,6 +183,7 @@ export async function replaceDatasetWithPassword(
   vault = created.vault;
   revision = 1;
   dataset = next;
+  sessionPassword = password;
   emit({ status: "unlocked", version: snapshot.version + 1 });
 }
 
@@ -199,9 +206,36 @@ export function getSyncContext(): {
   revision: number;
   dataset: Dataset;
   deviceId: string;
+  password: string | null;
 } | null {
   if (!key || !vault || !dataset) return null;
-  return { key, vault, revision, dataset, deviceId };
+  return { key, vault, revision, dataset, deviceId, password: sessionPassword };
+}
+
+/**
+ * Adotta vault e chiave del bundle cloud (nuovo browser/dispositivo con salt
+ * diverso) e persiste il dataset merged o ripristinato.
+ */
+export async function adoptCloudVault(
+  next: Dataset,
+  baseRevision: number,
+  nextKey: Uint8Array,
+  nextVault: VaultFile
+): Promise<number> {
+  if (!dataset) throw new Error("App bloccata.");
+  key = nextKey;
+  vault = nextVault;
+  dataset = next;
+  revision = baseRevision;
+  emit({ version: snapshot.version + 1 });
+  const newRevision = await saveBundle(
+    getAdapter(),
+    { key, vault, revision },
+    dataset,
+    deviceId
+  );
+  revision = newRevision;
+  return newRevision;
 }
 
 /**

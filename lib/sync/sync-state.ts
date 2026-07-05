@@ -43,8 +43,9 @@ export function patchSyncState(patch: Partial<SyncState>): void {
 }
 
 export function addSyncWarning(message: string): void {
-  if (state.warnings.includes(message)) return;
-  patchSyncState({ warnings: [...state.warnings, message] });
+  const trimmed = message.trim();
+  if (!trimmed || state.warnings.includes(trimmed)) return;
+  patchSyncState({ warnings: [...state.warnings, trimmed] });
 }
 
 export function clearSyncWarnings(): void {

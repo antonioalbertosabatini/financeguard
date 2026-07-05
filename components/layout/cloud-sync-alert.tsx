@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ShieldAlert } from "lucide-react";
+import { SyncErrorDetailsDialog } from "@/components/sync/sync-error-details-dialog";
 import { getSettings } from "@/lib/actions/settings";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { hasCloudSession, isCloudConfigured } from "@/lib/sync/cloud-sync";
@@ -46,6 +47,8 @@ export function CloudSyncAlert() {
   });
   if (!message) return null;
 
+  const showErrorDetails = Boolean(syncState.lastError?.trim());
+
   return (
     <div className="mb-6">
       <div
@@ -55,6 +58,11 @@ export function CloudSyncAlert() {
         <ShieldAlert className="mt-0.5 size-4 shrink-0" />
         <p className="flex-1 leading-relaxed">
           {message}{" "}
+          {showErrorDetails && (
+            <>
+              <SyncErrorDetailsDialog error={syncState.lastError} />{" "}
+            </>
+          )}
           <Link
             href="/profile"
             className="font-medium underline underline-offset-2"
@@ -79,10 +87,8 @@ function resolveMessage({
   if (!configured) {
     return "Sincronizzazione cloud non attiva: nessun account configurato. I tuoi dati restano solo su questo dispositivo.";
   }
-  if (syncState.status === "error" || syncState.lastError) {
-    return `Sincronizzazione cloud fallita${
-      syncState.lastError ? `: ${syncState.lastError}` : ""
-    }.`;
+  if (syncState.status === "error" || syncState.status === "blocked" || syncState.lastError) {
+    return "Sincronizzazione cloud fallita.";
   }
   if (signedIn === false) {
     return "Sincronizzazione cloud non attiva: non hai effettuato l'accesso all'account cloud.";

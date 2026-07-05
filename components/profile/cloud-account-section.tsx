@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Cloud, CloudOff, LogIn, Loader2 } from "lucide-react";
+import { Cloud, CloudOff, LogIn, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { SyncErrorDetailsDialog } from "@/components/sync/sync-error-details-dialog";
 import { getSettings, updateSettings } from "@/lib/actions/settings";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { getPasswordError } from "@/lib/constants";
@@ -188,6 +189,18 @@ export function CloudAccountSection() {
       toast.success("Disconnesso dal cloud");
     });
 
+  const handleForceSync = () =>
+    withBusy(async () => {
+      const result = await syncNow("manual");
+      if (result.ok) {
+        toast.success("Sincronizzazione completata");
+      } else {
+        toast.error("Sincronizzazione non riuscita");
+      }
+    });
+
+  const isSyncing = syncState.status === "syncing";
+
   return (
     <Card>
       <CardHeader>
@@ -273,17 +286,46 @@ export function CloudAccountSection() {
                 </p>
               )}
               {syncState.lastError && (
-                <p className="text-destructive text-xs">{syncState.lastError}</p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-destructive text-xs">
+                  <span>Sincronizzazione non riuscita.</span>
+                  <SyncErrorDetailsDialog
+                    error={syncState.lastError}
+                    trigger={
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-xs text-destructive underline underline-offset-2"
+                      >
+                        Vedi dettagli
+                      </Button>
+                    }
+                  />
+                </div>
               )}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy}
-              onClick={handleSignOut}
-            >
-              Disconnetti
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy || isSyncing}
+                onClick={handleForceSync}
+              >
+                {isSyncing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sincronizza ora
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                onClick={handleSignOut}
+              >
+                Disconnetti
+              </Button>
+            </div>
           </div>
         )}
 

@@ -5,7 +5,7 @@ import { getDeviceName } from "@/lib/sync/device-name";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { getSupabase } from "@/lib/sync/supabase-client";
 
-export const SESSION_HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000;
+export const SESSION_HEARTBEAT_TIMEOUT_MS = 2 * 60 * 1000;
 export const SESSION_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
 export interface ActiveSessionRow {

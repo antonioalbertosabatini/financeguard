@@ -8,7 +8,7 @@ export function SyncWarnings({ warnings }: { warnings: string[] }) {
 
   const visible = warnings
     .map((message, index) => ({ message, index }))
-    .filter(({ index }) => !dismissed.has(index));
+    .filter(({ message, index }) => message.trim() !== "" && !dismissed.has(index));
 
   if (visible.length === 0) return null;
 
