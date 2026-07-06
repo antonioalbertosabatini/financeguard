@@ -93,6 +93,8 @@ type TransactionFormProps = {
   year: number;
   transaction?: Transaction;
   onSuccess?: () => void;
+  onCancel?: () => void;
+  confirmLabel?: string;
   compact?: boolean;
 };
 
@@ -135,6 +137,8 @@ export function TransactionForm({
   year,
   transaction,
   onSuccess,
+  onCancel,
+  confirmLabel,
   compact = false,
 }: TransactionFormProps) {
   const isEdit = !!transaction;
@@ -412,13 +416,34 @@ export function TransactionForm({
             )}
           </div>
 
-          <Button
-            type="submit"
-            className="w-full md:w-auto"
-            disabled={form.formState.isSubmitting}
-          >
-            {isEdit ? "Aggiorna transazione" : "Salva transazione"}
-          </Button>
+          {onCancel ? (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:flex-1"
+                onClick={onCancel}
+                disabled={form.formState.isSubmitting}
+              >
+                Annulla
+              </Button>
+              <Button
+                type="submit"
+                className="w-full sm:flex-1"
+                disabled={form.formState.isSubmitting}
+              >
+                {confirmLabel ?? (isEdit ? "Aggiorna transazione" : "Salva transazione")}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              className="w-full md:w-auto"
+              disabled={form.formState.isSubmitting}
+            >
+              {isEdit ? "Aggiorna transazione" : "Salva transazione"}
+            </Button>
+          )}
         </form>
   );
 

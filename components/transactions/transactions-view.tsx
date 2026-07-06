@@ -44,6 +44,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TransactionForm } from "@/components/transactions/transaction-form";
+import { TransactionDetailView } from "@/components/transactions/transaction-detail-view";
 import { TagBadges } from "@/components/tags/tag-badges";
 import {
   copyRecurringFromPreviousYear,
@@ -66,6 +67,12 @@ import { cn } from "@/lib/utils";
 type ListRow =
   | { kind: "rule"; tx: Transaction }
   | { kind: "occurrence"; tx: ExpandedTransaction };
+
+type TransactionSheetState = {
+  transaction: Transaction;
+  mode: "view" | "edit";
+  listContext?: { kind: "rule" | "occurrence"; displayDate: string };
+};
 
 type TransactionsViewProps = {
   transactions: Transaction[];
@@ -156,7 +163,7 @@ export function TransactionsView({
   const [categoryId, setCategoryId] = useState<string>("all");
   const [accountId, setAccountId] = useState<string>("all");
   const [type, setType] = useState<string>("all");
-  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [sheetState, setSheetState] = useState<TransactionSheetState | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -488,7 +495,13 @@ export function TransactionsView({
                       <button
                         key={listRowKey(row)}
                         type="button"
-                        onClick={() => setEditing(source)}
+                        onClick={() =>
+                          setSheetState({
+                            transaction: source,
+                            mode: "view",
+                            listContext: { kind: row.kind, displayDate: tx.date },
+                          })
+                        }
                         className={cn(
                           "flex w-full items-center gap-3 border-l-2 px-3 py-3 text-left transition-colors active:bg-muted/60",
                           TYPE_BORDER_CLASS[tx.type]
@@ -672,7 +685,13 @@ export function TransactionsView({
                           <TableCell className="max-w-[200px] truncate">{tx.notes || "—"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon-sm" onClick={() => setEditing(source)}>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() =>
+                                  setSheetState({ transaction: source, mode: "edit" })
+                                }
+                              >
                                 <Pencil className="size-3.5" />
                               </Button>
                               <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(source)}>
@@ -707,25 +726,55 @@ export function TransactionsView({
         </SheetContent>
       </Sheet>
 
-      {/* Edit sheet */}
-      <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
+      {/* Transaction sheet (view on mobile tap, edit on desktop pencil) */}
+      <Sheet open={!!sheetState} onOpenChange={(open) => !open && setSheetState(null)}>
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>Modifica transazione</SheetTitle>
+            <SheetTitle>
+              {sheetState?.mode === "view" ? "Dettaglio transazione" : "Modifica transazione"}
+            </SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto">
-            {editing && (
+            {sheetState?.mode === "view" && (
+              <TransactionDetailView
+                transaction={sheetState.transaction}
+                accounts={accounts}
+                categories={categories}
+                year={year}
+                currency={currency}
+                locale={locale}
+                listContext={sheetState.listContext}
+              />
+            )}
+            {sheetState?.mode === "edit" && (
               <TransactionForm
+                key={sheetState.transaction.id}
                 accounts={accounts}
                 categories={categories}
                 availableTags={availableTags}
                 year={year}
-                transaction={editing}
-                onSuccess={() => setEditing(null)}
+                transaction={sheetState.transaction}
+                onSuccess={() => setSheetState(null)}
+                onCancel={
+                  sheetState.listContext
+                    ? () => setSheetState((s) => s && { ...s, mode: "view" })
+                    : undefined
+                }
+                confirmLabel={sheetState.listContext ? "Conferma" : undefined}
                 compact
               />
             )}
           </div>
+          {sheetState?.mode === "view" && (
+            <SheetFooter>
+              <Button
+                className="w-full"
+                onClick={() => setSheetState((s) => s && { ...s, mode: "edit" })}
+              >
+                Modifica
+              </Button>
+            </SheetFooter>
+          )}
         </SheetContent>
       </Sheet>
 
