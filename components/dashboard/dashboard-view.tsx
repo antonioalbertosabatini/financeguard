@@ -15,8 +15,10 @@ import {
 import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { MONTH_LABELS } from "@/lib/constants";
 
 type DashboardProps = {
@@ -81,6 +83,8 @@ export function DashboardView({
 }: DashboardProps) {
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
+  const isMobile = useIsMobile();
+  const tooltipTrigger = isMobile ? "click" : "hover";
 
   const trendData = monthlyTrend.map((m) => ({
     name: MONTH_LABELS[m.month - 1],
@@ -131,7 +135,7 @@ export function DashboardView({
           <CardHeader>
             <CardTitle>Spese per categoria</CardTitle>
           </CardHeader>
-          <CardContent className="h-[280px] sm:h-[300px]">
+          <CardContent className="h-[320px] sm:h-[300px]">
             {expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nessuna spesa registrata
@@ -144,9 +148,9 @@ export function DashboardView({
                     dataKey="amount"
                     nameKey="name"
                     cx="50%"
-                    cy="50%"
-                    innerRadius={56}
-                    outerRadius={96}
+                    cy="45%"
+                    innerRadius={isMobile ? 46 : 56}
+                    outerRadius={isMobile ? 76 : 96}
                     paddingAngle={2}
                   >
                     {expensesByCategory.map((entry) => (
@@ -154,13 +158,20 @@ export function DashboardView({
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) =>
-                      formatAmount(Number(value), currency, locale)
+                    trigger={tooltipTrigger}
+                    content={
+                      <ChartTooltip
+                        currency={currency}
+                        locale={locale}
+                        valueScale={1}
+                        hideLabel
+                      />
                     }
                   />
                   <Legend
                     iconType="circle"
-                    wrapperStyle={{ fontSize: 12 }}
+                    verticalAlign="bottom"
+                    wrapperStyle={{ fontSize: 12, lineHeight: "1.6" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -172,15 +183,28 @@ export function DashboardView({
           <CardHeader>
             <CardTitle>Andamento mensile</CardTitle>
           </CardHeader>
-          <CardContent className="h-[280px] sm:h-[300px]">
+          <CardContent className="h-[320px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendData} barGap={2}>
-                <XAxis dataKey="name" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis
-                  fontSize={11}
-                  width={44}
+              <BarChart
+                data={trendData}
+                barGap={2}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+              >
+                <XAxis
+                  dataKey="name"
+                  fontSize={isMobile ? 10 : 11}
                   tickLine={false}
                   axisLine={false}
+                  interval={isMobile ? 1 : 0}
+                  tickMargin={6}
+                  stroke="var(--muted-foreground)"
+                />
+                <YAxis
+                  fontSize={isMobile ? 10 : 11}
+                  width={isMobile ? 38 : 44}
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="var(--muted-foreground)"
                   tickFormatter={(value) =>
                     amountsHidden
                       ? "••"
@@ -188,14 +212,29 @@ export function DashboardView({
                   }
                 />
                 <Tooltip
+                  trigger={tooltipTrigger}
                   cursor={{ fill: "var(--muted)", opacity: 0.4 }}
-                  formatter={(value) =>
-                    formatAmount(Number(value) * 100, currency, locale)
+                  content={
+                    <ChartTooltip currency={currency} locale={locale} />
                   }
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Entrate" fill="var(--success)" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="Uscite" fill="var(--danger)" radius={[5, 5, 0, 0]} />
+                <Legend
+                  iconType="circle"
+                  verticalAlign="bottom"
+                  wrapperStyle={{ fontSize: 12 }}
+                />
+                <Bar
+                  dataKey="Entrate"
+                  fill="var(--success)"
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={isMobile ? 14 : 28}
+                />
+                <Bar
+                  dataKey="Uscite"
+                  fill="var(--danger)"
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={isMobile ? 14 : 28}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

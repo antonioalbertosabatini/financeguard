@@ -190,4 +190,39 @@
       font-size: 16px;
     }
   }
+
+  /* Recharts: prevent the ugly tap-highlight / text-selection box on touch
+     while keeping vertical page scroll working over the chart area. */
+  .recharts-wrapper,
+  .recharts-surface {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: pan-y;
+    outline: none;
+  }
+  .recharts-text,
+  .recharts-legend-item,
+  .recharts-cartesian-axis-tick {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .recharts-wrapper:focus,
+  .recharts-surface:focus,
+  .recharts-sector:focus,
+  .recharts-rectangle:focus,
+  .recharts-bar-rectangle:focus,
+  .recharts-pie-sector:focus,
+  .recharts-layer:focus {
+    outline: none;
+  }
+  /* Horizontally scrollable charts (e.g. daily expenses on mobile) need to
+     allow horizontal panning gestures over the chart surface. */
+  .chart-scroll-x {
+    -webkit-overflow-scrolling: touch;
+  }
+  .chart-scroll-x .recharts-wrapper,
+  .chart-scroll-x .recharts-surface {
+    touch-action: pan-x;
+  }
 }

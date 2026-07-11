@@ -16,6 +16,7 @@ import {
 import { TrendingDown, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CategoryBreakdown } from "@/components/reports/category-breakdown";
+import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { getMonthlyReport } from "@/lib/actions/transactions";
 import { MONTH_LABELS, MONTH_LABELS_FULL } from "@/lib/constants";
 import { currentMonth } from "@/lib/utils/dates";
@@ -118,6 +120,7 @@ function CategoryBarChart({
 }) {
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
+  const isMobile = useIsMobile();
   const [activeIndex, setActiveIndex] = useState<number | undefined>();
 
   const chartData = data.map((c) => ({
@@ -131,12 +134,15 @@ function CategoryBarChart({
       <BarChart
         data={chartData}
         layout="vertical"
-        margin={{ left: 8, right: 8 }}
+        margin={{ left: 4, right: 8 }}
         onMouseLeave={() => setActiveIndex(undefined)}
       >
         <XAxis
           type="number"
-          fontSize={12}
+          fontSize={isMobile ? 10 : 12}
+          tickLine={false}
+          axisLine={false}
+          stroke="var(--muted-foreground)"
           tickFormatter={(value) =>
             amountsHidden
               ? "••"
@@ -146,28 +152,34 @@ function CategoryBarChart({
         <YAxis
           type="category"
           dataKey="name"
-          fontSize={12}
-          width={100}
+          fontSize={isMobile ? 11 : 12}
+          width={isMobile ? 76 : 110}
+          tickLine={false}
+          axisLine={false}
           tick={({ x, y, payload, index }) => {
             const entry = chartData[index];
             const isActive = activeIndex === index;
+            const maxChars = isMobile ? 10 : 16;
+            const label =
+              payload.value.length > maxChars
+                ? `${payload.value.slice(0, maxChars - 1)}…`
+                : payload.value;
             return (
               <text
                 x={x}
                 y={y}
                 dy={4}
                 textAnchor="end"
-                fill={
-                  isActive ? entry.color : "var(--muted-foreground)"
-                }
-                fontSize={11}
+                fill={isActive ? entry.color : "var(--muted-foreground)"}
+                fontSize={isMobile ? 11 : 12}
               >
-                {payload.value}
+                {label}
               </text>
             );
           }}
         />
         <Tooltip
+          trigger={isMobile ? "click" : "hover"}
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
           content={({ active, payload }) => {
             if (!active || !payload?.length) return null;
@@ -198,6 +210,7 @@ function CategoryBarChart({
           dataKey="amount"
           radius={[0, 4, 4, 0]}
           onMouseEnter={(_, index) => setActiveIndex(index)}
+          onClick={(_, index) => setActiveIndex(index)}
         >
           {chartData.map((entry) => (
             <Cell key={entry.name} fill={entry.color} />
@@ -217,7 +230,7 @@ function CategoryPieChart({
   currency: string;
   locale: string;
 }) {
-  const formatAmount = useFormatCents();
+  const isMobile = useIsMobile();
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -227,20 +240,32 @@ function CategoryPieChart({
           dataKey="amount"
           nameKey="name"
           cx="50%"
-          cy="50%"
-          outerRadius={100}
-          label={({ name }) => name}
+          cy={isMobile ? "45%" : "50%"}
+          outerRadius={isMobile ? 78 : 100}
+          label={isMobile ? false : ({ name }) => name}
         >
           {data.map((entry) => (
-            <Cell key={entry.categoryId} fill={entry.color} />
+            <Cell key={entry.categoryId} fill={entry.color} stroke="none" />
           ))}
         </Pie>
         <Tooltip
-          formatter={(value, name) => [
-            formatAmount(Number(value), currency, locale),
-            name,
-          ]}
+          trigger={isMobile ? "click" : "hover"}
+          content={
+            <ChartTooltip
+              currency={currency}
+              locale={locale}
+              valueScale={1}
+              hideLabel
+            />
+          }
         />
+        {isMobile && (
+          <Legend
+            iconType="circle"
+            verticalAlign="bottom"
+            wrapperStyle={{ fontSize: 12, lineHeight: "1.6" }}
+          />
+        )}
       </PieChart>
     </ResponsiveContainer>
   );
@@ -259,40 +284,71 @@ function DailyStackedBarChart({
 }) {
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
+  const isMobile = useIsMobile();
+
+  const chart = (
+    <BarChart data={rows} margin={{ left: 4, right: 8, top: 4 }}>
+      <XAxis
+        dataKey="label"
+        fontSize={isMobile ? 10 : 12}
+        tickLine={false}
+        axisLine={false}
+        tickMargin={6}
+        stroke="var(--muted-foreground)"
+        interval={isMobile ? 1 : "preserveStartEnd"}
+      />
+      <YAxis
+        fontSize={isMobile ? 10 : 12}
+        width={isMobile ? 40 : 52}
+        tickLine={false}
+        axisLine={false}
+        stroke="var(--muted-foreground)"
+        tickFormatter={(value) =>
+          amountsHidden
+            ? "••"
+            : formatAmount(Number(value) * 100, currency, locale)
+        }
+      />
+      <Tooltip
+        trigger={isMobile ? "click" : "hover"}
+        cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+        content={
+          <ChartTooltip
+            currency={currency}
+            locale={locale}
+            labelFormatter={(label) => `Giorno ${label}`}
+          />
+        }
+      />
+      <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+      {series.map((cat, index) => (
+        <Bar
+          key={cat.key}
+          dataKey={cat.name}
+          stackId="daily"
+          fill={cat.color}
+          radius={index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+        />
+      ))}
+    </BarChart>
+  );
+
+  if (isMobile) {
+    const minWidth = Math.max(rows.length * 26, 320);
+    return (
+      <div className="chart-scroll-x h-full w-full overflow-x-auto">
+        <div style={{ minWidth, height: "100%" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {chart}
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={rows} margin={{ left: 4, right: 4 }}>
-        <XAxis dataKey="label" fontSize={12} />
-        <YAxis
-          fontSize={12}
-          tickFormatter={(value) =>
-            amountsHidden
-              ? "••"
-              : formatAmount(Number(value) * 100, currency, locale)
-          }
-        />
-        <Tooltip
-          formatter={(value, name) =>
-            amountsHidden
-              ? "••"
-              : formatAmount(Number(value) * 100, currency, locale)
-          }
-          labelFormatter={(label) => `Giorno ${label}`}
-        />
-        <Legend />
-        {series.map((cat, index) => (
-          <Bar
-            key={cat.key}
-            dataKey={cat.name}
-            stackId="daily"
-            fill={cat.color}
-            radius={
-              index === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-            }
-          />
-        ))}
-      </BarChart>
+      {chart}
     </ResponsiveContainer>
   );
 }
@@ -306,6 +362,7 @@ export function ReportsView({
 }: ReportsViewProps) {
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
+  const isMobile = useIsMobile();
 
   const [month, setMonth] = useState(String(currentMonth()));
   const [monthlyReport, setMonthlyReport] = useState(initialMonthlyReport);
@@ -411,7 +468,7 @@ export function ReportsView({
                 <CardHeader>
                   <CardTitle>Distribuzione spese — {monthLabel}</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[340px] sm:h-[300px]">
                   <CategoryPieChart
                     data={monthlyReport.expensesByCategory}
                     currency={currency}
@@ -503,12 +560,28 @@ export function ReportsView({
             <CardHeader>
               <CardTitle>Trend mensile</CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[320px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendData}>
-                  <XAxis dataKey="name" fontSize={12} />
+                <BarChart
+                  data={trendData}
+                  barGap={2}
+                  margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
+                >
+                  <XAxis
+                    dataKey="name"
+                    fontSize={isMobile ? 10 : 12}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={isMobile ? 1 : 0}
+                    tickMargin={6}
+                    stroke="var(--muted-foreground)"
+                  />
                   <YAxis
-                    fontSize={12}
+                    fontSize={isMobile ? 10 : 12}
+                    width={isMobile ? 38 : 52}
+                    tickLine={false}
+                    axisLine={false}
+                    stroke="var(--muted-foreground)"
                     tickFormatter={(value) =>
                       amountsHidden
                         ? "••"
@@ -516,13 +589,29 @@ export function ReportsView({
                     }
                   />
                   <Tooltip
-                    formatter={(value) =>
-                      formatAmount(Number(value) * 100, currency, locale)
+                    trigger={isMobile ? "click" : "hover"}
+                    cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                    content={
+                      <ChartTooltip currency={currency} locale={locale} />
                     }
                   />
-                  <Legend />
-                  <Bar dataKey="Entrate" fill="var(--success)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Uscite" fill="var(--danger)" radius={[4, 4, 0, 0]} />
+                  <Legend
+                    iconType="circle"
+                    verticalAlign="bottom"
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Bar
+                    dataKey="Entrate"
+                    fill="var(--success)"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={isMobile ? 14 : 28}
+                  />
+                  <Bar
+                    dataKey="Uscite"
+                    fill="var(--danger)"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={isMobile ? 14 : 28}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
