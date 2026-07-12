@@ -12,6 +12,7 @@
  * cifrati e l'archivio include anche vault.json.
  */
 import JSZip from "jszip";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   createVaultWeb,
   decryptJsonWeb,
@@ -150,11 +151,11 @@ export async function readEncryptedBackup(
   const zip = await JSZip.loadAsync(file);
   const vaultEntry = zip.file("vault.json");
   if (!vaultEntry) {
-    throw new Error("Il file non e' un backup criptato valido (vault mancante).");
+    throw new AppError("errors.invalidEncryptedBackup");
   }
   const vault = JSON.parse(await vaultEntry.async("string")) as VaultFile;
   const key = await verifyVaultPasswordWeb(vault, password);
-  if (!key) throw new Error("Password del backup errata.");
+  if (!key) throw new AppError("errors.wrongBackupPassword");
 
   const dataset = await filesToDataset(async (path) => {
     const entry = zip.file(path);

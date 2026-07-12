@@ -9,35 +9,61 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateSettings } from "@/lib/actions/settings";
+import {
+  LANGUAGE_LABELS,
+  SUPPORTED_LANGUAGES,
+  type Language,
+} from "@/lib/i18n/config";
+import { settingsWithLanguage } from "@/lib/schemas/settings";
 import type { Settings } from "@/lib/schemas/settings";
+import { useI18n } from "@/providers/i18n-provider";
+import { formatErrorMessage } from "@/lib/i18n/translate";
 
 export function SettingsView({ settings }: { settings: Settings }) {
+  const { t, language, setLanguage } = useI18n();
   const [currency, setCurrency] = useState(settings.defaultCurrency);
-  const [locale, setLocale] = useState(settings.locale);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(
+    settings.language
+  );
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await updateSettings({ ...settings, defaultCurrency: currency, locale });
-      toast.success("Impostazioni salvate");
+      const next = settingsWithLanguage(
+        { ...settings, defaultCurrency: currency },
+        selectedLanguage
+      );
+      await updateSettings(next);
+      setLanguage(selectedLanguage);
+      toast.success(t("settings.saved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   return (
     <div className="space-y-6 max-w-xl">
-      <PageHeader title="Impostazioni" description="Valuta, locale e categorie" />
+      <PageHeader
+        title={t("settings.title")}
+        description={t("settings.description")}
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Valuta e locale</CardTitle>
+          <CardTitle>{t("settings.currencyTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveSettings} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currency">Valuta predefinita</Label>
+              <Label htmlFor="currency">{t("settings.defaultCurrency")}</Label>
               <Input
                 id="currency"
                 value={currency}
@@ -46,15 +72,30 @@ export function SettingsView({ settings }: { settings: Settings }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="locale">Locale</Label>
-              <Input
-                id="locale"
-                value={locale}
-                onChange={(e) => setLocale(e.target.value)}
-              />
+              <Label htmlFor="language">{t("settings.languageTitle")}</Label>
+              <p className="text-sm text-muted-foreground">
+                {t("settings.languageDescription")}
+              </p>
+              <Select
+                value={selectedLanguage}
+                onValueChange={(value) =>
+                  setSelectedLanguage(value as Language)
+                }
+              >
+                <SelectTrigger id="language" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {LANGUAGE_LABELS[lang]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button type="submit" className="w-full sm:w-auto">
-              Salva impostazioni
+              {t("settings.save")}
             </Button>
           </form>
         </CardContent>
@@ -64,17 +105,17 @@ export function SettingsView({ settings }: { settings: Settings }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tags className="size-4" />
-            Categorie
+            {t("settings.categoriesTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Organizza le tue spese e entrate con categorie personalizzate.
+            {t("settings.categoriesDescription")}
           </p>
           <Button variant="outline" asChild>
             <Link href="/categories">
               <Tags className="size-4" />
-              Gestisci categorie
+              {t("settings.manageCategories")}
             </Link>
           </Button>
         </CardContent>

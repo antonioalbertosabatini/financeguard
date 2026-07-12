@@ -62,10 +62,12 @@ import {
   createAccountTransfer,
   deleteAccountTransfer,
 } from "@/lib/actions/account-transfers";
-import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from "@/lib/constants";
+import { ACCOUNT_TYPES } from "@/lib/constants";
 import { ACCOUNT_ICON_NAMES } from "@/lib/constants/account-icons";
 import type { Account } from "@/lib/schemas/account";
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { useI18n } from "@/providers/i18n-provider";
+import { formatErrorMessage } from "@/lib/i18n/translate";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
@@ -94,6 +96,7 @@ export function AccountsView({
   locale: string;
   year: number;
 }) {
+  const { t, language } = useI18n();
   const accounts = analysis.accountsAsOf;
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
@@ -243,7 +246,6 @@ export function AccountsView({
 
   function handleSwapAccounts() {
     if (!fromAccountId || !toAccountId) return;
-    // Swap “atomico”: evita stati intermedi in cui un value non esiste tra le opzioni.
     const nextFrom = toAccountId;
     const nextTo = fromAccountId;
     const ensured = ensureDifferentAccounts(nextFrom, nextTo);
@@ -263,14 +265,14 @@ export function AccountsView({
     try {
       if (editing) {
         await updateAccount(editing.id, data);
-        toast.success("Conto aggiornato");
+        toast.success(t("accounts.updated"));
       } else {
         await createAccount(data);
-        toast.success("Conto creato");
+        toast.success(t("accounts.created"));
       }
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
@@ -284,11 +286,11 @@ export function AccountsView({
         toAccountId,
         notes: transferNotes,
       });
-      toast.success("Trasferimento registrato");
+      toast.success(t("accounts.transferRegistered"));
       setTransferOpen(false);
       setTransfersOpen(true);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
@@ -296,43 +298,43 @@ export function AccountsView({
     if (!deletingTransfer) return;
     try {
       await deleteAccountTransfer(deletingTransfer.id, year);
-      toast.success("Trasferimento eliminato");
+      toast.success(t("accounts.transferDeleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     } finally {
       setDeletingTransfer(null);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Eliminare questo conto?")) return;
+    if (!confirm(t("accounts.deleteConfirm"))) return;
     try {
       await deleteAccount(id);
-      toast.success("Conto eliminato");
+      toast.success(t("accounts.deleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Conti"
-        description="Gestisci i tuoi conti"
+        title={t("accounts.title")}
+        description={t("accounts.description")}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button
               className="shadow-sm"
               onClick={openTransfer}
               disabled={accounts.length < 2}
-              title={accounts.length < 2 ? "Servono almeno 2 conti" : undefined}
+              title={accounts.length < 2 ? t("accounts.needTwoAccounts") : undefined}
             >
               <ArrowLeftRight className="size-4" />
-              Trasferisci
+              {t("accounts.transfer")}
             </Button>
             <Button variant="outline" onClick={openCreate}>
               <Plus className="size-4" />
-              Nuovo conto
+              {t("accounts.new")}
             </Button>
           </div>
         }
@@ -341,7 +343,7 @@ export function AccountsView({
       {accounts.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            Nessun conto. Creane uno per iniziare.
+            {t("accounts.empty")}
           </CardContent>
         </Card>
       ) : (
@@ -365,7 +367,7 @@ export function AccountsView({
                   <div>
                     <CardTitle className="text-base">{account.name}</CardTitle>
                     <p className="text-xs text-muted-foreground">
-                      {ACCOUNT_TYPE_LABELS[account.type]}
+                      {t(`labels.accountType.${account.type}`)}
                     </p>
                   </div>
                 </div>
@@ -399,11 +401,13 @@ export function AccountsView({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>{editing ? "Modifica conto" : "Nuovo conto"}</SheetTitle>
+            <SheetTitle>
+              {editing ? t("accounts.edit") : t("accounts.new")}
+            </SheetTitle>
           </SheetHeader>
           <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">{t("common.name")}</Label>
               <Input
                 id="name"
                 value={name}
@@ -412,22 +416,22 @@ export function AccountsView({
               />
             </div>
             <div className="space-y-2">
-              <Label>Tipo</Label>
+              <Label>{t("common.type")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ACCOUNT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {ACCOUNT_TYPE_LABELS[t]}
+                  {ACCOUNT_TYPES.map((accountType) => (
+                    <SelectItem key={accountType} value={accountType}>
+                      {t(`labels.accountType.${accountType}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Icona</Label>
+              <Label>{t("common.icon")}</Label>
               <div className="max-h-60 overflow-y-auto rounded-lg border p-2">
                 <div className="grid grid-cols-6 gap-2">
                   {ACCOUNT_ICON_NAMES.map((opt) => (
@@ -452,7 +456,9 @@ export function AccountsView({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="balance">
-                  Saldo iniziale ({currencyInput.toUpperCase()})
+                  {t("accounts.initialBalance", {
+                    currency: currencyInput.toUpperCase(),
+                  })}
                 </Label>
                 <Input
                   id="balance"
@@ -462,7 +468,7 @@ export function AccountsView({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Valuta</Label>
+                <Label htmlFor="currency">{t("common.currency")}</Label>
                 <Input
                   id="currency"
                   value={currencyInput}
@@ -473,7 +479,7 @@ export function AccountsView({
               </div>
             </div>
             <SheetFooter>
-              <Button type="submit">Salva</Button>
+              <Button type="submit">{t("common.save")}</Button>
             </SheetFooter>
           </form>
         </SheetContent>
@@ -482,11 +488,11 @@ export function AccountsView({
       <Sheet open={transferOpen} onOpenChange={setTransferOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Trasferimento tra conti</SheetTitle>
+            <SheetTitle>{t("accounts.transferTitle")}</SheetTitle>
           </SheetHeader>
           <form onSubmit={handleTransferSubmit} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="tr-date">Data</Label>
+              <Label htmlFor="tr-date">{t("common.date")}</Label>
               <Input
                 id="tr-date"
                 type="date"
@@ -496,7 +502,9 @@ export function AccountsView({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tr-amount">Importo ({currency})</Label>
+              <Label htmlFor="tr-amount">
+                {t("accounts.transferAmount", { currency })}
+              </Label>
               <Input
                 id="tr-amount"
                 placeholder="0.00"
@@ -507,10 +515,10 @@ export function AccountsView({
             </div>
             <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
               <div className="space-y-2">
-                <Label>Da</Label>
+                <Label>{t("common.from")}</Label>
                 <Select value={fromAccountId} onValueChange={handleChangeFromAccount}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleziona conto" />
+                    <SelectValue placeholder={t("transactions.form.selectAccount")} />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts.map((a) => (
@@ -534,15 +542,15 @@ export function AccountsView({
                 className="mb-3"
                 onClick={handleSwapAccounts}
                 disabled={!fromAccountId || !toAccountId}
-                title="Scambia conti"
+                title={t("accounts.swapAccounts")}
               >
                 <Shuffle className="size-4" />
               </Button>
               <div className="space-y-2">
-                <Label>A</Label>
+                <Label>{t("common.to")}</Label>
                 <Select value={toAccountId} onValueChange={handleChangeToAccount}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleziona conto" />
+                    <SelectValue placeholder={t("transactions.form.selectAccount")} />
                   </SelectTrigger>
                   <SelectContent>
                     {accounts.map((a) => (
@@ -561,16 +569,16 @@ export function AccountsView({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tr-notes">Note</Label>
+              <Label htmlFor="tr-notes">{t("common.notes")}</Label>
               <Input
                 id="tr-notes"
                 value={transferNotes}
                 onChange={(e) => setTransferNotes(e.target.value)}
-                placeholder="Es. giroconto risparmio"
+                placeholder={t("accounts.transferNotesPlaceholder")}
               />
             </div>
             <SheetFooter>
-              <Button type="submit">Salva</Button>
+              <Button type="submit">{t("common.save")}</Button>
             </SheetFooter>
           </form>
         </SheetContent>
@@ -588,7 +596,7 @@ export function AccountsView({
                       transfersOpen && "rotate-180"
                     )}
                   />
-                  Trasferimenti
+                  {t("accounts.transfersSection")}
                 </Button>
               </CollapsibleTrigger>
               <span className="text-sm text-muted-foreground">
@@ -599,7 +607,7 @@ export function AccountsView({
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                   <Filter className="size-4" />
-                  Filtri
+                  {t("common.filters")}
                   <ChevronDown
                     className={cn(
                       "size-4 transition-transform",
@@ -618,7 +626,9 @@ export function AccountsView({
                 <CollapsibleContent className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Da data</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.fromDate")}
+                      </Label>
                       <Input
                         type="date"
                         value={dateFrom}
@@ -626,7 +636,9 @@ export function AccountsView({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">A data</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.toDate")}
+                      </Label>
                       <Input
                         type="date"
                         value={dateTo}
@@ -634,13 +646,15 @@ export function AccountsView({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Da</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.from")}
+                      </Label>
                       <Select value={filterFrom} onValueChange={setFilterFrom}>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tutti</SelectItem>
+                          <SelectItem value="all">{t("common.all")}</SelectItem>
                           {accounts.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               <span className="flex items-center gap-2">
@@ -656,13 +670,15 @@ export function AccountsView({
                       </Select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">A</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.to")}
+                      </Label>
                       <Select value={filterTo} onValueChange={setFilterTo}>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tutti</SelectItem>
+                          <SelectItem value="all">{t("common.all")}</SelectItem>
                           {accounts.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               <span className="flex items-center gap-2">
@@ -678,15 +694,19 @@ export function AccountsView({
                       </Select>
                     </div>
                     <div className="space-y-1.5 lg:col-span-2">
-                      <Label className="text-xs text-muted-foreground">Cerca note</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.searchNotes")}
+                      </Label>
                       <Input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="testo…"
+                        placeholder={t("accounts.searchPlaceholder")}
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Ordine</Label>
+                      <Label className="text-xs text-muted-foreground">
+                        {t("common.order")}
+                      </Label>
                       <Select
                         value={order}
                         onValueChange={(v) => setOrder(v as typeof order)}
@@ -695,8 +715,8 @@ export function AccountsView({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="desc">Più recenti</SelectItem>
-                          <SelectItem value="asc">Più vecchi</SelectItem>
+                          <SelectItem value="desc">{t("common.newest")}</SelectItem>
+                          <SelectItem value="asc">{t("common.oldest")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -705,7 +725,7 @@ export function AccountsView({
                   {hasActiveTransferFilters && (
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-sm text-muted-foreground">
-                        Filtri attivi
+                        {t("common.activeFilters")}
                       </div>
                       <Button
                         variant="ghost"
@@ -719,7 +739,7 @@ export function AccountsView({
                         }}
                       >
                         <X className="size-4" />
-                        Azzera
+                        {t("common.reset")}
                       </Button>
                     </div>
                   )}
@@ -728,17 +748,17 @@ export function AccountsView({
 
               {filteredTransfers.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                  Nessun trasferimento per i filtri selezionati.
+                  {t("accounts.transfersEmpty")}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Da</TableHead>
-                      <TableHead>A</TableHead>
-                      <TableHead className="text-right">Importo</TableHead>
-                      <TableHead>Note</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("common.from")}</TableHead>
+                      <TableHead>{t("common.to")}</TableHead>
+                      <TableHead className="text-right">{t("common.amount")}</TableHead>
+                      <TableHead>{t("common.notes")}</TableHead>
                       <TableHead className="w-[60px]" />
                     </TableRow>
                   </TableHeader>
@@ -762,7 +782,7 @@ export function AccountsView({
                                 {from.name}
                               </span>
                             ) : (
-                              "—"
+                              t("common.none")
                             )}
                           </TableCell>
                           <TableCell>
@@ -775,14 +795,14 @@ export function AccountsView({
                                 {to.name}
                               </span>
                             ) : (
-                              "—"
+                              t("common.none")
                             )}
                           </TableCell>
                           <TableCell className="text-right font-medium tabular-nums">
                             {formatAmount(tr.amount, fromCurrency, locale)}
                           </TableCell>
                           <TableCell className="max-w-[320px] truncate">
-                            {tr.notes || "—"}
+                            {tr.notes || t("common.none")}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -817,11 +837,11 @@ export function AccountsView({
                         analysisOpen && "rotate-180"
                       )}
                     />
-                    Analisi Conti
+                    {t("accounts.analysisSection")}
                   </Button>
                 </CollapsibleTrigger>
                 <span className="text-sm text-muted-foreground">
-                  al {formatDate(analysis.asOfISO)}
+                  {t("accounts.analysisAsOf", { date: formatDate(analysis.asOfISO) })}
                 </span>
               </div>
             </div>
@@ -831,17 +851,19 @@ export function AccountsView({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Conto</TableHead>
-                      <TableHead className="text-right">Saldo attuale</TableHead>
+                      <TableHead>{t("common.account")}</TableHead>
                       <TableHead className="text-right">
-                        Saldo con tutte le transazioni
+                        {t("accounts.currentBalance")}
                       </TableHead>
-                      <TableHead className="text-right">Delta</TableHead>
+                      <TableHead className="text-right">
+                        {t("accounts.balanceAllTransactions")}
+                      </TableHead>
+                      <TableHead className="text-right">{t("accounts.delta")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow className="bg-muted/40 font-medium">
-                      <TableCell>Totale</TableCell>
+                      <TableCell>{t("accounts.total")}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatAmount(analysis.totalAsOf, currency, locale)}
                       </TableCell>
@@ -910,17 +932,17 @@ export function AccountsView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminare il trasferimento?</DialogTitle>
+            <DialogTitle>{t("accounts.transferDeleteConfirm")}</DialogTitle>
             <DialogDescription>
-              L&apos;operazione non puo&apos; essere annullata.
+              {t("common.cannotUndo")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingTransfer(null)}>
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDeleteTransfer}>
-              Elimina
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

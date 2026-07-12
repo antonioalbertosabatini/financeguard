@@ -7,6 +7,7 @@
  * nel browser e dentro un'app mobile (Capacitor/PWA) senza un server Node.
  */
 import { scrypt } from "@noble/hashes/scrypt.js";
+import { AppError } from "@/lib/i18n/app-error";
 
 export interface ScryptParams {
   N: number;
@@ -40,7 +41,7 @@ export interface VaultFile {
 function getCrypto(): Crypto {
   const c = (globalThis as { crypto?: Crypto }).crypto;
   if (!c?.subtle) {
-    throw new Error("Web Crypto non disponibile in questo ambiente.");
+    throw new AppError("errors.webCryptoUnavailable");
   }
   return c;
 }
@@ -169,7 +170,7 @@ export async function decryptJsonWeb<T>(
 ): Promise<T> {
   const parsed: unknown = JSON.parse(text);
   if (!isEnvelope(parsed)) {
-    throw new Error("Il file non e' in formato cifrato.");
+    throw new AppError("errors.notEncryptedFormat");
   }
   return JSON.parse(await decryptWeb(parsed, key)) as T;
 }

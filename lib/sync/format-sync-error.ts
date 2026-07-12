@@ -1,13 +1,16 @@
+import { isAppError } from "@/lib/i18n/app-error";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { formatErrorMessage, translate } from "@/lib/i18n/translate";
 import { SessionLockedError } from "@/lib/sync/session-lock";
-
-const FALLBACK_MESSAGE =
-  "Errore di sincronizzazione cloud. Controlla la connessione e riprova.";
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
-function formatSupabaseLikeError(value: Record<string, unknown>): string | null {
+function formatSupabaseLikeError(
+  value: Record<string, unknown>,
+  language = getCurrentLanguage()
+): string | null {
   const parts: string[] = [];
 
   if (isNonEmptyString(value.message)) {
@@ -32,21 +35,23 @@ function formatSupabaseLikeError(value: Record<string, unknown>): string | null 
         : null;
 
   if (code) {
-    return `Errore cloud (${code}): ${parts.join(" — ")}`;
+    return translate(language, "sync.cloudErrorWithCode", {
+      code,
+      details: parts.join(" — "),
+    });
   }
 
   return parts.join(" — ");
 }
 
-const OPERATION_ERROR_MESSAGE =
-  "Impossibile decifrare i dati sul cloud. Verifica di usare la stessa master password su tutti i dispositivi.";
-
 /**
  * Normalizza un errore di sync in un messaggio utente non vuoto.
  */
 export function formatSyncError(err: unknown): string {
-  if (err instanceof SessionLockedError) {
-    return err.message;
+  const language = getCurrentLanguage();
+
+  if (err instanceof SessionLockedError || isAppError(err)) {
+    return formatErrorMessage(language, err);
   }
 
   if (
@@ -56,12 +61,13 @@ export function formatSyncError(err: unknown): string {
   ) {
     return isNonEmptyString(err.message)
       ? err.message.trim()
-      : OPERATION_ERROR_MESSAGE;
+      : translate(language, "sync.decryptFailed");
   }
 
   if (err instanceof Error) {
-    if (isNonEmptyString(err.message)) {
-      return err.message.trim();
+    const formatted = formatErrorMessage(language, err);
+    if (formatted !== translate(language, "common.error")) {
+      return formatted;
     }
     if (isNonEmptyString(err.name) && err.name !== "Error") {
       return err.name.trim();
@@ -73,9 +79,9 @@ export function formatSyncError(err: unknown): string {
   }
 
   if (err && typeof err === "object") {
-    const formatted = formatSupabaseLikeError(err as Record<string, unknown>);
+    const formatted = formatSupabaseLikeError(err as Record<string, unknown>, language);
     if (formatted) return formatted;
   }
 
-  return FALLBACK_MESSAGE;
+  return translate(language, "sync.fallbackError");
 }

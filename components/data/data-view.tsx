@@ -17,9 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  getPasswordError,
-} from "@/lib/constants";
+import { getPasswordError } from "@/lib/constants";
 import {
   buildEncryptedBackup,
   buildPlainBackup,
@@ -33,6 +31,7 @@ import {
 } from "@/lib/storage/data-store";
 import { todayISO } from "@/lib/utils/dates";
 import { toastActionError } from "@/lib/utils/toast";
+import { useI18n } from "@/providers/i18n-provider";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -50,6 +49,7 @@ function today() {
 }
 
 export function DataView() {
+  const { t } = useI18n();
   const [importing, setImporting] = useState(false);
   const [exportingPlain, setExportingPlain] = useState(false);
 
@@ -66,9 +66,9 @@ export function DataView() {
     try {
       const blob = await buildPlainBackup(getDataset());
       downloadBlob(blob, `financeguard-export-${today()}.zip`);
-      toast.success("Dati esportati");
+      toast.success(t("data.exported"));
     } catch (err) {
-      toastActionError(err, "Errore export");
+      toastActionError(err, "common.errorExport");
     } finally {
       setExportingPlain(false);
     }
@@ -78,7 +78,7 @@ export function DataView() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm("L'import sovrascriverà tutti i dati attuali. Continuare?")) {
+    if (!confirm(t("data.importPlainConfirm"))) {
       e.target.value = "";
       return;
     }
@@ -87,9 +87,9 @@ export function DataView() {
     try {
       const dataset = await readPlainBackup(file);
       await replaceDataset(dataset);
-      toast.success("Dati importati con successo");
+      toast.success(t("data.imported"));
     } catch (err) {
-      toastActionError(err, "Errore import");
+      toastActionError(err, "common.errorImport");
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -99,7 +99,7 @@ export function DataView() {
   async function handleEncryptedExport(e: React.FormEvent) {
     e.preventDefault();
     if (exportPassword !== exportConfirm) {
-      toast.error("Le password non coincidono.");
+      toast.error(t("data.passwordMismatch"));
       return;
     }
     const passwordError = getPasswordError(exportPassword);
@@ -112,11 +112,11 @@ export function DataView() {
     try {
       const blob = await buildEncryptedBackup(getDataset(), exportPassword);
       downloadBlob(blob, `financeguard-backup-criptato-${today()}.zip`);
-      toast.success("Backup criptato creato");
+      toast.success(t("data.encryptedCreated"));
       setExportPassword("");
       setExportConfirm("");
     } catch (err) {
-      toastActionError(err, "Errore export");
+      toastActionError(err, "common.errorExport");
     } finally {
       setExporting(false);
     }
@@ -125,18 +125,14 @@ export function DataView() {
   async function handleEncryptedImport(e: React.FormEvent) {
     e.preventDefault();
     if (!encFile) {
-      toast.error("Seleziona un file di backup.");
+      toast.error(t("data.selectBackupFile"));
       return;
     }
     if (importPassword.length === 0) {
-      toast.error("Inserisci la password del backup.");
+      toast.error(t("data.enterBackupPassword"));
       return;
     }
-    if (
-      !confirm(
-        "Importando questo backup criptato sovrascrivi tutti i dati attuali e la password di accesso diventerà quella del backup. Continuare?"
-      )
-    ) {
+    if (!confirm(t("data.importEncryptedConfirm"))) {
       return;
     }
 
@@ -144,13 +140,11 @@ export function DataView() {
     try {
       const dataset = await readEncryptedBackup(encFile, importPassword);
       await replaceDatasetWithPassword(dataset, importPassword);
-      toast.success(
-        "Backup importato. La password di accesso è ora quella del backup."
-      );
+      toast.success(t("data.importEncryptedSuccess"));
       setEncFile(null);
       setImportPassword("");
     } catch (err) {
-      toastActionError(err, "Errore import");
+      toastActionError(err, "common.errorImport");
     } finally {
       setImportingEnc(false);
     }
@@ -159,25 +153,24 @@ export function DataView() {
   return (
     <div className="space-y-6 max-w-xl">
       <PageHeader
-        title="Backup"
-        description="Esporta e importa i tuoi dati, in chiaro o criptati"
+        title={t("data.title")}
+        description={t("data.description")}
       />
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileDown className="size-4" />
-            Esporta dati (in chiaro)
+            {t("data.exportPlainTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Scarica tutti i dati in un archivio ZIP leggibile, senza
-            crittografia.
+            {t("data.exportPlainDescription")}
           </p>
           <Button onClick={handlePlainExport} disabled={exportingPlain} className="w-full sm:w-auto">
             <Download className="size-4" />
-            {exportingPlain ? "Esportazione…" : "Esporta in chiaro"}
+            {exportingPlain ? t("data.exporting") : t("data.exportPlainButton")}
           </Button>
         </CardContent>
       </Card>
@@ -186,17 +179,16 @@ export function DataView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="size-4" />
-            Esporta backup criptato
+            {t("data.exportEncryptedTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Crea un backup protetto da una password a tua scelta (può essere
-            diversa da quella di accesso). Servirà per reimportarlo.
+            {t("data.exportEncryptedDescription")}
           </p>
           <form onSubmit={handleEncryptedExport} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="export-password">Password del backup</Label>
+              <Label htmlFor="export-password">{t("data.backupPassword")}</Label>
               <Input
                 id="export-password"
                 type="password"
@@ -206,7 +198,7 @@ export function DataView() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="export-confirm">Conferma password</Label>
+              <Label htmlFor="export-confirm">{t("auth.confirmPassword")}</Label>
               <Input
                 id="export-confirm"
                 type="password"
@@ -217,7 +209,7 @@ export function DataView() {
             </div>
             <Button type="submit" disabled={exporting} className="w-full sm:w-auto">
               <Lock className="size-4" />
-              {exporting ? "Creazione…" : "Esporta criptato"}
+              {exporting ? t("data.creating") : t("data.exportEncryptedButton")}
             </Button>
           </form>
         </CardContent>
@@ -227,13 +219,12 @@ export function DataView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileUp className="size-4" />
-            Importa dati (in chiaro)
+            {t("data.importPlainTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Carica un archivio ZIP in chiaro esportato in precedenza. Sovrascrive
-            i dati attuali.
+            {t("data.importPlainDescription")}
           </p>
           <Input
             type="file"
@@ -242,7 +233,9 @@ export function DataView() {
             onChange={handleImport}
           />
           {importing && (
-            <p className="text-sm text-muted-foreground mt-2">Import in corso…</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {t("data.importing")}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -251,20 +244,17 @@ export function DataView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileKey className="size-4" />
-            Importa backup criptato
+            {t("data.importEncryptedTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <span>
-              Attenzione: questo sovrascrive tutti i dati attuali e la password
-              di accesso diventerà quella del backup.
-            </span>
+            <span>{t("data.importEncryptedWarning")}</span>
           </div>
           <form onSubmit={handleEncryptedImport} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="import-file">File di backup (.zip)</Label>
+              <Label htmlFor="import-file">{t("data.importFile")}</Label>
               <Input
                 id="import-file"
                 type="file"
@@ -274,7 +264,7 @@ export function DataView() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="import-password">Password del backup</Label>
+              <Label htmlFor="import-password">{t("data.backupPassword")}</Label>
               <Input
                 id="import-password"
                 type="password"
@@ -285,7 +275,7 @@ export function DataView() {
             </div>
             <Button type="submit" variant="outline" disabled={importingEnc} className="w-full sm:w-auto">
               <Unlock className="size-4" />
-              {importingEnc ? "Import in corso…" : "Importa criptato"}
+              {importingEnc ? t("data.importing") : t("data.importEncryptedButton")}
             </Button>
           </form>
         </CardContent>

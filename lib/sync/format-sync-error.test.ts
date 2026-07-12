@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { translate } from "@/lib/i18n/translate";
 import { formatSyncError } from "@/lib/sync/format-sync-error";
 import { SessionLockedError } from "@/lib/sync/session-lock";
 
 describe("formatSyncError", () => {
   it("restituisce il messaggio di SessionLockedError", () => {
     const err = new SessionLockedError("dev-1", "MacBook Pro", "2026-01-01T00:00:00Z");
-    expect(formatSyncError(err)).toBe(err.message);
+    expect(formatSyncError(err)).toBe(
+      translate("it", "errors.sessionLockedNamed", { deviceName: "MacBook Pro" })
+    );
   });
 
   it("restituisce il messaggio di Error non vuoto", () => {
@@ -16,7 +19,7 @@ describe("formatSyncError", () => {
 
   it("usa il fallback per Error con message vuoto", () => {
     expect(formatSyncError(new Error(""))).toBe(
-      "Errore di sincronizzazione cloud. Controlla la connessione e riprova."
+      translate("it", "sync.fallbackError")
     );
   });
 
@@ -28,7 +31,11 @@ describe("formatSyncError", () => {
         details: "Policy check failed",
       })
     ).toBe(
-      "Errore cloud (42501): new row violates row-level security policy — Policy check failed"
+      translate("it", "sync.cloudErrorWithCode", {
+        code: "42501",
+        details:
+          "new row violates row-level security policy — Policy check failed",
+      })
     );
   });
 
@@ -39,16 +46,12 @@ describe("formatSyncError", () => {
   it("traduce OperationError senza messaggio", () => {
     if (typeof DOMException === "undefined") return;
     expect(formatSyncError(new DOMException("", "OperationError"))).toBe(
-      "Impossibile decifrare i dati sul cloud. Verifica di usare la stessa master password su tutti i dispositivi."
+      translate("it", "sync.decryptFailed")
     );
   });
 
   it("usa il fallback per valori non riconosciuti", () => {
-    expect(formatSyncError(null)).toBe(
-      "Errore di sincronizzazione cloud. Controlla la connessione e riprova."
-    );
-    expect(formatSyncError({})).toBe(
-      "Errore di sincronizzazione cloud. Controlla la connessione e riprova."
-    );
+    expect(formatSyncError(null)).toBe(translate("it", "sync.fallbackError"));
+    expect(formatSyncError({})).toBe(translate("it", "sync.fallbackError"));
   });
 });

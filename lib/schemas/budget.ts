@@ -1,5 +1,17 @@
 import { z } from "zod";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { translate } from "@/lib/i18n/translate";
+import type { MessageKey, TranslateParams } from "@/lib/i18n/types";
 import { normalizeIcon } from "@/lib/schemas/category";
+
+export type SchemaTranslate = (
+  key: MessageKey,
+  params?: TranslateParams
+) => string;
+
+function defaultSchemaTranslate(key: MessageKey, params?: TranslateParams) {
+  return translate(getCurrentLanguage(), key, params);
+}
 
 function normalizeOptionalString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -18,45 +30,63 @@ function normalizeBudgetName(value: unknown): string {
   return name || "Budget";
 }
 
-const budgetFieldsSchema = z.object({
-  id: z.string(),
-  name: z.preprocess(normalizeBudgetName, z.string().min(1)),
-  categoryId: z.preprocess(normalizeOptionalString, z.string().min(1).optional()),
-  tag: z.preprocess(
-    normalizeBudgetTag,
-    z.string().min(1).refine((tag) => !tag.includes(","), {
-      message: "Usa un solo tag per budget",
-    }).optional()
-  ),
-  icon: z.preprocess(normalizeIcon, z.string().min(1)),
-  monthlyLimit: z.number().int().positive(),
-});
-
-const budgetInputFieldsSchema = budgetFieldsSchema.omit({ id: true }).extend({
-  name: z.preprocess(normalizeOptionalString, z.string().min(1)),
-});
-
 function validateBudgetScope(
   data: { categoryId?: string; tag?: string },
-  ctx: z.RefinementCtx
+  ctx: z.RefinementCtx,
+  t: SchemaTranslate
 ) {
   if (!data.categoryId && !data.tag) {
     ctx.addIssue({
       code: "custom",
-      message: "Seleziona una categoria o inserisci un tag",
+      message: t("validation.budgetScopeRequired"),
       path: ["categoryId"],
     });
   }
 }
 
-export const budgetSchema = budgetFieldsSchema.superRefine(validateBudgetScope);
+export function createBudgetSchemas(t: SchemaTranslate = defaultSchemaTranslate) {
+  const budgetFieldsSchema = z.object({
+    id: z.string(),
+    name: z.preprocess(normalizeBudgetName, z.string().min(1)),
+    categoryId: z.preprocess(normalizeOptionalString, z.string().min(1).optional()),
+    tag: z.preprocess(
+      normalizeBudgetTag,
+      z
+        .string()
+        .min(1)
+        .refine((tag) => !tag.includes(","), {
+          message: t("validation.budgetSingleTag"),
+        })
+        .optional()
+    ),
+    icon: z.preprocess(normalizeIcon, z.string().min(1)),
+    monthlyLimit: z.number().int().positive(),
+  });
 
-export const budgetInputSchema =
-  budgetInputFieldsSchema.superRefine(validateBudgetScope);
+  const budgetInputFieldsSchema = budgetFieldsSchema.omit({ id: true }).extend({
+    name: z.preprocess(normalizeOptionalString, z.string().min(1)),
+  });
 
-export const budgetsFileSchema = z.object({
-  budgets: z.array(budgetSchema),
-});
+  const budgetSchema = budgetFieldsSchema.superRefine((data, ctx) =>
+    validateBudgetScope(data, ctx, t)
+  );
+
+  const budgetInputSchema = budgetInputFieldsSchema.superRefine((data, ctx) =>
+    validateBudgetScope(data, ctx, t)
+  );
+
+  const budgetsFileSchema = z.object({
+    budgets: z.array(budgetSchema),
+  });
+
+  return { budgetSchema, budgetInputSchema, budgetsFileSchema };
+}
+
+const defaultSchemas = createBudgetSchemas();
+
+export const budgetSchema = defaultSchemas.budgetSchema;
+export const budgetInputSchema = defaultSchemas.budgetInputSchema;
+export const budgetsFileSchema = defaultSchemas.budgetsFileSchema;
 
 export type Budget = z.infer<typeof budgetSchema>;
 export type BudgetInput = z.infer<typeof budgetInputSchema>;

@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useI18n } from "@/providers/i18n-provider";
 
 export function SyncErrorDetailsDialog({
   error,
@@ -20,6 +21,8 @@ export function SyncErrorDetailsDialog({
   error: string | null;
   trigger?: ReactNode;
 }) {
+  const { t } = useI18n();
+
   if (!error?.trim()) return null;
 
   return (
@@ -31,15 +34,15 @@ export function SyncErrorDetailsDialog({
             variant="link"
             className="h-auto p-0 text-inherit underline underline-offset-2"
           >
-            Vedi dettagli
+            {t("common.seeDetails")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Dettaglio errore di sincronizzazione</DialogTitle>
+          <DialogTitle>{t("sync.errorDialogTitle")}</DialogTitle>
           <DialogDescription>
-            Messaggio restituito dal servizio cloud o dal browser.
+            {t("sync.errorDialogDescription")}
           </DialogDescription>
         </DialogHeader>
         <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed">
@@ -48,7 +51,7 @@ export function SyncErrorDetailsDialog({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              Chiudi
+              {t("common.close")}
             </Button>
           </DialogClose>
         </DialogFooter>

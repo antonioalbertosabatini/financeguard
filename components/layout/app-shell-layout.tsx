@@ -10,11 +10,13 @@ import { CloudSyncAlert } from "@/components/layout/cloud-sync-alert";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { SyncWarnings } from "@/components/layout/sync-warnings";
 import { YearSelector } from "@/components/layout/year-selector";
+import { useI18n } from "@/providers/i18n-provider";
 import { useSidebar } from "@/providers/sidebar-provider";
 import { useSyncState } from "@/lib/sync/use-sync-state";
 import { cn } from "@/lib/utils";
 
 export function AppShellLayout({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const { sidebarOpen } = useSidebar();
   const { warnings: syncWarnings } = useSyncState();
 
@@ -33,7 +35,7 @@ export function AppShellLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-2 md:hidden">
               <AppLogo className="size-8" />
               <span className="font-heading text-base font-semibold tracking-tight">
-                FinanceGuard
+                {t("common.appTitle")}
               </span>
             </div>
             <div className="hidden items-center gap-2 md:flex">
@@ -47,7 +49,7 @@ export function AppShellLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             <AmountVisibilityToggle />
             <span className="hidden text-xs text-muted-foreground sm:inline">
-              Anno
+              {t("common.year")}
             </span>
             <YearSelector />
           </div>

@@ -1,4 +1,7 @@
 import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import { AppError } from "@/lib/i18n/app-error";
+import { mapLocale } from "@/lib/i18n/config";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
 import {
   trackCategoryUpsert,
   trackDelete,
@@ -12,7 +15,9 @@ import { generateId } from "@/lib/db/index";
 
 export async function getCategories(): Promise<Category[]> {
   return [...getDataset().categories].sort((a, b) =>
-    a.name.localeCompare(b.name, "it", { sensitivity: "base" })
+    a.name.localeCompare(b.name, mapLocale(getCurrentLanguage()), {
+      sensitivity: "base",
+    })
   );
 }
 
@@ -34,7 +39,7 @@ export async function updateCategory(
 ): Promise<Category> {
   const categories = getDataset().categories;
   const index = categories.findIndex((c) => c.id === id);
-  if (index === -1) throw new Error("Categoria non trovata");
+  if (index === -1) throw new AppError("errors.categoryNotFound");
   const previous = categories[index];
   const updated = categorySchema.parse({ ...input, id });
   categories[index] = updated;

@@ -1,7 +1,19 @@
 import { z } from "zod";
 import { TRANSACTION_TYPES } from "@/lib/constants";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { translate } from "@/lib/i18n/translate";
+import type { MessageKey, TranslateParams } from "@/lib/i18n/types";
 
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export type SchemaTranslate = (
+  key: MessageKey,
+  params?: TranslateParams
+) => string;
+
+function defaultSchemaTranslate(key: MessageKey, params?: TranslateParams) {
+  return translate(getCurrentLanguage(), key, params);
+}
 
 const transactionFieldsSchema = z.object({
   date: dateStringSchema,
@@ -18,11 +30,15 @@ const transactionFieldsSchema = z.object({
 
 type TransactionFields = z.infer<typeof transactionFieldsSchema>;
 
-function validateTransactionFields(data: TransactionFields, ctx: z.RefinementCtx) {
+function validateTransactionFields(
+  data: TransactionFields,
+  ctx: z.RefinementCtx,
+  t: SchemaTranslate
+) {
   if (data.type !== "transfer" && !data.categoryId) {
     ctx.addIssue({
       code: "custom",
-      message: "La categoria è obbligatoria per entrate e uscite",
+      message: t("validation.categoryRequired"),
       path: ["categoryId"],
     });
   }
@@ -32,14 +48,14 @@ function validateTransactionFields(data: TransactionFields, ctx: z.RefinementCtx
     if (data.recurrenceStart && !data.recurrenceStart.startsWith(year)) {
       ctx.addIssue({
         code: "custom",
-        message: "recurrenceStart deve essere nello stesso anno della data",
+        message: t("validation.recurrenceStartSameYear"),
         path: ["recurrenceStart"],
       });
     }
     if (data.recurrenceEnd && !data.recurrenceEnd.startsWith(year)) {
       ctx.addIssue({
         code: "custom",
-        message: "recurrenceEnd deve essere nello stesso anno della data",
+        message: t("validation.recurrenceEndSameYear"),
         path: ["recurrenceEnd"],
       });
     }
@@ -50,24 +66,34 @@ function validateTransactionFields(data: TransactionFields, ctx: z.RefinementCtx
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "recurrenceStart non può essere dopo recurrenceEnd",
+        message: t("validation.recurrenceStartBeforeEnd"),
         path: ["recurrenceStart"],
       });
     }
   }
 }
 
-export const transactionInputSchema = transactionFieldsSchema.superRefine(
-  validateTransactionFields
-);
+export function createTransactionSchemas(t: SchemaTranslate = defaultSchemaTranslate) {
+  const transactionInputSchema = transactionFieldsSchema.superRefine((data, ctx) =>
+    validateTransactionFields(data, ctx, t)
+  );
 
-export const transactionSchema = transactionFieldsSchema
-  .extend({ id: z.string() })
-  .superRefine(validateTransactionFields);
+  const transactionSchema = transactionFieldsSchema
+    .extend({ id: z.string() })
+    .superRefine((data, ctx) => validateTransactionFields(data, ctx, t));
 
-export const transactionsFileSchema = z.object({
-  transactions: z.array(transactionSchema),
-});
+  const transactionsFileSchema = z.object({
+    transactions: z.array(transactionSchema),
+  });
+
+  return { transactionInputSchema, transactionSchema, transactionsFileSchema };
+}
+
+const defaultSchemas = createTransactionSchemas();
+
+export const transactionInputSchema = defaultSchemas.transactionInputSchema;
+export const transactionSchema = defaultSchemas.transactionSchema;
+export const transactionsFileSchema = defaultSchemas.transactionsFileSchema;
 
 export type Transaction = z.infer<typeof transactionSchema>;
 export type TransactionInput = z.infer<typeof transactionInputSchema>;

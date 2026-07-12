@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "FinanceGuard",
     short_name: "FinanceGuard",
-    description: "Gestione finanze personali, locale e cifrata.",
+    description: "Local, encrypted personal finance management.",
     start_url: "/",
     display: "standalone",
     background_color: "#16151d",

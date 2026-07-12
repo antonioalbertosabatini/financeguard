@@ -4,7 +4,8 @@
  * Sul cloud finisce SOLO il bundle cifrato: Supabase non possiede mai la chiave.
  * Il merge avviene client-side (vedi sync-orchestrator e merge-datasets).
  */
-import { getPasswordError } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { AppError } from "@/lib/i18n/app-error";
 import { ConflictError } from "@/lib/storage/bundle";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { deriveAuthHash, normalizeEmail } from "@/lib/sync/auth-derive";
@@ -18,8 +19,11 @@ import { getSupabase, isCloudConfigured } from "@/lib/sync/supabase-client";
 export { ConflictError, SessionLockedError, isCloudConfigured };
 
 function assertValidPassword(password: string): void {
-  const error = getPasswordError(password);
-  if (error) throw new Error(error);
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new AppError("validation.passwordMinLength", {
+      minLength: MIN_PASSWORD_LENGTH,
+    });
+  }
 }
 
 const BUCKET = "vaults";
@@ -79,7 +83,7 @@ export async function updateCloudAuth(
 
 async function requireUserId(): Promise<string> {
   const { data } = await getSupabase().auth.getUser();
-  if (!data.user) throw new Error("Nessuna sessione cloud attiva.");
+  if (!data.user) throw new AppError("errors.noCloudSession");
   return data.user.id;
 }
 

@@ -12,8 +12,11 @@ import {
   updateTransaction as dbUpdateTransaction,
 } from "@/lib/db/transactions";
 import type { Category } from "@/lib/schemas/category";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { mapLocale } from "@/lib/i18n/config";
+import { translate } from "@/lib/i18n/translate";
 import {
-  transactionInputSchema,
+  createTransactionSchemas,
   type TransactionFilters,
   type TransactionInput,
 } from "@/lib/schemas/transaction";
@@ -100,6 +103,9 @@ export async function loadTransactionFormDeps(year: number) {
 }
 
 export async function createTransaction(data: TransactionInput) {
+  const { transactionInputSchema } = createTransactionSchemas((key, params) =>
+    translate(getCurrentLanguage(), key, params)
+  );
   const parsed = transactionInputSchema.parse(data);
   return dbCreateTransaction(parsed);
 }
@@ -109,6 +115,9 @@ export async function updateTransaction(
   year: number,
   data: TransactionInput
 ) {
+  const { transactionInputSchema } = createTransactionSchemas((key, params) =>
+    translate(getCurrentLanguage(), key, params)
+  );
   const parsed = transactionInputSchema.parse(data);
   return dbUpdateTransaction(id, year, parsed);
 }
@@ -167,7 +176,7 @@ export async function getAvailableTags(year?: number) {
   }
 
   return Array.from(tags).sort((a, b) =>
-    a.localeCompare(b, "it", { sensitivity: "base" })
+    a.localeCompare(b, mapLocale(getCurrentLanguage()), { sensitivity: "base" })
   );
 }
 

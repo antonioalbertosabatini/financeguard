@@ -1,4 +1,5 @@
 import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   trackAccountUpsert,
   trackDelete,
@@ -29,7 +30,7 @@ export async function updateAccount(
 ): Promise<Account> {
   const accounts = getDataset().accounts;
   const index = accounts.findIndex((a) => a.id === id);
-  if (index === -1) throw new Error("Conto non trovato");
+  if (index === -1) throw new AppError("errors.accountNotFound");
   const previous = accounts[index];
   const updated = { ...input, id };
   accounts[index] = updated;

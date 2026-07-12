@@ -8,6 +8,7 @@
  * confrontiamo la revisione (nessun merge automatico, coerente con l'uso "un
  * dispositivo alla volta").
  */
+import { AppError } from "@/lib/i18n/app-error";
 import {
   createVaultWeb,
   decryptJsonWeb,
@@ -37,16 +38,15 @@ export interface OpenedBundle<T> {
   dataset: T;
 }
 
-export class ConflictError extends Error {
-  constructor(
-    public readonly localRevision: number,
-    public readonly remoteRevision: number
-  ) {
-    super(
-      "Il file e' stato modificato da un altro dispositivo (revisione " +
-        `${remoteRevision} > ${localRevision}). Ricarica i dati prima di salvare.`
-    );
+export class ConflictError extends AppError {
+  readonly localRevision: number;
+  readonly remoteRevision: number;
+
+  constructor(localRevision: number, remoteRevision: number) {
+    super("errors.bundleConflict", { remoteRevision, localRevision });
     this.name = "ConflictError";
+    this.localRevision = localRevision;
+    this.remoteRevision = remoteRevision;
   }
 }
 
@@ -62,7 +62,7 @@ export function revisionOf(bundleText: string): number {
 function parseBundle(text: string): Bundle {
   const parsed = JSON.parse(text) as Bundle;
   if (parsed.app !== "financeguard" || typeof parsed.revision !== "number") {
-    throw new Error("File non riconosciuto come bundle FinanceGuard.");
+    throw new AppError("errors.invalidBundle");
   }
   return parsed;
 }
@@ -104,7 +104,7 @@ export async function openBundleText<T>(
 ): Promise<OpenedBundle<T> | null> {
   const bundle = parseBundle(text);
   const key = await verifyVaultPasswordWeb(bundle.vault, password);
-  if (!key) throw new Error("Password errata per questo file.");
+  if (!key) throw new AppError("errors.wrongBundlePassword");
   const dataset = await decryptJsonWeb<T>(bundle.data, key);
   return { key, vault: bundle.vault, revision: bundle.revision, dataset };
 }

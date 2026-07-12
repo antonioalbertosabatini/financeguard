@@ -17,11 +17,11 @@ import { CategoryIcon } from "@/components/categories/category-icon";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { TagBadges } from "@/components/tags/tag-badges";
-import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
 import { useAmountVisibility } from "@/providers/amount-visibility-provider";
+import { useI18n } from "@/providers/i18n-provider";
 import { formatDate } from "@/lib/utils/dates";
 import { formatSignedCents } from "@/lib/utils/money";
 import {
@@ -74,14 +74,15 @@ export function TransactionDetailView({
   locale,
   listContext,
 }: TransactionDetailViewProps) {
+  const { t, language } = useI18n();
   const { amountsHidden } = useAmountVisibility();
 
   if (transaction.type === "transfer") {
     return (
       <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-        I trasferimenti si gestiscono dalla sezione{" "}
+        {t("transactions.transferManagedInAccounts")}{" "}
         <Link href={`/accounts?year=${year}`} className="font-medium text-primary underline">
-          Conti
+          {t("nav.accounts")}
         </Link>
         .
       </div>
@@ -105,14 +106,14 @@ export function TransactionDetailView({
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <FieldLabel icon={ArrowLeftRight}>Tipo</FieldLabel>
+          <FieldLabel icon={ArrowLeftRight}>{t("common.type")}</FieldLabel>
           <Badge variant="secondary" className={cn("w-fit", TYPE_BADGE_CLASS[transaction.type])}>
-            {TRANSACTION_TYPE_LABELS[transaction.type]}
+            {t(`labels.transactionType.${transaction.type}`)}
           </Badge>
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <FieldLabel icon={Euro}>Importo (€)</FieldLabel>
+          <FieldLabel icon={Euro}>{t("transactions.form.amountEuro")}</FieldLabel>
           <DetailValue
             className={cn(
               "text-2xl tabular-nums",
@@ -125,17 +126,19 @@ export function TransactionDetailView({
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={Calendar}>Data</FieldLabel>
+          <FieldLabel icon={Calendar}>{t("common.date")}</FieldLabel>
           <DetailValue className="tabular-nums">{formatDate(displayDate)}</DetailValue>
           {listContext?.kind === "occurrence" && (
             <Badge variant="outline" className="mt-1 w-fit text-xs">
-              Occorrenza · {getOccurrenceMonthLabel(displayDate, year)}
+              {t("transactions.occurrence", {
+                label: getOccurrenceMonthLabel(displayDate, year, language),
+              })}
             </Badge>
           )}
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={Tags}>Categoria</FieldLabel>
+          <FieldLabel icon={Tags}>{t("common.category")}</FieldLabel>
           {category ? (
             <span className="flex items-center gap-2 text-sm font-medium">
               <span
@@ -147,35 +150,35 @@ export function TransactionDetailView({
               {category.name}
             </span>
           ) : (
-            <DetailValue className="text-muted-foreground">—</DetailValue>
+            <DetailValue className="text-muted-foreground">{t("common.none")}</DetailValue>
           )}
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={Wallet}>Conto</FieldLabel>
+          <FieldLabel icon={Wallet}>{t("common.account")}</FieldLabel>
           {account ? (
             <span className="flex items-center gap-2 text-sm font-medium">
               <AccountIcon name={account.icon} className="size-4 text-muted-foreground" />
               {account.name}
             </span>
           ) : (
-            <DetailValue className="text-muted-foreground">—</DetailValue>
+            <DetailValue className="text-muted-foreground">{t("common.none")}</DetailValue>
           )}
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={FileText}>Note</FieldLabel>
+          <FieldLabel icon={FileText}>{t("common.notes")}</FieldLabel>
           <DetailValue className={cn(!transaction.notes && "text-muted-foreground")}>
-            {transaction.notes || "—"}
+            {transaction.notes || t("common.none")}
           </DetailValue>
         </div>
 
         <div className="space-y-2">
-          <FieldLabel icon={Tag}>Tag</FieldLabel>
+          <FieldLabel icon={Tag}>{t("common.tags")}</FieldLabel>
           {(transaction.tags?.length ?? 0) > 0 ? (
             <TagBadges tags={transaction.tags ?? []} />
           ) : (
-            <DetailValue className="text-muted-foreground">—</DetailValue>
+            <DetailValue className="text-muted-foreground">{t("common.none")}</DetailValue>
           )}
         </div>
       </div>
@@ -183,17 +186,19 @@ export function TransactionDetailView({
       <div className="space-y-4 rounded-xl border bg-muted/30 p-4">
         <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Repeat className="size-4" />
-          Ricorrenza
+          {t("transactions.form.recurrence")}
         </h3>
 
         {transaction.isRecurring ? (
           <div className="space-y-3">
             <Badge variant="outline" className="w-fit">
-              Ricorrente · {getRecurrenceIntervalLabel(transaction, year)}
+              {t("transactions.recurring", {
+                interval: getRecurrenceIntervalLabel(transaction, year, language),
+              })}
             </Badge>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <FieldLabel icon={Calendar}>Inizio ricorrenza</FieldLabel>
+                <FieldLabel icon={Calendar}>{t("transactions.form.recurrenceStart")}</FieldLabel>
                 <DetailValue className="tabular-nums">
                   {transaction.recurrenceStart
                     ? formatDate(transaction.recurrenceStart)
@@ -201,17 +206,19 @@ export function TransactionDetailView({
                 </DetailValue>
               </div>
               <div className="space-y-1">
-                <FieldLabel icon={Calendar}>Fine ricorrenza</FieldLabel>
+                <FieldLabel icon={Calendar}>{t("transactions.form.recurrenceEnd")}</FieldLabel>
                 <DetailValue className="tabular-nums">
                   {transaction.recurrenceEnd
                     ? formatDate(transaction.recurrenceEnd)
-                    : "Fine anno"}
+                    : t("transactions.detail.endOfYear")}
                 </DetailValue>
               </div>
             </div>
           </div>
         ) : (
-          <DetailValue className="text-muted-foreground">Non ricorrente</DetailValue>
+          <DetailValue className="text-muted-foreground">
+            {t("transactions.detail.notRecurring")}
+          </DetailValue>
         )}
       </div>
     </div>

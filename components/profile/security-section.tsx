@@ -15,8 +15,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { changePassword, lockApp } from "@/lib/actions/auth";
+import { useI18n } from "@/providers/i18n-provider";
 
 export function SecuritySection() {
+  const { t } = useI18n();
   const [locking, startLocking] = useTransition();
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -38,7 +40,7 @@ export function SecuritySection() {
         setPasswordError(result.error);
         return;
       }
-      toast.success("Password aggiornata");
+      toast.success(t("profile.passwordUpdated"));
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -52,30 +54,27 @@ export function SecuritySection() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="size-4" />
-            Cambia password
+            {t("profile.changePasswordTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Aggiorna la master password. I dati verranno ricifrati con la nuova
-            password.
+            {t("profile.changePasswordDescription")}
           </p>
           <Button variant="outline" onClick={() => setPasswordOpen(true)}>
             <KeyRound className="size-4" />
-            Cambia password
+            {t("profile.changePasswordTitle")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Sicurezza</CardTitle>
+          <CardTitle>{t("profile.securityTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            I dati sono cifrati a riposo. Blocca l&apos;app per richiedere di
-            nuovo la password e rilasciare la sessione cloud su questo
-            dispositivo.
+            {t("profile.securityDescription")}
           </p>
           <Button
             variant="outline"
@@ -83,7 +82,7 @@ export function SecuritySection() {
             onClick={() => startLocking(() => void lockApp())}
           >
             <Lock className="size-4" />
-            Blocca app
+            {t("profile.lockApp")}
           </Button>
         </CardContent>
       </Card>
@@ -93,7 +92,7 @@ export function SecuritySection() {
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <KeyRound className="size-4" />
-              Cambia password
+              {t("profile.changePasswordTitle")}
             </SheetTitle>
           </SheetHeader>
           <form
@@ -101,7 +100,7 @@ export function SecuritySection() {
             className="space-y-4 overflow-y-auto"
           >
             <div className="space-y-2">
-              <Label htmlFor="old-password">Vecchia password</Label>
+              <Label htmlFor="old-password">{t("profile.oldPassword")}</Label>
               <Input
                 id="old-password"
                 type="password"
@@ -112,7 +111,7 @@ export function SecuritySection() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-password">Nuova password</Label>
+              <Label htmlFor="new-password">{t("profile.newPassword")}</Label>
               <Input
                 id="new-password"
                 type="password"
@@ -123,7 +122,9 @@ export function SecuritySection() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Conferma nuova password</Label>
+              <Label htmlFor="confirm-password">
+                {t("profile.confirmNewPassword")}
+              </Label>
               <Input
                 id="confirm-password"
                 type="password"
@@ -142,7 +143,7 @@ export function SecuritySection() {
                 disabled={changingPassword}
                 className="w-full sm:w-auto"
               >
-                {changingPassword ? "Salvataggio…" : "Salva"}
+                {changingPassword ? t("profile.saving") : t("common.save")}
               </Button>
             </SheetFooter>
           </form>

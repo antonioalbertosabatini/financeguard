@@ -3,7 +3,9 @@ import type {
   Transaction,
   TransactionFilters,
 } from "@/lib/schemas/transaction";
-import { MONTH_LABELS } from "@/lib/constants";
+import type { Language } from "@/lib/i18n/config";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { getMonthLabels } from "@/lib/i18n/translate";
 import {
   getDayFromDate,
   getDaysInMonth,
@@ -11,13 +13,14 @@ import {
   toISODate,
 } from "@/lib/utils/dates";
 
-function monthLabel(month: number): string {
-  return MONTH_LABELS[month - 1].toLowerCase();
+function monthLabel(month: number, language: Language = getCurrentLanguage()): string {
+  return getMonthLabels(language)[month - 1].toLowerCase();
 }
 
 export function getRecurrenceIntervalLabel(
   transaction: Transaction,
-  year: number
+  year: number,
+  language: Language = getCurrentLanguage()
 ): string {
   if (!transaction.isRecurring) return "";
 
@@ -34,9 +37,9 @@ export function getRecurrenceIntervalLabel(
   endMonth = Math.max(1, Math.min(12, endMonth));
 
   if (startMonth === endMonth) {
-    return `${monthLabel(startMonth)} ${y}`;
+    return `${monthLabel(startMonth, language)} ${y}`;
   }
-  return `${monthLabel(startMonth)}–${monthLabel(endMonth)} ${y}`;
+  return `${monthLabel(startMonth, language)}–${monthLabel(endMonth, language)} ${y}`;
 }
 
 export function expandRecurrences(
@@ -125,8 +128,12 @@ export function filterOccurrencesForListView(
   );
 }
 
-export function getOccurrenceMonthLabel(date: string, year: number): string {
-  return `${monthLabel(getMonthFromDate(date))} ${year}`;
+export function getOccurrenceMonthLabel(
+  date: string,
+  year: number,
+  language: Language = getCurrentLanguage()
+): string {
+  return `${monthLabel(getMonthFromDate(date), language)} ${year}`;
 }
 
 export function filterRawTransactions(

@@ -1,8 +1,24 @@
 import { format, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
+import { enUS, it } from "date-fns/locale";
+import type { Language } from "@/lib/i18n/config";
 
-export function formatDate(date: string, pattern = "dd/MM/yyyy"): string {
-  return format(parseISO(date), pattern, { locale: it });
+const DATE_FNS_LOCALES = {
+  it,
+  en: enUS,
+} as const;
+
+export function getDateFnsLocale(language: Language) {
+  return DATE_FNS_LOCALES[language];
+}
+
+export function formatDate(
+  date: string,
+  pattern = "dd/MM/yyyy",
+  language: Language = "it"
+): string {
+  return format(parseISO(date), pattern, {
+    locale: getDateFnsLocale(language),
+  });
 }
 
 export function todayISO(): string {

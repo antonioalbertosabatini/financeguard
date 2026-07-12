@@ -30,8 +30,13 @@ import {
 } from "@/lib/actions/categories";
 import { CATEGORY_TYPES } from "@/lib/constants";
 import { CATEGORY_ICON_NAMES } from "@/lib/constants/category-icons";
+import {
+  formatErrorMessage,
+  getTransactionTypeLabel,
+} from "@/lib/i18n/translate";
 import type { Category } from "@/lib/schemas/category";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/providers/i18n-provider";
 
 type CategoryCardProps = {
   category: Category;
@@ -88,8 +93,11 @@ function CategorySection({
   onEdit,
   onDelete,
 }: CategorySectionProps) {
+  const { t } = useI18n();
   const countLabel =
-    categories.length === 1 ? "1 categoria" : `${categories.length} categorie`;
+    categories.length === 1
+      ? t("categories.countSingular")
+      : t("categories.countPlural", { count: categories.length });
 
   return (
     <section className="space-y-4">
@@ -120,6 +128,7 @@ function CategorySection({
 }
 
 export function CategoriesView({ categories }: { categories: Category[] }) {
+  const { t, language } = useI18n();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState("");
@@ -160,36 +169,36 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
     try {
       if (editing) {
         await updateCategory(editing.id, data);
-        toast.success("Categoria aggiornata");
+        toast.success(t("categories.updated"));
       } else {
         await createCategory(data);
-        toast.success("Categoria creata");
+        toast.success(t("categories.created"));
       }
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Eliminare questa categoria?")) return;
+    if (!confirm(t("categories.deleteConfirm"))) return;
     try {
       await deleteCategory(id);
-      toast.success("Categoria eliminata");
+      toast.success(t("categories.deleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Categorie"
-        description="Entrate e uscite"
+        title={t("categories.title")}
+        description={t("categories.description")}
         actions={
           <Button onClick={openCreate}>
             <Plus className="size-4" />
-            Nuova categoria
+            {t("categories.new")}
           </Button>
         }
       />
@@ -197,22 +206,22 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
       {categories.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            Nessuna categoria. Creane una per classificare le transazioni.
+            {t("categories.empty")}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-8">
           <CategorySection
-            title="Entrate"
+            title={t("categories.incomeSection")}
             categories={incomeCategories}
-            emptyMessage="Nessuna categoria di entrata."
+            emptyMessage={t("categories.emptyIncome")}
             onEdit={openEdit}
             onDelete={handleDelete}
           />
           <CategorySection
-            title="Uscite"
+            title={t("categories.expenseSection")}
             categories={expenseCategories}
-            emptyMessage="Nessuna categoria di uscita."
+            emptyMessage={t("categories.emptyExpense")}
             onEdit={openEdit}
             onDelete={handleDelete}
           />
@@ -223,12 +232,12 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
             <SheetTitle>
-              {editing ? "Modifica categoria" : "Nuova categoria"}
+              {editing ? t("categories.edit") : t("categories.new")}
             </SheetTitle>
           </SheetHeader>
           <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="cat-name">Nome</Label>
+              <Label htmlFor="cat-name">{t("common.name")}</Label>
               <Input
                 id="cat-name"
                 value={name}
@@ -237,19 +246,23 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Tipo</Label>
+              <Label>{t("common.type")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="expense">Uscita</SelectItem>
-                  <SelectItem value="income">Entrata</SelectItem>
+                  <SelectItem value="expense">
+                    {getTransactionTypeLabel(language, "expense")}
+                  </SelectItem>
+                  <SelectItem value="income">
+                    {getTransactionTypeLabel(language, "income")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="color">Colore</Label>
+              <Label htmlFor="color">{t("categories.color")}</Label>
               <Input
                 id="color"
                 type="color"
@@ -258,7 +271,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
               />
             </div>
             <div className="space-y-2">
-              <Label>Icona</Label>
+              <Label>{t("common.icon")}</Label>
               <div className="grid grid-cols-6 gap-2">
                 {CATEGORY_ICON_NAMES.map((opt) => (
                   <button
@@ -279,7 +292,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
               </div>
             </div>
             <SheetFooter>
-              <Button type="submit">Salva</Button>
+              <Button type="submit">{t("common.save")}</Button>
             </SheetFooter>
           </form>
         </SheetContent>

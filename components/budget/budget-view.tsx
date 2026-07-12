@@ -42,13 +42,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { deleteBudget, updateBudget, upsertBudget } from "@/lib/actions/budgets";
-import { MONTH_LABELS_FULL } from "@/lib/constants";
 import { CATEGORY_ICON_NAMES } from "@/lib/constants/category-icons";
+import {
+  formatErrorMessage,
+  getMonthLabelsFull,
+} from "@/lib/i18n/translate";
 import type { Category } from "@/lib/schemas/category";
 import { formatDate } from "@/lib/utils/dates";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { useI18n } from "@/providers/i18n-provider";
 
 const NO_CATEGORY = "none";
 const DEFAULT_BUDGET_ICON = "piggy-bank";
@@ -97,6 +101,8 @@ export function BudgetView({
   currency: string;
   locale: string;
 }) {
+  const { t, language } = useI18n();
+  const monthLabelsFull = getMonthLabelsFull(language);
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
@@ -173,37 +179,40 @@ export function BudgetView({
 
       if (editingBudget) {
         await updateBudget(editingBudget.id, payload);
-        toast.success("Budget aggiornato");
+        toast.success(t("budget.updated"));
       } else {
         await upsertBudget(payload);
-        toast.success("Budget salvato");
+        toast.success(t("budget.saved"));
       }
       setOpen(false);
       resetForm();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Eliminare questo budget?")) return;
+    if (!confirm(t("budget.deleteConfirm"))) return;
     try {
       await deleteBudget(id);
-      toast.success("Budget eliminato");
+      toast.success(t("budget.deleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Budget"
-        description={`Limiti mensili per categoria, tag o combinazioni · ${MONTH_LABELS_FULL[month - 1]} ${year}`}
+        title={t("budget.title")}
+        description={t("budget.description", {
+          month: monthLabelsFull[month - 1],
+          year,
+        })}
         actions={
           <Button onClick={openCreateDialog}>
             <Plus className="size-4" />
-            Nuovo budget
+            {t("budget.new")}
           </Button>
         }
       />
@@ -212,19 +221,19 @@ export function BudgetView({
         <div className="grid gap-4 md:grid-cols-3">
           <Card size="sm">
             <CardHeader>
-              <CardDescription>Budget attivi</CardDescription>
+              <CardDescription>{t("budget.activeCount")}</CardDescription>
               <CardTitle>{items.length}</CardTitle>
             </CardHeader>
           </Card>
           <Card size="sm">
             <CardHeader>
-              <CardDescription>Speso nel mese</CardDescription>
+              <CardDescription>{t("budget.spentMonth")}</CardDescription>
               <CardTitle>{formatAmount(totals.spent, currency, locale)}</CardTitle>
             </CardHeader>
           </Card>
           <Card size="sm">
             <CardHeader>
-              <CardDescription>Limite totale</CardDescription>
+              <CardDescription>{t("budget.totalLimit")}</CardDescription>
               <CardTitle>{formatAmount(totals.limit, currency, locale)}</CardTitle>
             </CardHeader>
           </Card>
@@ -241,10 +250,9 @@ export function BudgetView({
                 className="size-6"
               />
             </div>
-            <h3 className="font-medium">Nessun budget impostato</h3>
+            <h3 className="font-medium">{t("budget.emptyTitle")}</h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Crea un budget per una categoria, un singolo tag o una combinazione
-              categoria + tag.
+              {t("budget.emptyDescription")}
             </p>
           </CardContent>
         </Card>
@@ -270,30 +278,30 @@ export function BudgetView({
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>
-              {editingBudget ? "Modifica budget" : "Nuovo budget"}
+              {editingBudget ? t("budget.edit") : t("budget.new")}
             </SheetTitle>
           </SheetHeader>
           <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto">
             <div className="space-y-2">
-              <Label htmlFor="budget-name">Nome budget</Label>
+              <Label htmlFor="budget-name">{t("budget.name")}</Label>
               <Input
                 id="budget-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="es. Spesa casa"
+                placeholder={t("budget.namePlaceholder")}
                 required
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Categoria</Label>
+                <Label>{t("common.category")}</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Opzionale" />
+                    <SelectValue placeholder={t("common.optional")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NO_CATEGORY}>Nessuna categoria</SelectItem>
+                    <SelectItem value={NO_CATEGORY}>{t("budget.noCategory")}</SelectItem>
                     {expenseCategories.map((c) => (
                       <CategorySelectItem key={c.id} category={c} />
                     ))}
@@ -302,20 +310,20 @@ export function BudgetView({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="budget-tag">Tag singolo</Label>
+                <Label htmlFor="budget-tag">{t("budget.singleTag")}</Label>
                 <TagSingleInput
                   id="budget-tag"
                   value={tag}
                   onChange={setTag}
                   suggestions={availableTags}
-                  placeholder="es. lavoro"
+                  placeholder={t("labels.tags.example")}
                 />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Icona</Label>
+                <Label>{t("common.icon")}</Label>
                 <Select value={icon} onValueChange={setIcon}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -338,7 +346,7 @@ export function BudgetView({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="limit">Limite mensile (€)</Label>
+                <Label htmlFor="limit">{t("budget.monthlyLimit")}</Label>
                 <Input
                   id="limit"
                   value={limitEuro}
@@ -350,14 +358,12 @@ export function BudgetView({
             </div>
 
             <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-              {duplicateBudget
-                ? "Esiste già un budget con questa combinazione di categoria e tag."
-                : "Lascia vuoto uno dei due campi per creare un budget solo categoria o solo tag."}
+              {duplicateBudget ? t("budget.duplicateHint") : t("budget.scopeHint")}
             </div>
 
             <SheetFooter>
               <Button type="submit" disabled={!canSubmit}>
-                {editingBudget ? "Aggiorna" : "Salva"}
+                {editingBudget ? t("common.update") : t("common.save")}
               </Button>
             </SheetFooter>
           </form>
@@ -380,6 +386,7 @@ function BudgetCard({
   onEdit: (item: BudgetItem) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t, language } = useI18n();
   const formatAmount = useFormatCents();
   const pctRaw = item.monthlyLimit > 0 ? (item.spent / item.monthlyLimit) * 100 : 0;
   const pct = Math.min(100, pctRaw);
@@ -427,7 +434,7 @@ function BudgetCard({
               variant="ghost"
               size="icon-sm"
               onClick={() => onEdit(item)}
-              aria-label={`Modifica budget ${item.name}`}
+              aria-label={t("budget.editAria", { name: item.name })}
             >
               <Pencil className="size-3.5" />
             </Button>
@@ -435,7 +442,7 @@ function BudgetCard({
               variant="ghost"
               size="icon-sm"
               onClick={() => onDelete(item.id)}
-              aria-label={`Elimina budget ${item.name}`}
+              aria-label={t("budget.deleteAria", { name: item.name })}
             >
               <Trash2 className="size-3.5" />
             </Button>
@@ -445,10 +452,10 @@ function BudgetCard({
 
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Metric label="Speso" value={formatAmount(item.spent, currency, locale)} />
-          <Metric label="Limite" value={formatAmount(item.monthlyLimit, currency, locale)} />
+          <Metric label={t("budget.spent")} value={formatAmount(item.spent, currency, locale)} />
+          <Metric label={t("budget.limit")} value={formatAmount(item.monthlyLimit, currency, locale)} />
           <Metric
-            label={overBudget ? "Superato di" : "Residuo"}
+            label={overBudget ? t("budget.overBudget") : t("budget.remaining")}
             value={formatAmount(Math.abs(remaining), currency, locale)}
             className={overBudget ? "text-destructive" : "text-success"}
           />
@@ -460,38 +467,45 @@ function BudgetCard({
             className={cn(overBudget && "[&>div]:bg-destructive")}
           />
           <p className="flex justify-between text-xs text-muted-foreground">
-            <span>{pctRaw.toFixed(0)}% utilizzato</span>
-            <span>{item.expenses.length} {item.expenses.length === 1 ? "spesa" : "spese"}</span>
+            <span>
+              {t("budget.usedPercent", { percent: pctRaw.toFixed(0) })}
+            </span>
+            <span>
+              {item.expenses.length}{" "}
+              {item.expenses.length === 1
+                ? t("budget.expenseSingular")
+                : t("budget.expensePlural")}
+            </span>
           </p>
         </div>
 
         <Collapsible>
           <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50">
-            Dettaglio spese
+            {t("budget.expenseDetails")}
             <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3">
             {item.expenses.length === 0 ? (
               <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                Nessuna spesa per questo budget nel mese selezionato.
+                {t("budget.noExpensesMonth")}
               </div>
             ) : (
               <div className="overflow-hidden rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Tag</TableHead>
-                      <TableHead>Note</TableHead>
-                      <TableHead className="text-right">Importo</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("common.category")}</TableHead>
+                      <TableHead>{t("common.tags")}</TableHead>
+                      <TableHead>{t("common.notes")}</TableHead>
+                      <TableHead className="text-right">{t("common.amount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {item.expenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell className="tabular-nums">
-                          {formatDate(expense.date)}
+                          {formatDate(expense.date, "dd/MM/yyyy", language)}
                         </TableCell>
                         <TableCell>
                           <span className="flex items-center gap-2">
@@ -509,7 +523,7 @@ function BudgetCard({
                           <TagBadges tags={expense.tags} />
                         </TableCell>
                         <TableCell className="max-w-[180px] truncate">
-                          {expense.notes || "—"}
+                          {expense.notes || t("common.none")}
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums text-danger">
                           -{formatAmount(expense.amount, currency, locale)}

@@ -2,12 +2,14 @@
 
 import { PanelLeft, PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/providers/i18n-provider";
 import { useSidebar } from "@/providers/sidebar-provider";
 
 export function SidebarToggle() {
   const { sidebarOpen, toggleSidebar } = useSidebar();
+  const { t } = useI18n();
 
-  const label = sidebarOpen ? "Chiudi menu" : "Apri menu";
+  const label = sidebarOpen ? t("common.closeMenu") : t("common.openMenu");
 
   return (
     <Button

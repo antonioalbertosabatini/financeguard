@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { setAppMode, type AppMode } from "@/lib/storage/local-store";
 import { isCloudConfigured } from "@/lib/sync/cloud-sync";
+import { useI18n } from "@/providers/i18n-provider";
 
 /**
  * Primo step dell'onboarding: scelta tra modalita' solo-locale e cloud.
@@ -18,6 +19,7 @@ export function ModeSelect({
 }: {
   onSelect: (mode: AppMode) => void;
 }) {
+  const { t } = useI18n();
   const [cloudNotConfigured, setCloudNotConfigured] = useState(false);
 
   async function choose(mode: AppMode) {
@@ -40,22 +42,14 @@ export function ModeSelect({
           <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
             <Cloud className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="space-y-1">
-              <p className="font-medium">Cloud non configurato</p>
-              <p>
-                Le chiavi <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
-                <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> non sono impostate.
-                Crea un progetto Supabase, esegui le migrazioni in{" "}
-                <code>supabase/migrations/</code> e compila un file{" "}
-                <code>.env.local</code> (vedi <code>.env.example</code> e il
-                README), poi riavvia l&apos;app. Nel frattempo puoi iniziare in
-                modalità solo locale.
-              </p>
+              <p className="font-medium">{t("auth.cloudNotConfiguredTitle")}</p>
+              <p>{t("auth.cloudNotConfiguredBody")}</p>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button className="w-full" onClick={() => choose("local")}>
               <HardDrive className="size-4" />
-              Continua in locale
+              {t("auth.continueLocal")}
             </Button>
             <Button
               variant="ghost"
@@ -63,7 +57,7 @@ export function ModeSelect({
               onClick={() => setCloudNotConfigured(false)}
             >
               <ArrowLeft className="size-4" />
-              Indietro
+              {t("common.back")}
             </Button>
           </div>
         </CardContent>
@@ -81,10 +75,9 @@ export function ModeSelect({
         >
           <HardDrive className="mt-0.5 size-5 shrink-0 text-primary" />
           <div className="space-y-1">
-            <p className="font-medium">Solo locale</p>
+            <p className="font-medium">{t("auth.modeLocalTitle")}</p>
             <p className="text-sm text-muted-foreground">
-              I dati restano cifrati solo su questo dispositivo. Nessun account,
-              nessuna configurazione. Puoi comunque esportare backup criptati.
+              {t("auth.modeLocalDescription")}
             </p>
           </div>
         </button>
@@ -96,11 +89,9 @@ export function ModeSelect({
         >
           <Cloud className="mt-0.5 size-5 shrink-0 text-primary" />
           <div className="space-y-1">
-            <p className="font-medium">Cloud (sincronizzato)</p>
+            <p className="font-medium">{t("auth.modeCloudTitle")}</p>
             <p className="text-sm text-muted-foreground">
-              Sincronizza il vault cifrato tra i dispositivi tramite Supabase.
-              Sul cloud finiscono solo dati cifrati: richiede la configurazione
-              dell&apos;ambiente.
+              {t("auth.modeCloudDescription")}
             </p>
           </div>
         </button>

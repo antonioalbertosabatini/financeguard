@@ -50,12 +50,14 @@ import {
   copyRecurringFromPreviousYear,
   deleteTransaction,
 } from "@/lib/actions/transactions";
-import { MONTH_LABELS_FULL, TRANSACTION_FILTER_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/constants";
+import { TRANSACTION_FILTER_TYPES } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { ExpandedTransaction, Transaction } from "@/lib/schemas/transaction";
 import { useAmountVisibility } from "@/providers/amount-visibility-provider";
+import { useI18n } from "@/providers/i18n-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { formatErrorMessage, getMonthLabelsFull } from "@/lib/i18n/translate";
 import { formatDate } from "@/lib/utils/dates";
 import { formatSignedCents } from "@/lib/utils/money";
 import {
@@ -103,12 +105,6 @@ const TYPE_DOT_CLASS: Record<Transaction["type"], string> = {
   transfer: "bg-muted-foreground/40",
 };
 
-function formatMonthGroup(date: string): string {
-  const month = parseInt(date.slice(5, 7), 10);
-  const year = date.slice(0, 4);
-  return `${MONTH_LABELS_FULL[month - 1]} ${year}`;
-}
-
 function resolveSourceTransaction(
   row: ListRow,
   transactions: Transaction[]
@@ -155,6 +151,7 @@ export function TransactionsView({
   currency,
   locale,
 }: TransactionsViewProps) {
+  const { t, language } = useI18n();
   const formatCentsDisplay = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
 
@@ -166,6 +163,8 @@ export function TransactionsView({
   const [sheetState, setSheetState] = useState<TransactionSheetState | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const monthLabelsFull = useMemo(() => getMonthLabelsFull(language), [language]);
 
   const accountMap = useMemo(
     () => Object.fromEntries(accounts.map((a) => [a.id, a])),
@@ -233,16 +232,17 @@ export function TransactionsView({
     const groups: { monthKey: string; label: string; items: ListRow[] }[] = [];
     for (const [monthKey, items] of map) {
       items.sort((a, b) => b.tx.date.localeCompare(a.tx.date));
+      const month = parseInt(monthKey.slice(5, 7), 10);
       groups.push({
         monthKey,
-        label: formatMonthGroup(`${monthKey}-01`),
+        label: `${monthLabelsFull[month - 1]} ${monthKey.slice(0, 4)}`,
         items,
       });
     }
 
     groups.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
     return groups;
-  }, [filtered, displayOccurrences]);
+  }, [filtered, displayOccurrences, monthLabelsFull]);
 
   const hasDisplayRows = groupedByMonth.length > 0;
 
@@ -266,9 +266,9 @@ export function TransactionsView({
     if (!deleting) return;
     try {
       await deleteTransaction(deleting.id, year);
-      toast.success("Transazione eliminata");
+      toast.success(t("transactions.deleted"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     } finally {
       setDeleting(null);
     }
@@ -279,11 +279,11 @@ export function TransactionsView({
       const count = await copyRecurringFromPreviousYear(year);
       toast.success(
         count > 0
-          ? `${count} regole ricorrenti copiate da ${year - 1}`
-          : "Nessuna regola ricorrente da copiare"
+          ? t("transactions.copySuccess", { count, year: year - 1 })
+          : t("transactions.copyEmpty")
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore");
+      toast.error(formatErrorMessage(language, err));
     }
   }
 
@@ -300,19 +300,19 @@ export function TransactionsView({
   const filterFields = (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Da data</Label>
+        <Label className="text-xs text-muted-foreground">{t("common.fromDate")}</Label>
         <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">A data</Label>
+        <Label className="text-xs text-muted-foreground">{t("common.toDate")}</Label>
         <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Categoria</Label>
+        <Label className="text-xs text-muted-foreground">{t("common.category")}</Label>
         <Select value={categoryId} onValueChange={setCategoryId}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutte</SelectItem>
+            <SelectItem value="all">{t("common.allFeminine")}</SelectItem>
             {categories.map((c) => (
               <CategorySelectItem key={c.id} category={c} />
             ))}
@@ -320,11 +320,11 @@ export function TransactionsView({
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Conto</Label>
+        <Label className="text-xs text-muted-foreground">{t("common.account")}</Label>
         <Select value={accountId} onValueChange={setAccountId}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutti</SelectItem>
+            <SelectItem value="all">{t("common.all")}</SelectItem>
             {accounts.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 <span className="flex items-center gap-2">
@@ -340,13 +340,15 @@ export function TransactionsView({
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Tipo</Label>
+        <Label className="text-xs text-muted-foreground">{t("common.type")}</Label>
         <Select value={type} onValueChange={setType}>
           <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutti</SelectItem>
-            {TRANSACTION_FILTER_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</SelectItem>
+            <SelectItem value="all">{t("common.all")}</SelectItem>
+            {TRANSACTION_FILTER_TYPES.map((txType) => (
+              <SelectItem key={txType} value={txType}>
+                {t(`labels.transactionType.${txType}`)}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -358,36 +360,38 @@ export function TransactionsView({
     <div className="flex flex-wrap items-center gap-2">
       {dateFrom && (
         <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setDateFrom("")}>
-          Da: {formatDate(dateFrom)}
+          {t("transactions.filterChipFrom", { date: formatDate(dateFrom) })}
           <X className="size-3" />
         </Badge>
       )}
       {dateTo && (
         <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setDateTo("")}>
-          A: {formatDate(dateTo)}
+          {t("transactions.filterChipTo", { date: formatDate(dateTo) })}
           <X className="size-3" />
         </Badge>
       )}
       {categoryId !== "all" && (
         <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setCategoryId("all")}>
-          Categoria: {categoryMap[categoryId]?.name ?? categoryId}
+          {t("transactions.filterChipCategory", { name: categoryMap[categoryId]?.name ?? categoryId })}
           <X className="size-3" />
         </Badge>
       )}
       {accountId !== "all" && (
         <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setAccountId("all")}>
-          Conto: {accountMap[accountId]?.name ?? accountId}
+          {t("transactions.filterChipAccount", { name: accountMap[accountId]?.name ?? accountId })}
           <X className="size-3" />
         </Badge>
       )}
       {type !== "all" && (
         <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setType("all")}>
-          Tipo: {TRANSACTION_TYPE_LABELS[type as Transaction["type"]]}
+          {t("transactions.filterChipType", {
+            type: t(`labels.transactionType.${type as Transaction["type"]}`),
+          })}
           <X className="size-3" />
         </Badge>
       )}
       <Button variant="ghost" size="sm" onClick={clearFilters}>
-        Azzera filtri
+        {t("common.clearFilters")}
       </Button>
     </div>
   );
@@ -395,20 +399,24 @@ export function TransactionsView({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Transazioni"
-        description={`Anno ${year} — regole, occorrenze e transazioni singole`}
+        title={t("transactions.title")}
+        description={t("transactions.description", { year })}
         actions={
           <>
             <Button variant="outline" className="hidden sm:inline-flex" asChild>
               <Link href="/add">
                 <Plus className="size-4" />
-                Nuova transazione
+                {t("transactions.new")}
               </Link>
             </Button>
             <Button variant="outline" onClick={handleCopyRecurring}>
               <Copy className="size-4" />
-              <span className="hidden sm:inline">Copia ricorrenti da {year - 1}</span>
-              <span className="sm:hidden">Copia {year - 1}</span>
+              <span className="hidden sm:inline">
+                {t("transactions.copyRecurring", { year: year - 1 })}
+              </span>
+              <span className="sm:hidden">
+                {t("transactions.copyRecurringShort", { year: year - 1 })}
+              </span>
             </Button>
           </>
         }
@@ -422,7 +430,7 @@ export function TransactionsView({
           className="gap-2"
         >
           <Filter className="size-4" />
-          Filtri
+          {t("common.filters")}
           {activeFilterCount > 0 && (
             <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {activeFilterCount}
@@ -431,7 +439,7 @@ export function TransactionsView({
         </Button>
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
-            Azzera
+            {t("common.reset")}
           </Button>
         )}
         <div className="hidden flex-1 sm:block">{activeChips}</div>
@@ -443,11 +451,11 @@ export function TransactionsView({
           <CardContent className="py-12 text-center text-muted-foreground">
             <p>
               {transactions.length === 0 && occurrences.length === 0
-                ? "Nessuna transazione registrata per questo anno."
-                : "Nessuna transazione trovata per i filtri selezionati."}
+                ? t("transactions.emptyYear")
+                : t("transactions.emptyFiltered")}
             </p>
             <Button variant="link" asChild className="mt-2">
-              <Link href="/add">Aggiungi una transazione</Link>
+              <Link href="/add">{t("transactions.addOne")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -458,7 +466,9 @@ export function TransactionsView({
             <CardContent className="flex flex-wrap items-center justify-between gap-3 py-1">
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">{filtered.length}</span>{" "}
-                {filtered.length === 1 ? "transazione" : "transazioni"}
+                {filtered.length === 1
+                  ? t("transactions.countSingular")
+                  : t("transactions.countPlural")}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
                 <span className="text-success">
@@ -468,7 +478,9 @@ export function TransactionsView({
                   {formatSignedCents(totals.expense, "expense", currency, locale, amountsHidden)}
                 </span>
                 <span className="font-medium">
-                  Saldo: {formatCentsDisplay(totals.net, currency, locale)}
+                  {t("transactions.balance", {
+                    amount: formatCentsDisplay(totals.net, currency, locale),
+                  })}
                 </span>
               </div>
             </CardContent>
@@ -482,7 +494,9 @@ export function TransactionsView({
                   <h3 className="text-sm font-semibold">{group.label}</h3>
                   <span className="text-xs text-muted-foreground">
                     {group.items.length}{" "}
-                    {group.items.length === 1 ? "transazione" : "transazioni"}
+                    {group.items.length === 1
+                      ? t("transactions.countSingular")
+                      : t("transactions.countPlural")}
                   </span>
                 </div>
                 <Card className="divide-y divide-border/70 py-0">
@@ -528,16 +542,20 @@ export function TransactionsView({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="truncate font-medium">
-                              {category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
+                              {category?.name ?? t(`labels.transactionType.${tx.type}`)}
                             </span>
                             {row.kind === "rule" && tx.isRecurring && (
                               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
-                                Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
+                                {t("transactions.recurring", {
+                                  interval: getRecurrenceIntervalLabel(tx, year, language),
+                                })}
                               </Badge>
                             )}
                             {row.kind === "occurrence" && (
                               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
-                                Occorrenza · {getOccurrenceMonthLabel(tx.date, year)}
+                                {t("transactions.occurrence", {
+                                  label: getOccurrenceMonthLabel(tx.date, year, language),
+                                })}
                               </Badge>
                             )}
                           </div>
@@ -570,7 +588,7 @@ export function TransactionsView({
                           <span
                             role="button"
                             tabIndex={0}
-                            aria-label="Elimina"
+                            aria-label={t("common.delete")}
                             onClick={(e) => {
                               e.stopPropagation();
                               setDeleting(source);
@@ -600,13 +618,13 @@ export function TransactionsView({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Conto</TableHead>
-                  <TableHead className="text-right">Importo</TableHead>
-                  <TableHead>Tag</TableHead>
-                  <TableHead>Note</TableHead>
+                  <TableHead>{t("common.date")}</TableHead>
+                  <TableHead>{t("common.type")}</TableHead>
+                  <TableHead>{t("common.category")}</TableHead>
+                  <TableHead>{t("common.account")}</TableHead>
+                  <TableHead className="text-right">{t("common.amount")}</TableHead>
+                  <TableHead>{t("common.tags")}</TableHead>
+                  <TableHead>{t("common.notes")}</TableHead>
                   <TableHead className="w-[100px]" />
                 </TableRow>
               </TableHeader>
@@ -618,7 +636,9 @@ export function TransactionsView({
                         {group.label}
                         <span className="ml-2 font-normal text-muted-foreground">
                           — {group.items.length}{" "}
-                          {group.items.length === 1 ? "transazione" : "transazioni"}
+                          {group.items.length === 1
+                            ? t("transactions.countSingular")
+                            : t("transactions.countPlural")}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -635,16 +655,20 @@ export function TransactionsView({
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <Badge variant="secondary" className={cn("w-fit", TYPE_BADGE_CLASS[tx.type])}>
-                                {TRANSACTION_TYPE_LABELS[tx.type]}
+                                {t(`labels.transactionType.${tx.type}`)}
                               </Badge>
                               {row.kind === "rule" && tx.isRecurring && (
                                 <Badge variant="outline" className="w-fit text-xs">
-                                  Ricorrente · {getRecurrenceIntervalLabel(tx, year)}
+                                  {t("transactions.recurring", {
+                                    interval: getRecurrenceIntervalLabel(tx, year, language),
+                                  })}
                                 </Badge>
                               )}
                               {row.kind === "occurrence" && (
                                 <Badge variant="outline" className="w-fit text-xs">
-                                  Occorrenza · {getOccurrenceMonthLabel(tx.date, year)}
+                                  {t("transactions.occurrence", {
+                                    label: getOccurrenceMonthLabel(tx.date, year, language),
+                                  })}
                                 </Badge>
                               )}
                             </div>
@@ -657,7 +681,7 @@ export function TransactionsView({
                                 <span className="truncate">{category.name}</span>
                               </span>
                             ) : (
-                              "—"
+                              t("common.none")
                             )}
                           </TableCell>
                           <TableCell>
@@ -667,7 +691,7 @@ export function TransactionsView({
                                 {accountMap[tx.accountId]!.name}
                               </span>
                             ) : (
-                              "—"
+                              t("common.none")
                             )}
                           </TableCell>
                           <TableCell
@@ -682,7 +706,9 @@ export function TransactionsView({
                           <TableCell>
                             <TagBadges tags={tx.tags ?? []} />
                           </TableCell>
-                          <TableCell className="max-w-[200px] truncate">{tx.notes || "—"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {tx.notes || t("common.none")}
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button
@@ -714,14 +740,14 @@ export function TransactionsView({
       <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>Filtri</SheetTitle>
+            <SheetTitle>{t("common.filters")}</SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto">{filterFields}</div>
           <SheetFooter>
             <Button variant="ghost" onClick={clearFilters} disabled={!hasActiveFilters}>
-              Azzera filtri
+              {t("common.clearFilters")}
             </Button>
-            <Button onClick={() => setFiltersOpen(false)}>Mostra risultati</Button>
+            <Button onClick={() => setFiltersOpen(false)}>{t("common.showResults")}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -731,7 +757,9 @@ export function TransactionsView({
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>
-              {sheetState?.mode === "view" ? "Dettaglio transazione" : "Modifica transazione"}
+              {sheetState?.mode === "view"
+                ? t("transactions.detailTitle")
+                : t("transactions.editTitle")}
             </SheetTitle>
           </SheetHeader>
           <div className="overflow-y-auto">
@@ -760,7 +788,7 @@ export function TransactionsView({
                     ? () => setSheetState((s) => s && { ...s, mode: "view" })
                     : undefined
                 }
-                confirmLabel={sheetState.listContext ? "Conferma" : undefined}
+                confirmLabel={sheetState.listContext ? t("common.confirm") : undefined}
                 compact
               />
             )}
@@ -771,7 +799,7 @@ export function TransactionsView({
                 className="w-full"
                 onClick={() => setSheetState((s) => s && { ...s, mode: "edit" })}
               >
-                Modifica
+                {t("common.edit")}
               </Button>
             </SheetFooter>
           )}
@@ -782,17 +810,17 @@ export function TransactionsView({
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminare la transazione?</DialogTitle>
+            <DialogTitle>{t("transactions.deleteConfirmTitle")}</DialogTitle>
             <DialogDescription>
-              L&apos;operazione non puo&apos; essere annullata.
+              {t("common.cannotUndo")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleting(null)}>
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Elimina
+              {t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

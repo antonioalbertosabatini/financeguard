@@ -6,6 +6,7 @@ import {
 } from "@/lib/db/accounts";
 import { getAllAccountTransfers } from "@/lib/db/account-transfers";
 import { getAllTransactions } from "@/lib/db/transactions";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   accountInputSchema,
   type AccountInput,
@@ -32,10 +33,10 @@ export async function deleteAccount(id: string) {
   ]);
 
   if (transactions.some((t) => t.accountId === id)) {
-    throw new Error("Impossibile eliminare: conto usato in transazioni");
+    throw new AppError("errors.deleteAccountInTransactions");
   }
   if (transfers.some((t) => t.fromAccountId === id || t.toAccountId === id)) {
-    throw new Error("Impossibile eliminare: conto usato in trasferimenti");
+    throw new AppError("errors.deleteAccountInTransfers");
   }
   await dbDeleteAccount(id);
 }

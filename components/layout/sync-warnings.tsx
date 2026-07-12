@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
+import { useI18n } from "@/providers/i18n-provider";
 
 export function SyncWarnings({ warnings }: { warnings: string[] }) {
+  const { t } = useI18n();
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
 
   const visible = warnings
@@ -24,7 +26,7 @@ export function SyncWarnings({ warnings }: { warnings: string[] }) {
           <p className="flex-1 leading-relaxed">{message}</p>
           <button
             type="button"
-            aria-label="Ignora avviso"
+            aria-label={t("common.dismissWarning")}
             onClick={() =>
               setDismissed((prev) => new Set(prev).add(index))
             }

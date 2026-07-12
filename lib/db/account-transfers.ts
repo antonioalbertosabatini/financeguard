@@ -5,6 +5,7 @@
  * per anno come le transazioni.
  */
 import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import { AppError } from "@/lib/i18n/app-error";
 import { generateId, getYearFromDate } from "@/lib/db/index";
 import {
   trackDelete,
@@ -73,7 +74,7 @@ export async function updateAccountTransfer(
 ): Promise<AccountTransfer> {
   const list = [...getYearTransfers(year)];
   const index = list.findIndex((t) => t.id === id);
-  if (index === -1) throw new Error("Trasferimento non trovato");
+  if (index === -1) throw new AppError("errors.transferNotFound");
 
   const previous = list[index];
   const updated = accountTransferSchema.parse({

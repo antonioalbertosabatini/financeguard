@@ -6,8 +6,10 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { UnlockForm } from "@/components/auth/unlock-form";
 import { FullScreenLoader } from "@/components/providers/full-screen-loader";
 import { useDataStore } from "@/lib/storage/data-store";
+import { useI18n } from "@/providers/i18n-provider";
 
 export default function UnlockPage() {
+  const { t } = useI18n();
   const { status } = useDataStore();
   const router = useRouter();
 
@@ -20,8 +22,8 @@ export default function UnlockPage() {
 
   return (
     <AuthShell
-      title="FinanceGuard"
-      description="Inserisci la password per sbloccare i tuoi dati."
+      title={t("auth.unlockTitle")}
+      description={t("auth.unlockDescription")}
     >
       <UnlockForm />
     </AuthShell>

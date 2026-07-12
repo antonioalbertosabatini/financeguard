@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { StoreBootstrap } from "@/components/providers/store-bootstrap";
+import { I18nProvider } from "@/providers/i18n-provider";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -11,7 +12,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "FinanceGuard",
-  description: "Gestione finanze personali locale",
+  description: "Local personal finance management",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -39,8 +40,10 @@ export default function RootLayout({
   return (
     <html lang="it" className={`${dmSans.variable} h-full`}>
       <body className="min-h-full flex flex-col font-sans antialiased">
-        <StoreBootstrap />
-        {children}
+        <I18nProvider>
+          <StoreBootstrap />
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );

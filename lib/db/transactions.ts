@@ -6,6 +6,7 @@ import {
   setYearTransactions,
 } from "@/lib/db/index";
 import { getDataset, getDeviceId } from "@/lib/storage/data-store";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   trackDelete,
   trackTransactionUpsert,
@@ -68,7 +69,7 @@ export async function updateTransaction(
 ): Promise<Transaction> {
   const list = [...getYearTransactions(year)];
   const index = list.findIndex((t) => t.id === id);
-  if (index === -1) throw new Error("Transazione non trovata");
+  if (index === -1) throw new AppError("errors.transactionNotFound");
 
   const previous = list[index];
   const updated = sanitizeTransaction({ ...input, id });

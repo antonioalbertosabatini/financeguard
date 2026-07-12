@@ -11,7 +11,10 @@
  * dataset e vault restano in campi interni non esposti a React.
  */
 import { useSyncExternalStore } from "react";
-import { getPasswordError } from "@/lib/constants";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { AppError } from "@/lib/i18n/app-error";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { translate } from "@/lib/i18n/translate";
 import { verifyVaultPasswordWeb, type VaultFile } from "@/lib/crypto/web-crypto";
 import type { StorageAdapter } from "@/lib/storage/adapter";
 import {
@@ -71,7 +74,12 @@ export function initStore(): Promise<void> {
 }
 
 function ensureValidPassword(password: string): string | null {
-  return getPasswordError(password);
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return translate(getCurrentLanguage(), "validation.passwordMinLength", {
+      minLength: MIN_PASSWORD_LENGTH,
+    });
+  }
+  return null;
 }
 
 export type AuthError = { error: string };
@@ -83,7 +91,9 @@ export async function setupPassword(
 ): Promise<AuthError | void> {
   const invalid = ensureValidPassword(password);
   if (invalid) return { error: invalid };
-  if (password !== confirm) return { error: "Le password non coincidono." };
+  if (password !== confirm) {
+    return { error: translate(getCurrentLanguage(), "errors.passwordMismatch") };
+  }
 
   const data = emptyDataset();
   const created = await createBundle(password, data, deviceId);
@@ -102,7 +112,9 @@ export async function unlockApp(password: string): Promise<AuthError | void> {
   const opened = await openBundle<Dataset>(getAdapter(), password).catch(
     () => null
   );
-  if (!opened) return { error: "Password errata." };
+  if (!opened) {
+    return { error: translate(getCurrentLanguage(), "errors.wrongPassword") };
+  }
 
   key = opened.key;
   vault = opened.vault;
@@ -132,15 +144,25 @@ export async function changePassword(
   newPassword: string,
   confirm: string
 ): Promise<AuthError | void> {
-  if (!vault || !dataset) return { error: "App bloccata." };
+  if (!vault || !dataset) {
+    return { error: translate(getCurrentLanguage(), "errors.appLocked") };
+  }
   const invalid = ensureValidPassword(newPassword);
   if (invalid) {
-    return { error: invalid.replace("La password", "La nuova password") };
+    return {
+      error: translate(getCurrentLanguage(), "validation.passwordMinLengthNew", {
+        minLength: MIN_PASSWORD_LENGTH,
+      }),
+    };
   }
-  if (newPassword !== confirm) return { error: "Le password non coincidono." };
+  if (newPassword !== confirm) {
+    return { error: translate(getCurrentLanguage(), "errors.passwordMismatch") };
+  }
 
   const verified = await verifyVaultPasswordWeb(vault, oldPassword);
-  if (!verified) return { error: "Vecchia password errata." };
+  if (!verified) {
+    return { error: translate(getCurrentLanguage(), "errors.wrongOldPassword") };
+  }
 
   const created = await createBundle(newPassword, dataset, deviceId);
   await getAdapter().save(created.text);
@@ -153,7 +175,7 @@ export async function changePassword(
 /** Restituisce il dataset vivo (muta in place); lancia se l'app e' bloccata. */
 export function getDataset(): Dataset {
   if (!dataset) {
-    throw new Error("App bloccata: inserisci la password per accedere ai dati.");
+    throw new AppError("errors.appLockedWithHint");
   }
   return dataset;
 }
@@ -163,7 +185,7 @@ export function getDataset(): Dataset {
  * di accesso corrente, quindi persiste.
  */
 export async function replaceDataset(next: Dataset): Promise<void> {
-  if (!key || !vault) throw new Error("App bloccata.");
+  if (!key || !vault) throw new AppError("errors.appLocked");
   dataset = next;
   emit({ version: snapshot.version + 1 });
   await persistNow();
@@ -222,7 +244,7 @@ export async function adoptCloudVault(
   nextKey: Uint8Array,
   nextVault: VaultFile
 ): Promise<number> {
-  if (!dataset) throw new Error("App bloccata.");
+  if (!dataset) throw new AppError("errors.appLocked");
   key = nextKey;
   vault = nextVault;
   dataset = next;
@@ -245,7 +267,7 @@ export async function applySyncedDataset(
   next: Dataset,
   baseRevision: number
 ): Promise<number> {
-  if (!key || !vault || !dataset) throw new Error("App bloccata.");
+  if (!key || !vault || !dataset) throw new AppError("errors.appLocked");
   dataset = next;
   revision = baseRevision;
   emit({ version: snapshot.version + 1 });

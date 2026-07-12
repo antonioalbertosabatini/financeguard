@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormatCents } from "@/hooks/use-format-cents";
+import { useI18n } from "@/providers/i18n-provider";
 
 type CategoryAmount = {
   categoryId: string;
@@ -20,12 +21,16 @@ export function CategoryBreakdown({
   categories,
   currency,
   locale,
-  emptyMessage = "Nessuna spesa",
+  emptyMessage,
 }: CategoryBreakdownProps) {
+  const { t } = useI18n();
   const formatAmount = useFormatCents();
+  const resolvedEmptyMessage = emptyMessage ?? t("reports.noExpenses");
 
   if (categories.length === 0) {
-    return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
+    return (
+      <p className="text-sm text-muted-foreground">{resolvedEmptyMessage}</p>
+    );
   }
 
   const total = categories.reduce((sum, c) => sum + c.amount, 0);

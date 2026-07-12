@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AppLogo } from "@/components/layout/app-logo";
 import { useSidebar } from "@/providers/sidebar-provider";
-import { isActivePath, navGroups } from "@/components/layout/nav-config";
+import { isActivePath } from "@/components/layout/nav-config";
+import { useNavConfig } from "@/hooks/use-nav-config";
+import { useI18n } from "@/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { sidebarOpen } = useSidebar();
+  const { navGroups } = useNavConfig();
+  const { t } = useI18n();
   const yearParam = searchParams.get("year");
   const query = yearParam ? `?year=${yearParam}` : "";
 
@@ -29,7 +33,7 @@ export function AppSidebar() {
             <h1 className="text-base font-semibold tracking-tight text-sidebar-foreground">
               FinanceGuard
             </h1>
-            <p className="text-xs text-muted-foreground">Finanze personali</p>
+            <p className="text-xs text-muted-foreground">{t("nav.tagline")}</p>
           </div>
         </div>
       </div>

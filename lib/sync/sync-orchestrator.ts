@@ -1,6 +1,7 @@
 /**
  * Orchestratore sync automatico: pull, merge client-side, push.
  */
+import { AppError } from "@/lib/i18n/app-error";
 import { openBundleText, revisionOf } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import {
@@ -84,9 +85,7 @@ async function runSync(): Promise<SyncResult> {
   }
 
   if (!ctx.password) {
-    throw new Error(
-      "Blocca e sblocca l'app per attivare la sincronizzazione cloud."
-    );
+    throw new AppError("errors.lockAndUnlockRequired");
   }
 
   patchSyncState({ status: "syncing", lastError: null });
@@ -120,9 +119,7 @@ async function runSync(): Promise<SyncResult> {
           ctx.password
         );
         if (!remoteOpened) {
-          throw new Error(
-            "Impossibile decifrare il vault sul cloud. Usa la stessa master password del primo dispositivo."
-          );
+          throw new AppError("errors.decryptVaultFailed");
         }
 
         const mergedDataset = mergeDatasets(ctx.dataset, remoteOpened.dataset);
@@ -167,7 +164,7 @@ async function runSync(): Promise<SyncResult> {
 
     const freshText = await adapter.load();
     if (!freshText) {
-      throw new Error("Bundle locale non disponibile dopo il merge.");
+      throw new AppError("errors.localBundleMissing");
     }
 
     const finalRevision = revisionOf(freshText);

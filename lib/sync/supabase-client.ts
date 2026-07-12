@@ -6,6 +6,7 @@
  * Se le variabili NEXT_PUBLIC_SUPABASE_* non sono configurate, il cloud e'
  * semplicemente disattivato e l'app resta 100% locale.
  */
+import { AppError } from "@/lib/i18n/app-error";
 import {
   createClient,
   type SupabaseClient,
@@ -24,9 +25,7 @@ export function isCloudConfigured(): boolean {
 /** Restituisce il client Supabase, o lancia se il cloud non e' configurato. */
 export function getSupabase(): SupabaseClient {
   if (!URL || !ANON_KEY) {
-    throw new Error(
-      "Cloud non configurato: imposta NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY."
-    );
+    throw new AppError("errors.cloudNotConfigured");
   }
   if (!client) {
     client = createClient(URL, ANON_KEY, {

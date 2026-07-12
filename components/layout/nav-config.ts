@@ -11,76 +11,78 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { MessageKey } from "@/lib/i18n/types";
+
 export type NavItem = {
   href: string;
-  label: string;
+  labelKey: MessageKey;
   icon: LucideIcon;
 };
 
 export type NavGroup = {
   label: string;
-  items: NavItem[];
+  items: (NavItem & { label: string })[];
 };
+
+export type TranslatedNavItem = NavItem & { label: string };
 
 export const DASHBOARD: NavItem = {
   href: "/",
-  label: "Dashboard",
+  labelKey: "nav.dashboard",
   icon: LayoutDashboard,
 };
 export const TRANSACTIONS: NavItem = {
   href: "/transactions",
-  label: "Transazioni",
+  labelKey: "nav.transactions",
   icon: ArrowLeftRight,
 };
 export const ACCOUNTS: NavItem = {
   href: "/accounts",
-  label: "Conti",
+  labelKey: "nav.accounts",
   icon: Wallet,
 };
 export const BUDGET: NavItem = {
   href: "/budget",
-  label: "Budget",
+  labelKey: "nav.budget",
   icon: PiggyBank,
 };
 export const REPORTS: NavItem = {
   href: "/reports",
-  label: "Report",
+  labelKey: "nav.reports",
   icon: BarChart3,
 };
 export const CATEGORIES: NavItem = {
   href: "/categories",
-  label: "Categorie",
+  labelKey: "nav.categories",
   icon: Shapes,
 };
 export const BACKUP: NavItem = {
   href: "/data",
-  label: "Backup",
+  labelKey: "nav.backup",
   icon: DatabaseBackup,
 };
 export const PROFILE: NavItem = {
   href: "/profile",
-  label: "Profilo",
+  labelKey: "nav.profile",
   icon: UserCircle,
 };
 export const SETTINGS: NavItem = {
   href: "/settings",
-  label: "Impostazioni",
+  labelKey: "nav.settings",
   icon: Settings,
 };
 
-/** Grouped navigation used by the desktop sidebar (full set). */
-export const navGroups: NavGroup[] = [
-  { label: "Principale", items: [DASHBOARD] },
-  { label: "Gestione", items: [TRANSACTIONS, ACCOUNTS, BUDGET, REPORTS, CATEGORIES] },
-  { label: "Sistema", items: [BACKUP, PROFILE, SETTINGS] },
-];
-
-/** Primary destinations shown directly in the mobile bottom bar (around the FAB). */
 export const bottomNavLeft: NavItem[] = [DASHBOARD, TRANSACTIONS];
 export const bottomNavRight: NavItem[] = [ACCOUNTS];
 
-/** Secondary destinations surfaced in the mobile "Altro" sheet. */
-export const moreNavItems: NavItem[] = [BUDGET, REPORTS, CATEGORIES, BACKUP, PROFILE, SETTINGS];
+export const moreNavItems: NavItem[] = [
+  BUDGET,
+  REPORTS,
+  CATEGORIES,
+  BACKUP,
+  PROFILE,
+  SETTINGS,
+];
 
 export function isActivePath(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);

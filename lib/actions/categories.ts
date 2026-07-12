@@ -5,6 +5,7 @@ import {
   updateCategory as dbUpdateCategory,
 } from "@/lib/db/categories";
 import { getAllTransactions } from "@/lib/db/transactions";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   categoryInputSchema,
   type CategoryInput,
@@ -27,7 +28,7 @@ export async function updateCategory(id: string, data: CategoryInput) {
 export async function deleteCategory(id: string) {
   const transactions = await getAllTransactions();
   if (transactions.some((t) => t.categoryId === id)) {
-    throw new Error("Impossibile eliminare: categoria usata in transazioni");
+    throw new AppError("errors.deleteCategoryInUse");
   }
   await dbDeleteCategory(id);
 }

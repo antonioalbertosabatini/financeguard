@@ -1,6 +1,7 @@
 /**
  * Lock di sessione cloud: una sola sessione attiva per utente (heartbeat 5 min).
  */
+import { AppError } from "@/lib/i18n/app-error";
 import { getDeviceName } from "@/lib/sync/device-name";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import { getSupabase } from "@/lib/sync/supabase-client";
@@ -16,18 +17,26 @@ export interface ActiveSessionRow {
   acquired_at: string;
 }
 
-export class SessionLockedError extends Error {
+export class SessionLockedError extends AppError {
+  readonly activeDeviceId: string;
+  readonly activeDeviceName: string | null;
+  readonly heartbeatAt: string;
+
   constructor(
-    public readonly activeDeviceId: string,
-    public readonly activeDeviceName: string | null,
-    public readonly heartbeatAt: string
+    activeDeviceId: string,
+    activeDeviceName: string | null,
+    heartbeatAt: string
   ) {
     super(
       activeDeviceName
-        ? `Sessione attiva su ${activeDeviceName}. Attendi qualche minuto o blocca l'app sull'altro dispositivo.`
-        : "Sessione attiva su un altro dispositivo. Attendi qualche minuto o blocca l'app sull'altro dispositivo."
+        ? "errors.sessionLockedNamed"
+        : "errors.sessionLockedGeneric",
+      activeDeviceName ? { deviceName: activeDeviceName } : undefined
     );
     this.name = "SessionLockedError";
+    this.activeDeviceId = activeDeviceId;
+    this.activeDeviceName = activeDeviceName;
+    this.heartbeatAt = heartbeatAt;
   }
 }
 
@@ -37,7 +46,7 @@ export function isSessionStale(heartbeatAt: string, now = Date.now()): boolean {
 
 async function requireUserId(): Promise<string> {
   const { data } = await getSupabase().auth.getUser();
-  if (!data.user) throw new Error("Nessuna sessione cloud attiva.");
+  if (!data.user) throw new AppError("errors.noCloudSession");
   return data.user.id;
 }
 

@@ -10,21 +10,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  bottomNavLeft,
-  bottomNavRight,
-  isActivePath,
-  moreNavItems,
-  type NavItem,
-} from "@/components/layout/nav-config";
+import { isActivePath, type TranslatedNavItem } from "@/components/layout/nav-config";
+import { useNavConfig } from "@/hooks/use-nav-config";
+import { useI18n } from "@/providers/i18n-provider";
 import { cn } from "@/lib/utils";
+
+type NavTabItem = TranslatedNavItem;
 
 function NavTab({
   item,
   active,
   query,
 }: {
-  item: NavItem;
+  item: NavTabItem;
   active: boolean;
   query: string;
 }) {
@@ -55,6 +53,8 @@ export function BottomNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { bottomNavLeft, bottomNavRight, moreNavItems } = useNavConfig();
+  const { t } = useI18n();
   const yearParam = searchParams.get("year");
   const query = yearParam ? `?year=${yearParam}` : "";
 
@@ -75,11 +75,10 @@ export function BottomNav() {
             />
           ))}
 
-          {/* Center FAB for quick transaction entry */}
           <div className="flex w-16 shrink-0 items-start justify-center">
             <Link
               href={`/add${query}`}
-              aria-label="Aggiungi transazione"
+              aria-label={t("nav.addTransaction")}
               className="-mt-5 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.54_0.205_285/0.6)] ring-4 ring-background transition-transform active:scale-95"
             >
               <Plus className="size-6" />
@@ -112,7 +111,7 @@ export function BottomNav() {
             >
               <MoreHorizontal className="size-5" />
             </span>
-            <span>Altro</span>
+            <span>{t("nav.more")}</span>
           </button>
         </div>
       </nav>
@@ -120,7 +119,7 @@ export function BottomNav() {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Altro</SheetTitle>
+            <SheetTitle>{t("nav.more")}</SheetTitle>
           </SheetHeader>
           <div className="grid grid-cols-2 gap-2.5">
             {moreNavItems.map((item) => {

@@ -9,6 +9,7 @@ import {
   filterTagSuggestions,
   normalizeTag,
 } from "@/lib/utils/tags";
+import { useI18n } from "@/providers/i18n-provider";
 
 type TagInputProps = {
   value: string[];
@@ -24,11 +25,13 @@ export function TagInput({
   value,
   onChange,
   suggestions = [],
-  placeholder = "Aggiungi tag…",
+  placeholder,
   id,
   className,
   maxTags,
 }: TagInputProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("labels.tags.add");
   const [inputValue, setInputValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +97,7 @@ export function TagInput({
                 e.stopPropagation();
                 removeTag(tag);
               }}
-              aria-label={`Rimuovi tag ${tag}`}
+              aria-label={t("common.removeTag", { tag })}
             >
               <X className="size-3" />
             </button>
@@ -115,7 +118,7 @@ export function TagInput({
               setTimeout(() => setShowSuggestions(false), 150);
             }}
             onKeyDown={handleKeyDown}
-            placeholder={value.length === 0 ? placeholder : ""}
+            placeholder={value.length === 0 ? resolvedPlaceholder : ""}
             className="min-w-[80px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         )}

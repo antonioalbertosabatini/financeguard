@@ -1,22 +1,21 @@
-// Lunghezza minima della password (app e backup). Piu' alta = piu' resistente
-// agli attacchi offline su un vault esportato o sincronizzato sul cloud.
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { translate } from "@/lib/i18n/translate";
+import type { Language } from "@/lib/i18n/config";
+
 export const MIN_PASSWORD_LENGTH = 12;
 
-/**
- * Regola unica di validazione della master password, usata sia in locale
- * (data-store) sia per il cloud (auth Supabase): ritorna un messaggio d'errore
- * o null se la password e' valida. Centralizzarla evita che un percorso (es. il
- * sign-up cloud) accetti password vuote/troppo corte.
- */
-export function getPasswordError(password: string): string | null {
+export function getPasswordError(
+  password: string,
+  language: Language = getCurrentLanguage()
+): string | null {
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return `La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`;
+    return translate(language, "validation.passwordMinLength", {
+      minLength: MIN_PASSWORD_LENGTH,
+    });
   }
   return null;
 }
 
-// Nomi logici dei file dati usati da export/import (ZIP) per restare
-// compatibili con i backup creati dalla versione server.
 export const ROOT_DATA_FILES = [
   "accounts.json",
   "categories.json",
@@ -39,51 +38,32 @@ export const TRANSACTION_FORM_TYPES = ["income", "expense"] as const;
 
 export const TRANSACTION_FILTER_TYPES = ["income", "expense"] as const;
 
-export const ACCOUNT_TYPE_LABELS: Record<
-  (typeof ACCOUNT_TYPES)[number],
-  string
-> = {
-  checking: "Conto corrente",
-  cash: "Contanti",
-  savings: "Risparmio",
-  credit_card: "Carta di credito",
-};
-
-export const TRANSACTION_TYPE_LABELS: Record<
-  (typeof TRANSACTION_TYPES)[number],
-  string
-> = {
-  income: "Entrata",
-  expense: "Uscita",
-  transfer: "Trasferimento",
-};
-
-export const MONTH_LABELS = [
-  "Gen",
-  "Feb",
-  "Mar",
-  "Apr",
-  "Mag",
-  "Giu",
-  "Lug",
-  "Ago",
-  "Set",
-  "Ott",
-  "Nov",
-  "Dic",
+export const MONTH_KEYS = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
 ] as const;
 
-export const MONTH_LABELS_FULL = [
-  "Gennaio",
-  "Febbraio",
-  "Marzo",
-  "Aprile",
-  "Maggio",
-  "Giugno",
-  "Luglio",
-  "Agosto",
-  "Settembre",
-  "Ottobre",
-  "Novembre",
-  "Dicembre",
+export const MONTH_FULL_KEYS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
 ] as const;

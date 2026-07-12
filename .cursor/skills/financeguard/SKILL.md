@@ -5,7 +5,7 @@ description: FinanceGuard project domain knowledge — local-first encrypted per
 
 # FinanceGuard
 
-App di gestione finanze personali **local-first e cifrata**. Nessun database remoto obbligatorio, nessuna telemetria. L'interfaccia è in **italiano**.
+App di gestione finanze personali **local-first e cifrata**. Nessun database remoto obbligatorio, nessuna telemetria. L'interfaccia è **bilingue** (italiano/inglese).
 
 ## Architettura
 
@@ -32,7 +32,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 | Transazione | `lib/schemas/transaction.ts` | Importi interi positivi; date `YYYY-MM-DD`; raggruppate per anno in `transactionsByYear` |
 | Trasferimento | `lib/schemas/account-transfer.ts` | Entità separata in `accountTransfersByYear` (non confondere con `type: "transfer"` legacy) |
 | Budget | `lib/schemas/budget.ts` | Per categoria e periodo |
-| Settings | `lib/schemas/settings.ts` | Valuta, locale, preferenze UI |
+| Settings | `lib/schemas/settings.ts` | Valuta, `language` (it/en), `locale` (derivato), preferenze UI |
 
 **Regole dominio:**
 - Tutti gli importi sono **interi in centesimi** — usare `lib/utils/money.ts` (`toCents`, `formatCents`, `parseEuroInput`).
@@ -68,7 +68,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 - Importi: hook `useFormatCents()` per rispettare la visibilità importi mascherati.
 - Navigazione: `components/layout/nav-config.ts`.
 
-**Lingua:** messaggi utente, label e errori di validazione in **italiano** (vedi `lib/constants.ts` per label esistenti).
+L'interfaccia supporta **italiano** e **inglese** (selezionabile in Impostazioni). Il campo `settings.language` (`"it" | "en"`) è sincronizzato nel vault; `settings.locale` è derivato automaticamente (`it-IT` / `en-US`) per formattazione numeri e date.
 
 **Test:** Vitest — `npm test`. Test esistenti in `lib/sync/*.test.ts`.
 

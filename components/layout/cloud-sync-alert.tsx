@@ -8,6 +8,8 @@ import { getSettings } from "@/lib/actions/settings";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { hasCloudSession, isCloudConfigured } from "@/lib/sync/cloud-sync";
 import { useSyncState } from "@/lib/sync/use-sync-state";
+import { useI18n } from "@/providers/i18n-provider";
+import type { MessageKey } from "@/lib/i18n/types";
 
 /**
  * Banner rosso in cima all'app quando il sync cloud NON e' attivo:
@@ -19,6 +21,7 @@ import { useSyncState } from "@/lib/sync/use-sync-state";
  * disattivabile dal Profilo; parte OFF se l'utente sceglie la modalita' locale).
  */
 export function CloudSyncAlert() {
+  const { t } = useI18n();
   const configured = isCloudConfigured();
   const syncState = useSyncState();
   const { data: settings } = useAsyncData(() => getSettings(), []);
@@ -44,6 +47,7 @@ export function CloudSyncAlert() {
     configured,
     signedIn,
     syncState,
+    t,
   });
   if (!message) return null;
 
@@ -67,7 +71,7 @@ export function CloudSyncAlert() {
             href="/profile"
             className="font-medium underline underline-offset-2"
           >
-            Gestisci il cloud
+            {t("sync.alert.manageCloud")}
           </Link>
         </p>
       </div>
@@ -79,19 +83,21 @@ function resolveMessage({
   configured,
   signedIn,
   syncState,
+  t,
 }: {
   configured: boolean;
   signedIn: boolean | null;
   syncState: ReturnType<typeof useSyncState>;
+  t: (key: MessageKey) => string;
 }): string | null {
   if (!configured) {
-    return "Sincronizzazione cloud non attiva: nessun account configurato. I tuoi dati restano solo su questo dispositivo.";
+    return t("sync.alert.notConfigured");
   }
   if (syncState.status === "error" || syncState.status === "blocked" || syncState.lastError) {
-    return "Sincronizzazione cloud fallita.";
+    return t("sync.alert.failed");
   }
   if (signedIn === false) {
-    return "Sincronizzazione cloud non attiva: non hai effettuato l'accesso all'account cloud.";
+    return t("sync.alert.notSignedIn");
   }
   return null;
 }

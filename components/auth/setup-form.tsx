@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,16 @@ import { getSettings, updateSettings } from "@/lib/actions/settings";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import type { AppMode } from "@/lib/storage/local-store";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/providers/i18n-provider";
 
-const STRENGTH_LABELS = ["Molto debole", "Debole", "Sufficiente", "Buona", "Ottima"];
+const STRENGTH_KEYS = [
+  "auth.strengthVeryWeak",
+  "auth.strengthWeak",
+  "auth.strengthFair",
+  "auth.strengthGood",
+  "auth.strengthExcellent",
+] as const;
+
 const STRENGTH_COLORS = [
   "bg-destructive",
   "bg-destructive",
@@ -34,12 +42,17 @@ function passwordStrength(pw: string): number {
 }
 
 export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const strength = passwordStrength(password);
+  const strengthLabel = useMemo(
+    () => t(STRENGTH_KEYS[strength]),
+    [strength, t]
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,9 +69,7 @@ export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
         const settings = await getSettings();
         await updateSettings({ ...settings, showSyncWarning: false });
       } else {
-        toast.info(
-          "Attiva la sincronizzazione dal Profilo: crea o accedi al tuo account cloud."
-        );
+        toast.info(t("auth.cloudSyncHint"));
       }
     });
   }
@@ -68,7 +79,7 @@ export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("common.password")}</Label>
             <Input
               id="password"
               type="password"
@@ -94,13 +105,13 @@ export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Robustezza: {STRENGTH_LABELS[strength]}
+                  {t("auth.strengthLabel", { label: strengthLabel })}
                 </p>
               </div>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm">Conferma password</Label>
+            <Label htmlFor="confirm">{t("auth.confirmPassword")}</Label>
             <Input
               id="confirm"
               type="password"
@@ -114,12 +125,9 @@ export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <div className="space-y-1">
-              <p className="font-medium">Nessun recupero possibile</p>
+              <p className="font-medium">{t("auth.noRecoveryTitle")}</p>
               <p>
-                FinanceGuard è zero-knowledge: la password non è memorizzata da
-                nessuna parte, nemmeno sul cloud. Se la dimentichi, i dati sono
-                persi per sempre. Usa almeno {MIN_PASSWORD_LENGTH} caratteri,
-                conservala con cura ed esporta regolarmente un backup criptato.
+                {t("auth.noRecoveryBody", { minLength: MIN_PASSWORD_LENGTH })}
               </p>
             </div>
           </div>
@@ -130,16 +138,14 @@ export function SetupForm({ mode = "local" }: { mode?: AppMode }) {
               checked={acknowledged}
               onChange={(e) => setAcknowledged(e.target.checked)}
             />
-            <span>
-              Ho capito: se perdo la password, perdo l&apos;accesso ai miei dati.
-            </span>
+            <span>{t("auth.acknowledgeLoss")}</span>
           </label>
           <Button
             type="submit"
             className="w-full"
             disabled={pending || !acknowledged}
           >
-            {pending ? "Creazione…" : "Imposta password"}
+            {pending ? t("auth.creating") : t("auth.setPassword")}
           </Button>
         </form>
       </CardContent>

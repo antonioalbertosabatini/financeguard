@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -37,13 +38,12 @@ import { CategorySelectItem } from "@/components/categories/category-select-item
 import { TagInput } from "@/components/tags/tag-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTransaction, updateTransaction } from "@/lib/actions/transactions";
-import {
-  TRANSACTION_FORM_TYPES,
-  TRANSACTION_TYPE_LABELS,
-} from "@/lib/constants";
+import { TRANSACTION_FORM_TYPES } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
+import { useI18n } from "@/providers/i18n-provider";
+import { formatErrorMessage } from "@/lib/i18n/translate";
 import { todayISO } from "@/lib/utils/dates";
 import { toCents } from "@/lib/utils/money";
 import { dedupeTags } from "@/lib/utils/tags";
@@ -54,37 +54,18 @@ const TYPE_ICONS: Record<(typeof TRANSACTION_FORM_TYPES)[number], LucideIcon> = 
   expense: TrendingDown,
 };
 
-const formSchema = z
-  .object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    amountEuro: z.string().min(1, "Importo obbligatorio"),
-    type: z.enum(TRANSACTION_FORM_TYPES),
-    categoryId: z.string().optional(),
-    accountId: z.string().min(1),
-    notes: z.string(),
-    tags: z.array(z.string()),
-    isRecurring: z.boolean(),
-    recurrenceStart: z.string().optional(),
-    recurrenceEnd: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (!data.categoryId) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Seleziona una categoria",
-        path: ["categoryId"],
-      });
-    }
-    if (toCents(data.amountEuro) <= 0) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Importo deve essere positivo",
-        path: ["amountEuro"],
-      });
-    }
-  });
-
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = {
+  date: string;
+  amountEuro: string;
+  type: (typeof TRANSACTION_FORM_TYPES)[number];
+  categoryId?: string;
+  accountId: string;
+  notes: string;
+  tags: string[];
+  isRecurring: boolean;
+  recurrenceStart?: string;
+  recurrenceEnd?: string;
+};
 
 type TransactionFormProps = {
   accounts: Account[];
@@ -141,8 +122,43 @@ export function TransactionForm({
   confirmLabel,
   compact = false,
 }: TransactionFormProps) {
+  const { t, language } = useI18n();
   const isEdit = !!transaction;
   const isLegacyTransfer = transaction?.type === "transfer";
+
+  const formSchema = useMemo(
+    () =>
+      z
+        .object({
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          amountEuro: z.string().min(1, t("transactions.form.amountRequired")),
+          type: z.enum(TRANSACTION_FORM_TYPES),
+          categoryId: z.string().optional(),
+          accountId: z.string().min(1),
+          notes: z.string(),
+          tags: z.array(z.string()),
+          isRecurring: z.boolean(),
+          recurrenceStart: z.string().optional(),
+          recurrenceEnd: z.string().optional(),
+        })
+        .superRefine((data, ctx) => {
+          if (!data.categoryId) {
+            ctx.addIssue({
+              code: "custom",
+              message: t("transactions.form.selectCategory"),
+              path: ["categoryId"],
+            });
+          }
+          if (toCents(data.amountEuro) <= 0) {
+            ctx.addIssue({
+              code: "custom",
+              message: t("transactions.form.amountPositive"),
+              path: ["amountEuro"],
+            });
+          }
+        }),
+    [t]
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -168,9 +184,9 @@ export function TransactionForm({
   if (isLegacyTransfer) {
     return (
       <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-        I trasferimenti si gestiscono dalla sezione{" "}
+        {t("transactions.transferManagedInAccounts")}{" "}
         <Link href={`/accounts?year=${year}`} className="font-medium text-primary underline">
-          Conti
+          {t("nav.accounts")}
         </Link>
         .
       </div>
@@ -206,10 +222,10 @@ export function TransactionForm({
     try {
       if (isEdit && transaction) {
         await updateTransaction(transaction.id, year, payload);
-        toast.success("Transazione aggiornata");
+        toast.success(t("transactions.updated"));
       } else {
         await createTransaction(payload);
-        toast.success("Transazione salvata");
+        toast.success(t("transactions.saved"));
         form.reset({
           date: todayISO(),
           amountEuro: "",
@@ -225,7 +241,7 @@ export function TransactionForm({
       }
       onSuccess?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Errore nel salvataggio");
+      toast.error(formatErrorMessage(language, err, "common.errorSaving"));
     }
   }
 
@@ -234,19 +250,19 @@ export function TransactionForm({
           <div className="grid gap-4 md:grid-cols-2">
             {/* Type segmented control */}
             <div className="space-y-2 md:col-span-2">
-              <FieldLabel icon={ArrowLeftRight}>Tipo</FieldLabel>
+              <FieldLabel icon={ArrowLeftRight}>{t("common.type")}</FieldLabel>
               <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-muted p-1">
-                {TRANSACTION_FORM_TYPES.map((t) => {
-                  const Icon = TYPE_ICONS[t];
-                  const active = watchType === t;
+                {TRANSACTION_FORM_TYPES.map((txType) => {
+                  const Icon = TYPE_ICONS[txType];
+                  const active = watchType === txType;
                   const activeTone =
-                    t === "income" ? "text-success" : "text-danger";
+                    txType === "income" ? "text-success" : "text-danger";
                   return (
                     <button
-                      key={t}
+                      key={txType}
                       type="button"
                       onClick={() => {
-                        form.setValue("type", t);
+                        form.setValue("type", txType);
                         form.setValue("categoryId", undefined);
                       }}
                       aria-pressed={active}
@@ -259,7 +275,7 @@ export function TransactionForm({
                     >
                       <Icon className="size-4" />
                       <span className="hidden sm:inline">
-                        {TRANSACTION_TYPE_LABELS[t]}
+                        {t(`labels.transactionType.${txType}`)}
                       </span>
                     </button>
                   );
@@ -268,11 +284,13 @@ export function TransactionForm({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <FieldLabel htmlFor="amount" icon={Euro}>Importo (€)</FieldLabel>
+              <FieldLabel htmlFor="amount" icon={Euro}>
+                {t("transactions.form.amountEuro")}
+              </FieldLabel>
               <Input
                 id="amount"
                 inputMode="decimal"
-                placeholder="0,00"
+                placeholder={t("transactions.form.amountPlaceholder")}
                 className="h-14 text-2xl font-semibold tabular-nums md:h-14"
                 {...form.register("amountEuro")}
               />
@@ -284,17 +302,17 @@ export function TransactionForm({
             </div>
 
             <div className="space-y-2">
-              <FieldLabel htmlFor="date" icon={Calendar}>Data</FieldLabel>
+              <FieldLabel htmlFor="date" icon={Calendar}>{t("common.date")}</FieldLabel>
               <Input id="date" type="date" {...form.register("date")} />
             </div>
 
             <div className="space-y-2">
-              <FieldLabel icon={Tags}>Categoria</FieldLabel>
+              <FieldLabel icon={Tags}>{t("common.category")}</FieldLabel>
               {filteredCategories.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                  Nessuna categoria per questo tipo.{" "}
+                  {t("transactions.form.noCategoryForType")}{" "}
                   <Link href="/categories" className="font-medium text-primary underline">
-                    Aggiungine una
+                    {t("transactions.form.addCategoryLink")}
                   </Link>
                 </div>
               ) : (
@@ -304,7 +322,7 @@ export function TransactionForm({
                     onValueChange={(v) => form.setValue("categoryId", v)}
                   >
                     <SelectTrigger className="w-full" aria-invalid={!!form.formState.errors.categoryId}>
-                      <SelectValue placeholder="Seleziona categoria" />
+                      <SelectValue placeholder={t("transactions.form.selectCategory")} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredCategories.map((c) => (
@@ -322,13 +340,13 @@ export function TransactionForm({
             </div>
 
             <div className="space-y-2">
-              <FieldLabel icon={Wallet}>Conto</FieldLabel>
+              <FieldLabel icon={Wallet}>{t("common.account")}</FieldLabel>
               <Select
                 value={form.watch("accountId")}
                 onValueChange={(v) => form.setValue("accountId", v)}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleziona conto" />
+                  <SelectValue placeholder={t("transactions.form.selectAccount")} />
                 </SelectTrigger>
                 <SelectContent>
                   {accounts.map((a) => (
@@ -347,11 +365,11 @@ export function TransactionForm({
             </div>
 
             <div className="space-y-2">
-              <FieldLabel htmlFor="notes" icon={FileText}>Note</FieldLabel>
+              <FieldLabel htmlFor="notes" icon={FileText}>{t("common.notes")}</FieldLabel>
               <Textarea id="notes" rows={3} {...form.register("notes")} />
             </div>
             <div className="space-y-2">
-              <FieldLabel htmlFor="tags" icon={Tag}>Tag</FieldLabel>
+              <FieldLabel htmlFor="tags" icon={Tag}>{t("common.tags")}</FieldLabel>
               <Controller
                 name="tags"
                 control={form.control}
@@ -361,7 +379,7 @@ export function TransactionForm({
                     value={field.value}
                     onChange={field.onChange}
                     suggestions={availableTags}
-                    placeholder="casa, lavoro…"
+                    placeholder={t("transactions.form.tagsPlaceholder")}
                   />
                 )}
               />
@@ -369,7 +387,7 @@ export function TransactionForm({
           </div>
 
           <div className="rounded-xl border bg-muted/30 p-4 space-y-4">
-            <SectionTitle icon={Repeat}>Ricorrenza</SectionTitle>
+            <SectionTitle icon={Repeat}>{t("transactions.form.recurrence")}</SectionTitle>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="recurring"
@@ -382,7 +400,7 @@ export function TransactionForm({
                   }
                 }}
               />
-              <Label htmlFor="recurring">Ricorrente (mensile)</Label>
+              <Label htmlFor="recurring">{t("transactions.form.recurringMonthly")}</Label>
             </div>
 
             {watchRecurring && (
@@ -390,7 +408,7 @@ export function TransactionForm({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <FieldLabel htmlFor="recurrenceStart" icon={Calendar}>
-                      Inizio ricorrenza
+                      {t("transactions.form.recurrenceStart")}
                     </FieldLabel>
                     <Input
                       id="recurrenceStart"
@@ -400,7 +418,7 @@ export function TransactionForm({
                   </div>
                   <div className="space-y-2">
                     <FieldLabel htmlFor="recurrenceEnd" icon={Calendar}>
-                      Fine ricorrenza
+                      {t("transactions.form.recurrenceEnd")}
                     </FieldLabel>
                     <Input
                       id="recurrenceEnd"
@@ -410,7 +428,7 @@ export function TransactionForm({
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Se non specifichi una fine, la spesa si ripete fino a fine anno.
+                  {t("transactions.form.recurrenceNoEndHint")}
                 </p>
               </div>
             )}
@@ -425,14 +443,14 @@ export function TransactionForm({
                 onClick={onCancel}
                 disabled={form.formState.isSubmitting}
               >
-                Annulla
+                {t("common.cancel")}
               </Button>
               <Button
                 type="submit"
                 className="w-full sm:flex-1"
                 disabled={form.formState.isSubmitting}
               >
-                {confirmLabel ?? (isEdit ? "Aggiorna transazione" : "Salva transazione")}
+                {confirmLabel ?? (isEdit ? t("transactions.form.update") : t("transactions.form.save"))}
               </Button>
             </div>
           ) : (
@@ -441,7 +459,7 @@ export function TransactionForm({
               className="w-full md:w-auto"
               disabled={form.formState.isSubmitting}
             >
-              {isEdit ? "Aggiorna transazione" : "Salva transazione"}
+              {isEdit ? t("transactions.form.update") : t("transactions.form.save")}
             </Button>
           )}
         </form>
@@ -463,7 +481,7 @@ export function TransactionForm({
             )}
           </div>
           <CardTitle className="text-lg">
-            {isEdit ? "Modifica transazione" : "Nuova transazione"}
+            {isEdit ? t("transactions.editTitle") : t("transactions.form.newTitle")}
           </CardTitle>
         </div>
       </CardHeader>

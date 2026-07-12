@@ -1,4 +1,5 @@
 import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
+import { AppError } from "@/lib/i18n/app-error";
 import {
   trackBudgetUpsert,
   trackDelete,
@@ -27,7 +28,7 @@ export async function upsertBudget(input: BudgetInput): Promise<Budget> {
     (b) => budgetKey(budgetSchema.parse(b)) === inputKey
   );
   if (existing !== -1) {
-    throw new Error("Esiste già un budget con questa combinazione");
+    throw new AppError("errors.budgetDuplicate");
   }
   const budget: Budget = budgetSchema.parse({
     ...input,
@@ -46,7 +47,7 @@ export async function updateBudget(
 ): Promise<Budget> {
   const budgets = getDataset().budgets;
   const index = budgets.findIndex((b) => b.id === id);
-  if (index === -1) throw new Error("Budget non trovato");
+  if (index === -1) throw new AppError("errors.budgetNotFound");
 
   const inputKey = budgetKey(input);
   const duplicate = budgets.some((budget) => {
@@ -54,7 +55,7 @@ export async function updateBudget(
     return parsedBudget.id !== id && budgetKey(parsedBudget) === inputKey;
   });
   if (duplicate) {
-    throw new Error("Esiste già un budget con questa combinazione");
+    throw new AppError("errors.budgetDuplicate");
   }
 
   const previous = budgets[index];

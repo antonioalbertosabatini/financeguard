@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -30,12 +30,16 @@ import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { getMonthlyReport } from "@/lib/actions/transactions";
-import { MONTH_LABELS, MONTH_LABELS_FULL } from "@/lib/constants";
+import {
+  getMonthLabels,
+  getMonthLabelsFull,
+} from "@/lib/i18n/translate";
 import { currentMonth } from "@/lib/utils/dates";
 import type {
   DailyExpenseRow,
   DailyExpenseSeries,
 } from "@/lib/utils/balance";
+import { useI18n } from "@/providers/i18n-provider";
 
 type CategoryAmount = {
   categoryId: string;
@@ -282,6 +286,7 @@ function DailyStackedBarChart({
   currency: string;
   locale: string;
 }) {
+  const { t } = useI18n();
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
   const isMobile = useIsMobile();
@@ -316,7 +321,7 @@ function DailyStackedBarChart({
           <ChartTooltip
             currency={currency}
             locale={locale}
-            labelFormatter={(label) => `Giorno ${label}`}
+            labelFormatter={(label) => t("reports.dayLabel", { day: label })}
           />
         }
       />
@@ -360,9 +365,18 @@ export function ReportsView({
   initialMonthlyReport,
   annualReport,
 }: ReportsViewProps) {
+  const { t, language } = useI18n();
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
   const isMobile = useIsMobile();
+
+  const monthLabels = useMemo(() => getMonthLabels(language), [language]);
+  const monthLabelsFull = useMemo(
+    () => getMonthLabelsFull(language),
+    [language]
+  );
+  const incomeLabel = t("labels.chart.income");
+  const expenseLabel = t("labels.chart.expense");
 
   const [month, setMonth] = useState(String(currentMonth()));
   const [monthlyReport, setMonthlyReport] = useState(initialMonthlyReport);
@@ -396,25 +410,28 @@ export function ReportsView({
   }, [year, monthNum]);
 
   const trendData = annualReport.monthlyTrend.map((m) => ({
-    name: MONTH_LABELS[m.month - 1],
-    Entrate: m.income / 100,
-    Uscite: m.expense / 100,
+    name: monthLabels[m.month - 1],
+    [incomeLabel]: m.income / 100,
+    [expenseLabel]: m.expense / 100,
   }));
 
-  const monthLabel = MONTH_LABELS_FULL[monthNum - 1];
+  const monthLabel = monthLabelsFull[monthNum - 1];
   const hasMonthlyExpenses = monthlyReport.expensesByCategory.length > 0;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Report" description={`Anno ${year}`} />
+      <PageHeader
+        title={t("reports.title")}
+        description={t("reports.description", { year })}
+      />
 
       <Tabs defaultValue="monthly">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="monthly" className="flex-1 sm:flex-none">
-            Resoconto mensile
+            {t("reports.tabMonthly")}
           </TabsTrigger>
           <TabsTrigger value="annual" className="flex-1 sm:flex-none">
-            Resoconto annuale
+            {t("reports.tabAnnual")}
           </TabsTrigger>
         </TabsList>
 
@@ -425,7 +442,7 @@ export function ReportsView({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MONTH_LABELS_FULL.map((label, i) => (
+                {monthLabelsFull.map((label, i) => (
                   <SelectItem key={label} value={String(i + 1)}>
                     {label}
                   </SelectItem>
@@ -433,13 +450,15 @@ export function ReportsView({
               </SelectContent>
             </Select>
             {loading && (
-              <span className="text-sm text-muted-foreground">Caricamento…</span>
+              <span className="text-sm text-muted-foreground">
+                {t("common.loadingEllipsis")}
+              </span>
             )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <StatCard
-              title={`Entrate — ${monthLabel}`}
+              title={t("reports.incomeMonth", { month: monthLabel })}
               value={formatAmount(monthlyReport.income, currency, locale)}
               icon={TrendingUp}
               iconClassName="bg-success/10 text-success"
@@ -447,7 +466,7 @@ export function ReportsView({
               borderClassName="border-success/30"
             />
             <StatCard
-              title={`Uscite — ${monthLabel}`}
+              title={t("reports.expenseMonth", { month: monthLabel })}
               value={formatAmount(monthlyReport.expense, currency, locale)}
               icon={TrendingDown}
               iconClassName="bg-danger/10 text-danger"
@@ -455,7 +474,7 @@ export function ReportsView({
               borderClassName="border-danger/30"
             />
             <StatCard
-              title="Saldo netto"
+              title={t("reports.netBalance")}
               value={formatAmount(monthlyReport.net, currency, locale)}
               icon={Wallet}
               iconClassName="bg-primary/10 text-primary"
@@ -466,7 +485,9 @@ export function ReportsView({
             <div className="grid gap-4 lg:grid-cols-2">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle>Distribuzione spese — {monthLabel}</CardTitle>
+                  <CardTitle>
+                    {t("reports.distributionMonth", { month: monthLabel })}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[340px] sm:h-[300px]">
                   <CategoryPieChart
@@ -478,7 +499,9 @@ export function ReportsView({
               </Card>
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle>Spese per categoria — {monthLabel}</CardTitle>
+                  <CardTitle>
+                    {t("reports.byCategoryMonth", { month: monthLabel })}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   <CategoryBarChart
@@ -493,7 +516,9 @@ export function ReportsView({
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Dettaglio spese per categoria — {monthLabel}</CardTitle>
+              <CardTitle>
+                {t("reports.detailByCategoryMonth", { month: monthLabel })}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <CategoryBreakdown
@@ -507,7 +532,9 @@ export function ReportsView({
           {hasMonthlyExpenses ? (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Spese giornaliere — {monthLabel}</CardTitle>
+                <CardTitle>
+                  {t("reports.dailyMonth", { month: monthLabel })}
+                </CardTitle>
               </CardHeader>
               <CardContent className="h-[320px]">
                 <DailyStackedBarChart
@@ -521,10 +548,12 @@ export function ReportsView({
           ) : (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Spese giornaliere — {monthLabel}</CardTitle>
+                <CardTitle>
+                  {t("reports.dailyMonth", { month: monthLabel })}
+                </CardTitle>
               </CardHeader>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Nessuna spesa registrata in questo mese.
+                {t("reports.noExpensesMonth")}
               </CardContent>
             </Card>
           )}
@@ -533,7 +562,7 @@ export function ReportsView({
         <TabsContent value="annual" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <StatCard
-              title={`Entrate totali ${year}`}
+              title={t("reports.incomeYear", { year })}
               value={formatAmount(annualReport.income, currency, locale)}
               icon={TrendingUp}
               iconClassName="bg-success/10 text-success"
@@ -541,7 +570,7 @@ export function ReportsView({
               borderClassName="border-success/30"
             />
             <StatCard
-              title={`Uscite totali ${year}`}
+              title={t("reports.expenseYear", { year })}
               value={formatAmount(annualReport.expense, currency, locale)}
               icon={TrendingDown}
               iconClassName="bg-danger/10 text-danger"
@@ -549,7 +578,7 @@ export function ReportsView({
               borderClassName="border-danger/30"
             />
             <StatCard
-              title="Saldo netto annuale"
+              title={t("reports.netAnnual")}
               value={formatAmount(annualReport.net, currency, locale)}
               icon={Wallet}
               iconClassName="bg-primary/10 text-primary"
@@ -558,7 +587,7 @@ export function ReportsView({
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Trend mensile</CardTitle>
+              <CardTitle>{t("reports.monthlyTrend")}</CardTitle>
             </CardHeader>
             <CardContent className="h-[320px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -601,13 +630,13 @@ export function ReportsView({
                     wrapperStyle={{ fontSize: 12 }}
                   />
                   <Bar
-                    dataKey="Entrate"
+                    dataKey={incomeLabel}
                     fill="var(--success)"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={isMobile ? 14 : 28}
                   />
                   <Bar
-                    dataKey="Uscite"
+                    dataKey={expenseLabel}
                     fill="var(--danger)"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={isMobile ? 14 : 28}
@@ -619,7 +648,7 @@ export function ReportsView({
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Spese per categoria — anno {year}</CardTitle>
+              <CardTitle>{t("reports.byCategoryYear", { year })}</CardTitle>
             </CardHeader>
             <CardContent>
               <CategoryBreakdown

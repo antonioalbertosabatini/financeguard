@@ -4,8 +4,10 @@ import {
   getAccountTransfersForYear,
   updateAccountTransfer as dbUpdateAccountTransfer,
 } from "@/lib/db/account-transfers";
+import { getCurrentLanguage } from "@/lib/i18n/runtime";
+import { translate } from "@/lib/i18n/translate";
 import {
-  accountTransferInputSchema,
+  createAccountTransferSchemas,
   type AccountTransferInput,
 } from "@/lib/schemas/account-transfer";
 
@@ -14,6 +16,9 @@ export async function getAccountTransfers(year: number) {
 }
 
 export async function createAccountTransfer(data: AccountTransferInput) {
+  const { accountTransferInputSchema } = createAccountTransferSchemas(
+    (key, params) => translate(getCurrentLanguage(), key, params)
+  );
   const parsed = accountTransferInputSchema.parse(data);
   return dbCreateAccountTransfer(parsed);
 }
@@ -23,6 +28,9 @@ export async function updateAccountTransfer(
   year: number,
   data: AccountTransferInput
 ) {
+  const { accountTransferInputSchema } = createAccountTransferSchemas(
+    (key, params) => translate(getCurrentLanguage(), key, params)
+  );
   const parsed = accountTransferInputSchema.parse(data);
   return dbUpdateAccountTransfer(id, year, parsed);
 }

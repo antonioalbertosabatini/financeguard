@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   PieChart,
   Pie,
@@ -19,7 +20,8 @@ import { ChartTooltip } from "@/components/charts/chart-tooltip";
 import { useAmountVisibility } from "@/providers/amount-visibility-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { MONTH_LABELS } from "@/lib/constants";
+import { getMonthLabels } from "@/lib/i18n/translate";
+import { useI18n } from "@/providers/i18n-provider";
 
 type DashboardProps = {
   totalBalance: number;
@@ -81,22 +83,31 @@ export function DashboardView({
   expensesByCategory,
   monthlyTrend,
 }: DashboardProps) {
+  const { t, language } = useI18n();
   const formatAmount = useFormatCents();
   const { amountsHidden } = useAmountVisibility();
   const isMobile = useIsMobile();
   const tooltipTrigger = isMobile ? "click" : "hover";
 
-  const trendData = monthlyTrend.map((m) => ({
-    name: MONTH_LABELS[m.month - 1],
-    Entrate: m.income / 100,
-    Uscite: m.expense / 100,
-  }));
+  const monthLabels = useMemo(() => getMonthLabels(language), [language]);
+  const incomeLabel = t("labels.chart.income");
+  const expenseLabel = t("labels.chart.expense");
+
+  const trendData = useMemo(
+    () =>
+      monthlyTrend.map((m) => ({
+        name: monthLabels[m.month - 1],
+        [incomeLabel]: m.income / 100,
+        [expenseLabel]: m.expense / 100,
+      })),
+    [monthlyTrend, monthLabels, incomeLabel, expenseLabel]
+  );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
-        description="Panoramica finanziaria dell'anno selezionato"
+        title={t("dashboard.title")}
+        description={t("dashboard.description")}
       />
 
       {/* Hero: total balance */}
@@ -107,23 +118,23 @@ export function DashboardView({
         />
         <div className="relative">
           <p className="text-sm font-medium text-primary-foreground/80">
-            Saldo totale
+            {t("dashboard.totalBalance")}
           </p>
           <p className="mt-2 text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">
-            {formatAmount(totalBalance, currency, locale)}
+            {formatAmount(totalBalance, currency)}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <FlowTile
-          title="Entrate del mese"
+          title={t("dashboard.monthlyIncome")}
           value={formatAmount(monthlyIncome, currency, locale)}
           icon={TrendingUp}
           tone="success"
         />
         <FlowTile
-          title="Uscite del mese"
+          title={t("dashboard.monthlyExpense")}
           value={formatAmount(monthlyExpense, currency, locale)}
           icon={TrendingDown}
           tone="danger"
@@ -133,12 +144,12 @@ export function DashboardView({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle>Spese per categoria</CardTitle>
+            <CardTitle>{t("dashboard.expensesByCategory")}</CardTitle>
           </CardHeader>
           <CardContent className="h-[320px] sm:h-[300px]">
             {expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nessuna spesa registrata
+                {t("dashboard.noExpenses")}
               </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -181,7 +192,7 @@ export function DashboardView({
 
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle>Andamento mensile</CardTitle>
+            <CardTitle>{t("dashboard.monthlyTrend")}</CardTitle>
           </CardHeader>
           <CardContent className="h-[320px] sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -224,13 +235,13 @@ export function DashboardView({
                   wrapperStyle={{ fontSize: 12 }}
                 />
                 <Bar
-                  dataKey="Entrate"
+                  dataKey={incomeLabel}
                   fill="var(--success)"
                   radius={[5, 5, 0, 0]}
                   maxBarSize={isMobile ? 14 : 28}
                 />
                 <Bar
-                  dataKey="Uscite"
+                  dataKey={expenseLabel}
                   fill="var(--danger)"
                   radius={[5, 5, 0, 0]}
                   maxBarSize={isMobile ? 14 : 28}
