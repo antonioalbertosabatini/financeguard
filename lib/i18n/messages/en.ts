@@ -75,6 +75,8 @@ export const enMessages: {
     newest: "Newest first",
     oldest: "Oldest first",
     searchNotes: "Search notes",
+    searchTags: "Search tags…",
+    searchOptions: "Search…",
     activeFilters: "Active filters",
     optional: "Optional",
     none: "—",

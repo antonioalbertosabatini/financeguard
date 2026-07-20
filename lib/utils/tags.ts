@@ -28,3 +28,34 @@ export function filterTagSuggestions(
     return normalized.includes(normalizedQuery);
   });
 }
+
+/** Collect unique normalized tags from transactions of any type (income/expense/transfer). */
+export function collectTagsFromTransactions(
+  transactions: Array<{ tags?: string[] }>,
+  locale = "it-IT"
+): string[] {
+  const tags = new Set<string>();
+  for (const tx of transactions) {
+    for (const tag of tx.tags ?? []) {
+      const normalized = normalizeTag(tag);
+      if (normalized) tags.add(normalized);
+    }
+  }
+  return Array.from(tags).sort((a, b) =>
+    a.localeCompare(b, locale, { sensitivity: "base" })
+  );
+}
+
+/** Union of tag lists, normalized and sorted. */
+export function mergeTagLists(lists: string[][], locale = "it-IT"): string[] {
+  const tags = new Set<string>();
+  for (const list of lists) {
+    for (const tag of list) {
+      const normalized = normalizeTag(tag);
+      if (normalized) tags.add(normalized);
+    }
+  }
+  return Array.from(tags).sort((a, b) =>
+    a.localeCompare(b, locale, { sensitivity: "base" })
+  );
+}

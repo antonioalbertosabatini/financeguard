@@ -79,6 +79,10 @@ import {
   type MatchMode,
   type UiTransactionFilters,
 } from "@/lib/utils/transaction-filters";
+import {
+  collectTagsFromTransactions,
+  mergeTagLists,
+} from "@/lib/utils/tags";
 import { cn } from "@/lib/utils";
 
 type ListRow =
@@ -170,6 +174,16 @@ export function TransactionsView({
   const [monthlyOpen, setMonthlyOpen] = useState(false);
 
   const monthLabelsFull = useMemo(() => getMonthLabelsFull(language), [language]);
+
+  const filterTags = useMemo(
+    () => collectTagsFromTransactions(transactions, locale),
+    [transactions, locale]
+  );
+
+  const formTags = useMemo(
+    () => mergeTagLists([availableTags, filterTags], locale),
+    [availableTags, filterTags, locale]
+  );
 
   const accountMap = useMemo(
     () => Object.fromEntries(accounts.map((a) => [a.id, a])),
@@ -428,12 +442,14 @@ export function TransactionsView({
           </div>
         </div>
         <FilterMultiSelect
-          options={availableTags.map((tag) => ({ value: tag, label: tag }))}
+          options={filterTags.map((tag) => ({ value: tag, label: tag }))}
           selected={tags}
           onChange={setTags}
           placeholder={t("transactions.filterSelectTags")}
           selectedLabel={selectedCountLabel}
           emptyLabel={t("common.none")}
+          searchThreshold={0}
+          searchPlaceholder={t("common.searchTags")}
         />
       </div>
       <div className="space-y-1.5">
@@ -1057,7 +1073,7 @@ export function TransactionsView({
                 key={sheetState.transaction.id}
                 accounts={accounts}
                 categories={categories}
-                availableTags={availableTags}
+                availableTags={formTags}
                 year={year}
                 transaction={sheetState.transaction}
                 onSuccess={() => setSheetState(null)}

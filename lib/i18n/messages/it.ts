@@ -65,6 +65,8 @@ export const itMessages = {
     newest: "Più recenti",
     oldest: "Più vecchi",
     searchNotes: "Cerca note",
+    searchTags: "Cerca tag…",
+    searchOptions: "Cerca…",
     activeFilters: "Filtri attivi",
     optional: "Opzionale",
     none: "—",
