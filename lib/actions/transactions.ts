@@ -97,7 +97,7 @@ export async function loadTransactionFormDeps(year: number) {
   const [accounts, categories, availableTags] = await Promise.all([
     getAccounts(),
     getCategories(),
-    getAvailableTags(year),
+    getAvailableTags(year, ["income", "expense"]),
   ]);
   return { accounts, categories, availableTags };
 }
@@ -156,7 +156,10 @@ export async function getDashboardData(year: number) {
   };
 }
 
-export async function getAvailableTags(year?: number) {
+export async function getAvailableTags(
+  year?: number,
+  types: Array<"income" | "expense"> = ["expense"]
+) {
   const years =
     year !== undefined
       ? [year]
@@ -164,10 +167,11 @@ export async function getAvailableTags(year?: number) {
           ys.length > 0 ? ys : [currentYear()]
         );
 
+  const allowed = new Set(types);
   const tags = new Set<string>();
   for (const y of years) {
     for (const tx of await getTransactionsForYear(y)) {
-      if (tx.type !== "expense") continue;
+      if (!allowed.has(tx.type as "income" | "expense")) continue;
       for (const tag of tx.tags) {
         const normalized = normalizeTag(tag);
         if (normalized) tags.add(normalized);

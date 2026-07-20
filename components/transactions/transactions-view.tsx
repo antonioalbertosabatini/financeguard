@@ -3,14 +3,26 @@
 import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Filter, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  Copy,
+  Filter,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { CategoryIcon } from "@/components/categories/category-icon";
-import { CategorySelectItem } from "@/components/categories/category-select-item";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -43,6 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { FilterMultiSelect } from "@/components/transactions/filter-multi-select";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { TransactionDetailView } from "@/components/transactions/transaction-detail-view";
 import { TagBadges } from "@/components/tags/tag-badges";
@@ -59,11 +65,20 @@ import { useI18n } from "@/providers/i18n-provider";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { formatErrorMessage, getMonthLabelsFull } from "@/lib/i18n/translate";
 import { formatDate } from "@/lib/utils/dates";
-import { formatSignedCents } from "@/lib/utils/money";
+import { formatCents, formatSignedCents, toCents } from "@/lib/utils/money";
 import {
   getOccurrenceMonthLabel,
   getRecurrenceIntervalLabel,
 } from "@/lib/utils/recurrence";
+import {
+  countActiveUiFilters,
+  EMPTY_UI_FILTERS,
+  matchesUiFilters,
+  summarizeByMonth,
+  summarizeTransactions,
+  type MatchMode,
+  type UiTransactionFilters,
+} from "@/lib/utils/transaction-filters";
 import { cn } from "@/lib/utils";
 
 type ListRow =
@@ -119,26 +134,11 @@ function listRowKey(row: ListRow): string {
   return row.kind === "rule" ? row.tx.id : row.tx.occurrenceId;
 }
 
-function matchesFilters(
-  tx: Pick<Transaction, "date" | "categoryId" | "accountId" | "type">,
-  filters: {
-    dateFrom: string;
-    dateTo: string;
-    categoryId: string;
-    accountId: string;
-    type: string;
-  }
-): boolean {
-  if (filters.dateFrom && tx.date < filters.dateFrom) return false;
-  if (filters.dateTo && tx.date > filters.dateTo) return false;
-  if (filters.categoryId !== "all" && tx.categoryId !== filters.categoryId) {
-    return false;
-  }
-  if (filters.accountId !== "all" && tx.accountId !== filters.accountId) {
-    return false;
-  }
-  if (filters.type !== "all" && tx.type !== filters.type) return false;
-  return true;
+function euroFilterToCents(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const cents = toCents(trimmed);
+  return cents > 0 ? cents : null;
 }
 
 export function TransactionsView({
@@ -157,12 +157,17 @@ export function TransactionsView({
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [categoryId, setCategoryId] = useState<string>("all");
-  const [accountId, setAccountId] = useState<string>("all");
-  const [type, setType] = useState<string>("all");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [accountIds, setAccountIds] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagsMatch, setTagsMatch] = useState<MatchMode>("any");
+  const [amountMinEuro, setAmountMinEuro] = useState("");
+  const [amountMaxEuro, setAmountMaxEuro] = useState("");
   const [sheetState, setSheetState] = useState<TransactionSheetState | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [monthlyOpen, setMonthlyOpen] = useState(false);
 
   const monthLabelsFull = useMemo(() => getMonthLabelsFull(language), [language]);
 
@@ -175,17 +180,41 @@ export function TransactionsView({
     [categories]
   );
 
-  const filterState = useMemo(
-    () => ({ dateFrom, dateTo, categoryId, accountId, type }),
-    [dateFrom, dateTo, categoryId, accountId, type]
-  );
+  const filterState = useMemo((): UiTransactionFilters => {
+    return {
+      dateFrom,
+      dateTo,
+      categoryIds,
+      accountIds,
+      types,
+      tags,
+      tagsMatch,
+      amountMinCents: euroFilterToCents(amountMinEuro),
+      amountMaxCents: euroFilterToCents(amountMaxEuro),
+    };
+  }, [
+    dateFrom,
+    dateTo,
+    categoryIds,
+    accountIds,
+    types,
+    tags,
+    tagsMatch,
+    amountMinEuro,
+    amountMaxEuro,
+  ]);
+
+  const amountRangeInvalid =
+    filterState.amountMinCents !== null &&
+    filterState.amountMaxCents !== null &&
+    filterState.amountMinCents > filterState.amountMaxCents;
 
   const filtered = useMemo(() => {
-    return transactions.filter((tx) => matchesFilters(tx, filterState));
+    return transactions.filter((tx) => matchesUiFilters(tx, filterState));
   }, [transactions, filterState]);
 
   const filteredOccurrences = useMemo(() => {
-    return occurrences.filter((tx) => matchesFilters(tx, filterState));
+    return occurrences.filter((tx) => matchesUiFilters(tx, filterState));
   }, [occurrences, filterState]);
 
   const ruleAnchorMonthById = useMemo(() => {
@@ -206,24 +235,26 @@ export function TransactionsView({
     });
   }, [filteredOccurrences, ruleAnchorMonthById]);
 
-  const totals = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const tx of filtered) {
-      if (tx.type === "income") income += tx.amount;
-      if (tx.type === "expense") expense += tx.amount;
-    }
-    return { income, expense, net: income - expense };
-  }, [filtered]);
-
-  const groupedByMonth = useMemo(() => {
-    const rows: ListRow[] = [
+  const displayRows = useMemo((): ListRow[] => {
+    return [
       ...filtered.map((tx) => ({ kind: "rule" as const, tx })),
       ...displayOccurrences.map((tx) => ({ kind: "occurrence" as const, tx })),
     ];
+  }, [filtered, displayOccurrences]);
 
+  const totals = useMemo(
+    () => summarizeTransactions(displayRows.map((row) => row.tx)),
+    [displayRows]
+  );
+
+  const monthlySummaries = useMemo(
+    () => summarizeByMonth(displayRows.map((row) => row.tx)),
+    [displayRows]
+  );
+
+  const groupedByMonth = useMemo(() => {
     const map = new Map<string, ListRow[]>();
-    for (const row of rows) {
+    for (const row of displayRows) {
       const key = row.tx.date.slice(0, 7);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(row);
@@ -242,24 +273,23 @@ export function TransactionsView({
 
     groups.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
     return groups;
-  }, [filtered, displayOccurrences, monthLabelsFull]);
+  }, [displayRows, monthLabelsFull]);
 
   const hasDisplayRows = groupedByMonth.length > 0;
 
-  const activeFilterCount =
-    (dateFrom !== "" ? 1 : 0) +
-    (dateTo !== "" ? 1 : 0) +
-    (categoryId !== "all" ? 1 : 0) +
-    (accountId !== "all" ? 1 : 0) +
-    (type !== "all" ? 1 : 0);
+  const activeFilterCount = countActiveUiFilters(filterState);
   const hasActiveFilters = activeFilterCount > 0;
 
   function clearFilters() {
-    setDateFrom("");
-    setDateTo("");
-    setCategoryId("all");
-    setAccountId("all");
-    setType("all");
+    setDateFrom(EMPTY_UI_FILTERS.dateFrom);
+    setDateTo(EMPTY_UI_FILTERS.dateTo);
+    setCategoryIds([]);
+    setAccountIds([]);
+    setTypes([]);
+    setTags([]);
+    setTagsMatch("any");
+    setAmountMinEuro("");
+    setAmountMaxEuro("");
   }
 
   async function handleDelete() {
@@ -297,8 +327,16 @@ export function TransactionsView({
     );
   }
 
+  function monthLabel(monthKey: string) {
+    const month = parseInt(monthKey.slice(5, 7), 10);
+    return `${monthLabelsFull[month - 1]} ${monthKey.slice(0, 4)}`;
+  }
+
+  const selectedCountLabel = (count: number) =>
+    t("transactions.filterSelectedCount", { count });
+
   const filterFields = (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">{t("common.fromDate")}</Label>
         <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -307,88 +345,251 @@ export function TransactionsView({
         <Label className="text-xs text-muted-foreground">{t("common.toDate")}</Label>
         <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 sm:col-span-2">
         <Label className="text-xs text-muted-foreground">{t("common.category")}</Label>
-        <Select value={categoryId} onValueChange={setCategoryId}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("common.allFeminine")}</SelectItem>
-            {categories.map((c) => (
-              <CategorySelectItem key={c.id} category={c} />
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterMultiSelect
+          options={categories.map((c) => ({
+            value: c.id,
+            label: c.name,
+            icon: (
+              <CategoryIcon
+                name={c.icon}
+                color={c.color}
+                className="size-3.5 shrink-0"
+              />
+            ),
+          }))}
+          selected={categoryIds}
+          onChange={setCategoryIds}
+          placeholder={t("transactions.filterSelectCategories")}
+          selectedLabel={selectedCountLabel}
+        />
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 sm:col-span-2">
         <Label className="text-xs text-muted-foreground">{t("common.account")}</Label>
-        <Select value={accountId} onValueChange={setAccountId}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("common.all")}</SelectItem>
-            {accounts.map((a) => (
-              <SelectItem key={a.id} value={a.id}>
-                <span className="flex items-center gap-2">
-                  <AccountIcon
-                    name={a.icon}
-                    className="size-3.5 text-muted-foreground"
-                  />
-                  {a.name}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterMultiSelect
+          options={accounts.map((a) => ({
+            value: a.id,
+            label: a.name,
+            icon: (
+              <AccountIcon
+                name={a.icon}
+                className="size-3.5 shrink-0 text-muted-foreground"
+              />
+            ),
+          }))}
+          selected={accountIds}
+          onChange={setAccountIds}
+          placeholder={t("transactions.filterSelectAccounts")}
+          selectedLabel={selectedCountLabel}
+        />
+      </div>
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label className="text-xs text-muted-foreground">{t("common.type")}</Label>
+        <FilterMultiSelect
+          options={TRANSACTION_FILTER_TYPES.map((txType) => ({
+            value: txType,
+            label: t(`labels.transactionType.${txType}`),
+          }))}
+          selected={types}
+          onChange={setTypes}
+          placeholder={t("transactions.filterSelectTypes")}
+          selectedLabel={selectedCountLabel}
+        />
+      </div>
+      <div className="space-y-1.5 sm:col-span-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label className="text-xs text-muted-foreground">{t("common.tags")}</Label>
+          <div className="flex rounded-md border p-0.5 text-xs">
+            <button
+              type="button"
+              className={cn(
+                "rounded px-2 py-0.5 transition-colors",
+                tagsMatch === "any"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setTagsMatch("any")}
+            >
+              {t("transactions.filterTagsAny")}
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "rounded px-2 py-0.5 transition-colors",
+                tagsMatch === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setTagsMatch("all")}
+            >
+              {t("transactions.filterTagsAll")}
+            </button>
+          </div>
+        </div>
+        <FilterMultiSelect
+          options={availableTags.map((tag) => ({ value: tag, label: tag }))}
+          selected={tags}
+          onChange={setTags}
+          placeholder={t("transactions.filterSelectTags")}
+          selectedLabel={selectedCountLabel}
+          emptyLabel={t("common.none")}
+        />
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">{t("common.type")}</Label>
-        <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("common.all")}</SelectItem>
-            {TRANSACTION_FILTER_TYPES.map((txType) => (
-              <SelectItem key={txType} value={txType}>
-                {t(`labels.transactionType.${txType}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label className="text-xs text-muted-foreground">
+          {t("transactions.filterAmountMin")}
+        </Label>
+        <Input
+          inputMode="decimal"
+          placeholder={t("transactions.form.amountPlaceholder")}
+          value={amountMinEuro}
+          onChange={(e) => setAmountMinEuro(e.target.value)}
+        />
       </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">
+          {t("transactions.filterAmountMax")}
+        </Label>
+        <Input
+          inputMode="decimal"
+          placeholder={t("transactions.form.amountPlaceholder")}
+          value={amountMaxEuro}
+          onChange={(e) => setAmountMaxEuro(e.target.value)}
+        />
+      </div>
+      {amountRangeInvalid && (
+        <p className="text-xs text-danger sm:col-span-2">
+          {t("transactions.filterAmountInvalidRange")}
+        </p>
+      )}
     </div>
   );
 
   const activeChips = hasActiveFilters && (
     <div className="flex flex-wrap items-center gap-2">
       {dateFrom && (
-        <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setDateFrom("")}>
+        <Badge
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setDateFrom("")}
+        >
           {t("transactions.filterChipFrom", { date: formatDate(dateFrom) })}
           <X className="size-3" />
         </Badge>
       )}
       {dateTo && (
-        <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setDateTo("")}>
+        <Badge
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setDateTo("")}
+        >
           {t("transactions.filterChipTo", { date: formatDate(dateTo) })}
           <X className="size-3" />
         </Badge>
       )}
-      {categoryId !== "all" && (
-        <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setCategoryId("all")}>
-          {t("transactions.filterChipCategory", { name: categoryMap[categoryId]?.name ?? categoryId })}
-          <X className="size-3" />
-        </Badge>
-      )}
-      {accountId !== "all" && (
-        <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setAccountId("all")}>
-          {t("transactions.filterChipAccount", { name: accountMap[accountId]?.name ?? accountId })}
-          <X className="size-3" />
-        </Badge>
-      )}
-      {type !== "all" && (
-        <Badge variant="secondary" className="cursor-pointer gap-1 pr-1.5" onClick={() => setType("all")}>
-          {t("transactions.filterChipType", {
-            type: t(`labels.transactionType.${type as Transaction["type"]}`),
+      {categoryIds.map((id) => (
+        <Badge
+          key={`cat-${id}`}
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setCategoryIds((prev) => prev.filter((x) => x !== id))}
+        >
+          {t("transactions.filterChipCategory", {
+            name: categoryMap[id]?.name ?? id,
           })}
           <X className="size-3" />
         </Badge>
+      ))}
+      {accountIds.map((id) => (
+        <Badge
+          key={`acc-${id}`}
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setAccountIds((prev) => prev.filter((x) => x !== id))}
+        >
+          {t("transactions.filterChipAccount", {
+            name: accountMap[id]?.name ?? id,
+          })}
+          <X className="size-3" />
+        </Badge>
+      ))}
+      {types.map((txType) => (
+        <Badge
+          key={`type-${txType}`}
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setTypes((prev) => prev.filter((x) => x !== txType))}
+        >
+          {t("transactions.filterChipType", {
+            type: t(`labels.transactionType.${txType as Transaction["type"]}`),
+          })}
+          <X className="size-3" />
+        </Badge>
+      ))}
+      {tags.map((tag) => (
+        <Badge
+          key={`tag-${tag}`}
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}
+        >
+          {t("transactions.filterChipTag", { tag })}
+          <X className="size-3" />
+        </Badge>
+      ))}
+      {tags.length > 0 && tagsMatch === "all" && (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => setTagsMatch("any")}
+        >
+          {t("transactions.filterChipTagsAll")}
+          <X className="size-3" />
+        </Badge>
+      )}
+      {filterState.amountMinCents !== null && filterState.amountMaxCents !== null ? (
+        <Badge
+          variant="secondary"
+          className="cursor-pointer gap-1 pr-1.5"
+          onClick={() => {
+            setAmountMinEuro("");
+            setAmountMaxEuro("");
+          }}
+        >
+          {t("transactions.filterChipAmountRange", {
+            min: formatCents(filterState.amountMinCents, currency, locale),
+            max: formatCents(filterState.amountMaxCents, currency, locale),
+          })}
+          <X className="size-3" />
+        </Badge>
+      ) : (
+        <>
+          {filterState.amountMinCents !== null && (
+            <Badge
+              variant="secondary"
+              className="cursor-pointer gap-1 pr-1.5"
+              onClick={() => setAmountMinEuro("")}
+            >
+              {t("transactions.filterChipAmountMin", {
+                amount: formatCents(filterState.amountMinCents, currency, locale),
+              })}
+              <X className="size-3" />
+            </Badge>
+          )}
+          {filterState.amountMaxCents !== null && (
+            <Badge
+              variant="secondary"
+              className="cursor-pointer gap-1 pr-1.5"
+              onClick={() => setAmountMaxEuro("")}
+            >
+              {t("transactions.filterChipAmountMax", {
+                amount: formatCents(filterState.amountMaxCents, currency, locale),
+              })}
+              <X className="size-3" />
+            </Badge>
+          )}
+        </>
       )}
       <Button variant="ghost" size="sm" onClick={clearFilters}>
         {t("common.clearFilters")}
@@ -463,26 +664,103 @@ export function TransactionsView({
         <>
           {/* Summary */}
           <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 py-1">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{filtered.length}</span>{" "}
-                {filtered.length === 1
-                  ? t("transactions.countSingular")
-                  : t("transactions.countPlural")}
-              </p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
-                <span className="text-success">
-                  {formatSignedCents(totals.income, "income", currency, locale, amountsHidden)}
-                </span>
-                <span className="text-danger">
-                  {formatSignedCents(totals.expense, "expense", currency, locale, amountsHidden)}
-                </span>
-                <span className="font-medium">
-                  {t("transactions.balance", {
-                    amount: formatCentsDisplay(totals.net, currency, locale),
-                  })}
-                </span>
+            <CardContent className="space-y-3 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{totals.count}</span>{" "}
+                  {totals.count === 1
+                    ? t("transactions.countSingular")
+                    : t("transactions.countPlural")}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm tabular-nums">
+                  <span className="text-success">
+                    {formatSignedCents(
+                      totals.income,
+                      "income",
+                      currency,
+                      locale,
+                      amountsHidden
+                    )}
+                  </span>
+                  <span className="text-danger">
+                    {formatSignedCents(
+                      totals.expense,
+                      "expense",
+                      currency,
+                      locale,
+                      amountsHidden
+                    )}
+                  </span>
+                  <span className="font-medium">
+                    {t("transactions.balance", {
+                      amount: formatCentsDisplay(totals.net, currency, locale),
+                    })}
+                  </span>
+                </div>
               </div>
+
+              {monthlySummaries.length > 0 && (
+                <Collapsible open={monthlyOpen} onOpenChange={setMonthlyOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-2 rounded-md py-1 text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span>
+                        <span className="font-medium text-foreground">
+                          {t("transactions.monthlyBreakdown")}
+                        </span>
+                        <span className="ml-2 text-xs">
+                          {t("transactions.monthlyBreakdownHint")}
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          "size-4 shrink-0 transition-transform",
+                          monthlyOpen && "rotate-180"
+                        )}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <ul className="mt-2 divide-y border-t">
+                      {monthlySummaries.map((month) => (
+                        <li
+                          key={month.monthKey}
+                          className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+                        >
+                          <span className="font-medium">
+                            {monthLabel(month.monthKey)}
+                          </span>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+                            <span className="text-success">
+                              {formatSignedCents(
+                                month.income,
+                                "income",
+                                currency,
+                                locale,
+                                amountsHidden
+                              )}
+                            </span>
+                            <span className="text-danger">
+                              {formatSignedCents(
+                                month.expense,
+                                "expense",
+                                currency,
+                                locale,
+                                amountsHidden
+                              )}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {formatCentsDisplay(month.net, currency, locale)}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </CardContent>
           </Card>
 

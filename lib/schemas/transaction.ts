@@ -107,7 +107,17 @@ export type ExpandedTransaction = Transaction & {
 export type TransactionFilters = {
   dateFrom?: string;
   dateTo?: string;
+  /** @deprecated Prefer categoryIds */
   categoryId?: string;
+  categoryIds?: string[];
+  /** @deprecated Prefer accountIds */
   accountId?: string;
+  accountIds?: string[];
+  /** @deprecated Prefer types */
   type?: Transaction["type"];
+  types?: Array<Transaction["type"]>;
+  tags?: string[];
+  tagsMatch?: "any" | "all";
+  amountMinCents?: number;
+  amountMaxCents?: number;
 };

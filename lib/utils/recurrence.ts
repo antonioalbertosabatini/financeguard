@@ -12,6 +12,7 @@ import {
   getMonthFromDate,
   toISODate,
 } from "@/lib/utils/dates";
+import { matchesUiFilters, toUiFilters } from "@/lib/utils/transaction-filters";
 
 function monthLabel(month: number, language: Language = getCurrentLanguage()): string {
   return getMonthLabels(language)[month - 1].toLowerCase();
@@ -101,15 +102,8 @@ export function filterExpandedTransactions(
   filters?: TransactionFilters
 ): ExpandedTransaction[] {
   if (!filters) return transactions;
-
-  return transactions.filter((tx) => {
-    if (filters.dateFrom && tx.date < filters.dateFrom) return false;
-    if (filters.dateTo && tx.date > filters.dateTo) return false;
-    if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
-    if (filters.accountId && tx.accountId !== filters.accountId) return false;
-    if (filters.type && tx.type !== filters.type) return false;
-    return true;
-  });
+  const ui = toUiFilters(filters);
+  return transactions.filter((tx) => matchesUiFilters(tx, ui));
 }
 
 export function filterOccurrencesForListView(
@@ -141,10 +135,6 @@ export function filterRawTransactions(
   filters?: Omit<TransactionFilters, "dateFrom" | "dateTo">
 ): Transaction[] {
   if (!filters) return transactions;
-  return transactions.filter((tx) => {
-    if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
-    if (filters.accountId && tx.accountId !== filters.accountId) return false;
-    if (filters.type && tx.type !== filters.type) return false;
-    return true;
-  });
+  const ui = toUiFilters(filters);
+  return transactions.filter((tx) => matchesUiFilters(tx, ui));
 }
