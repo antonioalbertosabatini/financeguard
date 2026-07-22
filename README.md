@@ -132,10 +132,12 @@ npm run cap:android   # build, sync and open the Android project
 
 ## Contributing
 
-Issues and pull requests are welcome. Please run `npm run lint` and `npm run test` before opening a PR.
+Issues are welcome. Pull requests are accepted only if, by submitting a contribution, you grant the copyright holder the right to include it in this project under the repository license. Please run `npm run lint` and `npm run test` before opening a PR.
 
 > Note: this project pins a specific Next.js version whose conventions may differ from older releases — check the guides bundled under `node_modules/next/dist/docs/` when working on Next.js-specific code.
 
 ## License
 
-[MIT](LICENSE) © 2026 Antonio Alberto Sabatini
+[PolyForm Strict 1.0.0](LICENSE) © 2026 Antonio Alberto Sabatini
+
+Personal and other noncommercial use is permitted. Redistribution, modification, sublicensing, and commercial use (including sale) are not.
