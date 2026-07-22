@@ -425,6 +425,7 @@ export const enMessages: {
     categoriesDescription:
       "Organize your income and expenses with custom categories.",
     manageCategories: "Manage categories",
+    appVersion: "Version {version}",
   },
   labels: {
     accountType: {

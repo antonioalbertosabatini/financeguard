@@ -415,6 +415,7 @@ export const itMessages = {
     categoriesDescription:
       "Organizza le tue spese e entrate con categorie personalizzate.",
     manageCategories: "Gestisci categorie",
+    appVersion: "Versione {version}",
   },
   labels: {
     accountType: {

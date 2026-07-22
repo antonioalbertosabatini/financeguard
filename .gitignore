@@ -51,3 +51,5 @@ next-env.d.ts
 
 # android studio
 android/.idea
+
+releases/*.dmg

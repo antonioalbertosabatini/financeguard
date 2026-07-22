@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateSettings } from "@/lib/actions/settings";
+import { APP_VERSION } from "@/lib/app-version";
 import {
   LANGUAGE_LABELS,
   SUPPORTED_LANGUAGES,
@@ -120,6 +121,10 @@ export function SettingsView({ settings }: { settings: Settings }) {
           </Button>
         </CardContent>
       </Card>
+
+      <p className="text-sm text-muted-foreground">
+        {t("settings.appVersion", { version: APP_VERSION })}
+      </p>
     </div>
   );
 }

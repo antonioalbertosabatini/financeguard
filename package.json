@@ -1,6 +1,6 @@
 {
   "name": "financeguard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -17,7 +17,8 @@
     "cap:android": "next build && cap sync android && cap open android",
     "android": "npm run cap:android",
     "ios": "npm run cap:ios",
-    "icons:generate": "node assets/generate-icons.mjs && npx @capacitor/assets generate --ios --android"
+    "icons:generate": "node assets/generate-icons.mjs && npx @capacitor/assets generate --ios --android",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.4.1",
@@ -78,7 +79,14 @@
       "!**/node_modules/**"
     ],
     "mac": {
-      "target": "dmg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
       "category": "public.app-category.finance",
       "electronLanguages": [
         "en",
@@ -86,7 +94,14 @@
       ]
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "linux": {
       "target": "AppImage",
