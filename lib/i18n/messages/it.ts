@@ -346,6 +346,9 @@ export const itMessages = {
     importPlainConfirm:
       "L'import sovrascriverà tutti i dati attuali. Continuare?",
     imported: "Dati importati con successo",
+    importedCloudPushed: "Dati importati e caricati sul cloud",
+    importedCloudPushFailed:
+      "Dati importati in locale, ma il caricamento sul cloud non è riuscito",
     importEncryptedTitle: "Importa backup criptato",
     importEncryptedWarning:
       "Attenzione: questo sovrascrive tutti i dati attuali e la password di accesso diventerà quella del backup.",

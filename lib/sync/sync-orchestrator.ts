@@ -1,11 +1,13 @@
 /**
  * Orchestratore sync automatico: pull, merge client-side, push.
+ * Supporta anche sync push-only (es. dopo import backup).
  */
 import { AppError } from "@/lib/i18n/app-error";
 import { openBundleText, revisionOf } from "@/lib/storage/bundle";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import {
   adoptCloudVault,
+  advanceRevisionBase,
   applySyncedDataset,
   getSyncContext,
   isUnlocked,
@@ -38,16 +40,51 @@ export interface SyncResult {
   error?: string;
 }
 
+export type SyncMode = "full" | "push-only";
+
+export interface SyncOptions {
+  mode?: SyncMode;
+}
+
 let syncChain: Promise<SyncResult> = Promise.resolve({
   ok: true,
   merged: false,
   pushed: false,
 });
 let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+/** Dopo un import: i sync in coda usano push-only (niente pull/merge). */
+let localOverrideActive = false;
 
-export async function syncNow(reason?: string): Promise<SyncResult> {
+export function beginLocalOverrideSync(): void {
+  localOverrideActive = true;
+  cancelScheduledSync();
+}
+
+export function clearLocalOverrideSync(): void {
+  localOverrideActive = false;
+}
+
+export function isLocalOverrideActive(): boolean {
+  return localOverrideActive;
+}
+
+export function cancelScheduledSync(): void {
+  if (syncDebounceTimer) {
+    clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = null;
+  }
+}
+
+export async function syncNow(
+  reason?: string,
+  options?: SyncOptions
+): Promise<SyncResult> {
   void reason;
-  syncChain = syncChain.then(() => runSync());
+  const mode: SyncMode =
+    options?.mode === "push-only" || localOverrideActive
+      ? "push-only"
+      : "full";
+  syncChain = syncChain.then(() => runSync(mode));
   return syncChain;
 }
 
@@ -59,7 +96,7 @@ export function scheduleSync(reason: string, debounceMs = 3000): void {
   }, debounceMs);
 }
 
-async function runSync(): Promise<SyncResult> {
+async function runSync(mode: SyncMode): Promise<SyncResult> {
   if (!isCloudConfigured()) {
     return { ok: true, merged: false, pushed: false };
   }
@@ -107,77 +144,17 @@ async function runSync(): Promise<SyncResult> {
       return { ok: true, merged: false, pushed: false };
     }
 
-    const localRevision = revisionOf(localText);
-    const remoteRevision = await getRemoteRevision();
-    let merged = false;
-
-    if (remoteRevision !== null) {
-      const remoteText = await downloadRemoteBundle();
-      if (remoteText) {
-        const remoteOpened = await openBundleText<Dataset>(
-          remoteText,
-          ctx.password
-        );
-        if (!remoteOpened) {
-          throw new AppError("errors.decryptVaultFailed");
-        }
-
-        const mergedDataset = mergeDatasets(ctx.dataset, remoteOpened.dataset);
-        const vaultMismatch = remoteOpened.vault.salt !== ctx.vault.salt;
-
-        if (datasetsDiffer(ctx.dataset, mergedDataset)) {
-          const baseRevision = Math.max(localRevision, remoteOpened.revision);
-          if (vaultMismatch) {
-            await adoptCloudVault(
-              mergedDataset,
-              baseRevision,
-              remoteOpened.key,
-              remoteOpened.vault
-            );
-          } else {
-            await applySyncedDataset(mergedDataset, baseRevision);
-          }
-          merged = true;
-        } else if (remoteOpened.revision > localRevision) {
-          if (vaultMismatch) {
-            await adoptCloudVault(
-              mergedDataset,
-              remoteOpened.revision,
-              remoteOpened.key,
-              remoteOpened.vault
-            );
-          } else {
-            await applySyncedDataset(mergedDataset, remoteOpened.revision);
-          }
-          merged = true;
-        } else if (vaultMismatch && localRevision <= 1) {
-          await adoptCloudVault(
-            remoteOpened.dataset,
-            remoteOpened.revision,
-            remoteOpened.key,
-            remoteOpened.vault
-          );
-          merged = true;
-        }
-      }
+    if (mode === "push-only") {
+      return await runPushOnly(adapter, localText);
     }
 
-    const freshText = await adapter.load();
-    if (!freshText) {
-      throw new AppError("errors.localBundleMissing");
-    }
-
-    const finalRevision = revisionOf(freshText);
-    await uploadBundle(freshText, finalRevision);
-
-    patchSyncState({
-      status: "idle",
-      lastSyncedAt: new Date().toISOString(),
-      isSessionOwner: true,
-      activeDeviceName: null,
-    });
-
-    return { ok: true, merged, pushed: true };
+    return await runFullSync(
+      adapter,
+      localText,
+      ctx.password,
+      ctx.dataset,
+      ctx.vault.salt
+    );
   } catch (err) {
     const message = formatSyncError(err);
 
@@ -194,4 +171,112 @@ async function runSync(): Promise<SyncResult> {
     patchSyncState({ status: "error", lastError: message });
     return { ok: false, merged: false, pushed: false, error: message };
   }
+}
+
+async function runPushOnly(
+  adapter: IndexedDbAdapter,
+  localText: string
+): Promise<SyncResult> {
+  let text = localText;
+  let localRevision = revisionOf(text);
+  const remoteRevision = await getRemoteRevision();
+
+  if (remoteRevision !== null && remoteRevision >= localRevision) {
+    await advanceRevisionBase(remoteRevision);
+    const advanced = await adapter.load();
+    if (!advanced) {
+      throw new AppError("errors.localBundleMissing");
+    }
+    text = advanced;
+    localRevision = revisionOf(text);
+  }
+
+  await uploadBundle(text, localRevision);
+  clearLocalOverrideSync();
+
+  patchSyncState({
+    status: "idle",
+    lastSyncedAt: new Date().toISOString(),
+    isSessionOwner: true,
+    activeDeviceName: null,
+  });
+
+  return { ok: true, merged: false, pushed: true };
+}
+
+async function runFullSync(
+  adapter: IndexedDbAdapter,
+  localText: string,
+  password: string,
+  localDataset: Dataset,
+  localSalt: string
+): Promise<SyncResult> {
+  const localRevision = revisionOf(localText);
+  const remoteRevision = await getRemoteRevision();
+  let merged = false;
+
+  if (remoteRevision !== null) {
+    const remoteText = await downloadRemoteBundle();
+    if (remoteText) {
+      const remoteOpened = await openBundleText<Dataset>(remoteText, password);
+      if (!remoteOpened) {
+        throw new AppError("errors.decryptVaultFailed");
+      }
+
+      const mergedDataset = mergeDatasets(localDataset, remoteOpened.dataset);
+      const vaultMismatch = remoteOpened.vault.salt !== localSalt;
+
+      if (datasetsDiffer(localDataset, mergedDataset)) {
+        const baseRevision = Math.max(localRevision, remoteOpened.revision);
+        if (vaultMismatch) {
+          await adoptCloudVault(
+            mergedDataset,
+            baseRevision,
+            remoteOpened.key,
+            remoteOpened.vault
+          );
+        } else {
+          await applySyncedDataset(mergedDataset, baseRevision);
+        }
+        merged = true;
+      } else if (remoteOpened.revision > localRevision) {
+        if (vaultMismatch) {
+          await adoptCloudVault(
+            mergedDataset,
+            remoteOpened.revision,
+            remoteOpened.key,
+            remoteOpened.vault
+          );
+        } else {
+          await applySyncedDataset(mergedDataset, remoteOpened.revision);
+        }
+        merged = true;
+      } else if (vaultMismatch && localRevision <= 1) {
+        await adoptCloudVault(
+          remoteOpened.dataset,
+          remoteOpened.revision,
+          remoteOpened.key,
+          remoteOpened.vault
+        );
+        merged = true;
+      }
+    }
+  }
+
+  const freshText = await adapter.load();
+  if (!freshText) {
+    throw new AppError("errors.localBundleMissing");
+  }
+
+  const finalRevision = revisionOf(freshText);
+  await uploadBundle(freshText, finalRevision);
+
+  patchSyncState({
+    status: "idle",
+    lastSyncedAt: new Date().toISOString(),
+    isSessionOwner: true,
+    activeDeviceName: null,
+  });
+
+  return { ok: true, merged, pushed: true };
 }

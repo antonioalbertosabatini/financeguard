@@ -220,6 +220,29 @@ export function migrateSyncMetadataIfNeeded(
   return true;
 }
 
+/**
+ * Dopo un import: marca tutti i record locali come appena aggiornati, così
+ * eventuali merge futuri danno priorità a questo dataset.
+ */
+export function stampDatasetAsAuthoritative(
+  dataset: Dataset,
+  deviceId: string
+): void {
+  const at = nowIso();
+  const meta = emptySyncMetadata();
+  meta.migratedAt = at;
+
+  for (const { type, id, data } of collectEntities(dataset)) {
+    meta.records[recordKey(type, id)] = {
+      updatedAt: at,
+      deviceId,
+      fields: stampAllFields(data, at, deviceId),
+    };
+  }
+
+  dataset.syncMeta = meta;
+}
+
 /** Helper tipizzati per il data layer. */
 export function trackAccountUpsert(
   dataset: Dataset,

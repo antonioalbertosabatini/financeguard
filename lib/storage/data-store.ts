@@ -25,7 +25,10 @@ import {
 import { emptyDataset, type Dataset } from "@/lib/storage/dataset";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
-import { migrateSyncMetadataIfNeeded } from "@/lib/sync/sync-metadata";
+import {
+  migrateSyncMetadataIfNeeded,
+  stampDatasetAsAuthoritative,
+} from "@/lib/sync/sync-metadata";
 
 export type StoreStatus = "loading" | "needs-setup" | "locked" | "unlocked";
 
@@ -186,6 +189,7 @@ export function getDataset(): Dataset {
  */
 export async function replaceDataset(next: Dataset): Promise<void> {
   if (!key || !vault) throw new AppError("errors.appLocked");
+  stampDatasetAsAuthoritative(next, deviceId);
   dataset = next;
   emit({ version: snapshot.version + 1 });
   await persistNow();
@@ -199,6 +203,7 @@ export async function replaceDatasetWithPassword(
   next: Dataset,
   password: string
 ): Promise<void> {
+  stampDatasetAsAuthoritative(next, deviceId);
   const created = await createBundle(password, next, deviceId);
   await getAdapter().save(created.text);
   key = created.key;
@@ -207,6 +212,16 @@ export async function replaceDatasetWithPassword(
   dataset = next;
   sessionPassword = password;
   emit({ status: "unlocked", version: snapshot.version + 1 });
+}
+
+/**
+ * Imposta la revisione base in memoria e persiste (revision+1 su disco).
+ * Usato dal sync push-only per superare la revisione remota.
+ */
+export async function advanceRevisionBase(baseRevision: number): Promise<void> {
+  if (!key || !vault || !dataset) throw new AppError("errors.appLocked");
+  revision = baseRevision;
+  await persistNow();
 }
 
 export function isUnlocked(): boolean {

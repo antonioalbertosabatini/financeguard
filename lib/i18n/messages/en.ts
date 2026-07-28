@@ -356,6 +356,9 @@ export const enMessages: {
     importPlainConfirm:
       "Import will overwrite all current data. Continue?",
     imported: "Data imported successfully",
+    importedCloudPushed: "Data imported and uploaded to the cloud",
+    importedCloudPushFailed:
+      "Data imported locally, but uploading to the cloud failed",
     importEncryptedTitle: "Import encrypted backup",
     importEncryptedWarning:
       "Warning: this overwrites all current data and your login password will become the backup password.",
