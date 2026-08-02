@@ -6,7 +6,9 @@ import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
+import type { Instrument } from "@/lib/schemas/instrument";
 import type { Settings } from "@/lib/schemas/settings";
+import type { Trade } from "@/lib/schemas/trade";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { Dataset } from "@/lib/storage/dataset";
 
@@ -19,6 +21,8 @@ export type SyncEntityType =
   | "budget"
   | "transaction"
   | "accountTransfer"
+  | "instrument"
+  | "trade"
   | "settings";
 
 export interface FieldTimestamp {
@@ -166,6 +170,13 @@ function collectEntities(dataset: Dataset): Array<{
       data: budget as unknown as Record<string, unknown>,
     });
   }
+  for (const instrument of dataset.instruments ?? []) {
+    items.push({
+      type: "instrument",
+      id: instrument.id,
+      data: instrument as unknown as Record<string, unknown>,
+    });
+  }
   items.push({
     type: "settings",
     id: SETTINGS_RECORD_ID,
@@ -187,6 +198,15 @@ function collectEntities(dataset: Dataset): Array<{
         type: "accountTransfer",
         id: tr.id,
         data: tr as unknown as Record<string, unknown>,
+      });
+    }
+  }
+  for (const year of Object.keys(dataset.tradesByYear ?? {})) {
+    for (const trade of dataset.tradesByYear[year] ?? []) {
+      items.push({
+        type: "trade",
+        id: trade.id,
+        data: trade as unknown as Record<string, unknown>,
       });
     }
   }
@@ -319,6 +339,38 @@ export function trackTransactionUpsert(
     "transaction",
     tx.id,
     tx as unknown as Record<string, unknown>,
+    deviceId,
+    previous as unknown as Record<string, unknown> | undefined
+  );
+}
+
+export function trackInstrumentUpsert(
+  dataset: Dataset,
+  instrument: Instrument,
+  deviceId: string,
+  previous?: Instrument
+): void {
+  trackUpsert(
+    dataset,
+    "instrument",
+    instrument.id,
+    instrument as unknown as Record<string, unknown>,
+    deviceId,
+    previous as unknown as Record<string, unknown> | undefined
+  );
+}
+
+export function trackTradeUpsert(
+  dataset: Dataset,
+  trade: Trade,
+  deviceId: string,
+  previous?: Trade
+): void {
+  trackUpsert(
+    dataset,
+    "trade",
+    trade.id,
+    trade as unknown as Record<string, unknown>,
     deviceId,
     previous as unknown as Record<string, unknown> | undefined
   );

@@ -3,6 +3,7 @@ import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getBudgets } from "@/lib/db/budgets";
 import { getCategories } from "@/lib/db/categories";
 import { getSettings } from "@/lib/db/settings";
+import { getTradesForYear } from "@/lib/db/trades";
 import {
   copyRecurringRules,
   createTransaction as dbCreateTransaction,
@@ -131,13 +132,15 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
 }
 
 export async function getDashboardData(year: number) {
-  const [accounts, categories, settings, transfers, expanded] = await Promise.all([
-    getAccounts(),
-    getCategories(),
-    getSettings(),
-    getAccountTransfersForYear(year),
-    expandedForYear(year),
-  ]);
+  const [accounts, categories, settings, transfers, trades, expanded] =
+    await Promise.all([
+      getAccounts(),
+      getCategories(),
+      getSettings(),
+      getAccountTransfersForYear(year),
+      getTradesForYear(year),
+      expandedForYear(year),
+    ]);
 
   const now = new Date();
   const monthPrefix = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -145,7 +148,7 @@ export async function getDashboardData(year: number) {
 
   return {
     settings,
-    totalBalance: calculateTotalBalance(accounts, expanded, transfers),
+    totalBalance: calculateTotalBalance(accounts, expanded, transfers, trades),
     monthlyIncome: sumByType(monthTxs, "income"),
     monthlyExpense: sumByType(monthTxs, "expense"),
     expensesByCategory: mapCategoryExpenses(
@@ -234,58 +237,84 @@ export async function getAnnualReport(year: number) {
 }
 
 export async function getAccountsWithBalances(year: number) {
-  const [accounts, expanded, transfers] = await Promise.all([
+  const [accounts, expanded, transfers, trades] = await Promise.all([
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
+    getTradesForYear(year),
   ]);
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers),
+    balance: calculateAccountBalance(account, expanded, transfers, trades),
   }));
 }
 
 export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string) {
-  const [accounts, expanded, transfers] = await Promise.all([
+  const [accounts, expanded, transfers, trades] = await Promise.all([
     getAccounts(),
     expandedForYear(year, asOfISO),
     getAccountTransfersForYear(year).then((items) =>
       items.filter((tr) => tr.date <= asOfISO)
     ),
+    getTradesForYear(year).then((items) =>
+      items.filter((trade) => trade.date <= asOfISO)
+    ),
   ]);
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers),
+    balance: calculateAccountBalance(account, expanded, transfers, trades),
   }));
 }
 
 export async function getAccountsAnalysisSummary(year: number, asOfISO: string) {
-  const [accounts, expandedAll, transfersAll] = await Promise.all([
+  const [accounts, expandedAll, transfersAll, tradesAll] = await Promise.all([
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
+    getTradesForYear(year),
   ]);
 
   const expandedAsOf = expandedAll.filter((tx) => tx.date <= asOfISO);
   const transfersAsOf = transfersAll.filter((tr) => tr.date <= asOfISO);
+  const tradesAsOf = tradesAll.filter((trade) => trade.date <= asOfISO);
 
   const accountsAsOf = accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expandedAsOf, transfersAsOf),
+    balance: calculateAccountBalance(
+      account,
+      expandedAsOf,
+      transfersAsOf,
+      tradesAsOf
+    ),
   }));
 
   const accountsAll = accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expandedAll, transfersAll),
+    balance: calculateAccountBalance(
+      account,
+      expandedAll,
+      transfersAll,
+      tradesAll
+    ),
   }));
 
   return {
     accountsAsOf,
     accountsAll,
-    totalAsOf: calculateTotalBalance(accounts, expandedAsOf, transfersAsOf),
-    totalAll: calculateTotalBalance(accounts, expandedAll, transfersAll),
+    totalAsOf: calculateTotalBalance(
+      accounts,
+      expandedAsOf,
+      transfersAsOf,
+      tradesAsOf
+    ),
+    totalAll: calculateTotalBalance(
+      accounts,
+      expandedAll,
+      transfersAll,
+      tradesAll
+    ),
     asOfISO,
   };
 }

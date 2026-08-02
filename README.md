@@ -21,6 +21,7 @@ FinanceGuard runs fully offline as a local-only app, or optionally syncs an **en
 - **Recurrences** — recurring transactions with start/end dates.
 - **Categories** — customizable income/expense categories (sensible defaults seeded).
 - **Budgets** — set limits per category and track actual vs. budgeted spending.
+- **Investments** — stocks, ETFs and crypto as buy/sell lots, with FIFO cost basis, realized and unrealized gains, live symbol search and market prices converted to your base currency (see below).
 - **Reports** — analytics on spending by category and over time.
 - **Backups** — export/import an encrypted (or cleartext) ZIP; a backup can use its own password.
 - **Profile** — cloud account management and sync status.
@@ -97,6 +98,25 @@ Cloud sync is bring-your-own-backend: you run your own Supabase project, so you 
 > The Supabase anon key is public by design. Security does not rely on keeping it secret: the vault is encrypted client-side and Row Level Security scopes every row/object to the authenticated user. The master password and encryption key are never sent to Supabase.
 
 If `.env.local` is missing or the variables are empty, cloud features are simply hidden and the app stays 100% local — nothing breaks.
+
+---
+
+## Market data (optional)
+
+The investments section works with no configuration: you can always search instruments and enter prices by hand. Automatic quotes use three sources, none of which is required for the app to function.
+
+| Purpose | Source | Key | Notes |
+| --- | --- | --- | --- |
+| Instrument search | Twelve Data | no | Keyless endpoint, works everywhere, covers European listings |
+| Stock/ETF quotes | Yahoo Finance (default) or Twelve Data | no / yes | See the caveat below |
+| Crypto quotes | CoinGecko | no | Priced directly in EUR |
+| Exchange rates | Frankfurter (ECB) | no | Daily reference rates |
+
+Free plans that cover **European UCITS ETFs** essentially do not exist: Twelve Data and Finnhub restrict their free tiers to US markets, and Stooq's CSV endpoint has been retired. The only free source that quotes them is Yahoo Finance, which sends no CORS headers. The desktop and mobile builds route those requests outside the WebView — through the Electron main process and Capacitor's native HTTP layer — so quotes work there. In a plain browser the request is blocked and the app falls back to the manual price you can set per instrument.
+
+Configure the source with `NEXT_PUBLIC_MARKET_PROVIDER` and `NEXT_PUBLIC_MARKET_API_KEY` (see `.env.example`), or from **Settings → Market data**, which stores the key encrypted in the vault and overrides the compiled one.
+
+> `NEXT_PUBLIC_*` variables are compiled into the bundle: anyone holding the binary can extract the key. Use a dedicated free key, never a paid one — or leave it out of the build entirely and enter it at runtime in Settings.
 
 ---
 

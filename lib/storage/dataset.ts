@@ -10,7 +10,9 @@ import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
+import type { Instrument } from "@/lib/schemas/instrument";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/schemas/settings";
+import type { Trade } from "@/lib/schemas/trade";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { SyncMetadata } from "@/lib/sync/sync-metadata";
 import { emptySyncMetadata } from "@/lib/sync/sync-metadata";
@@ -19,11 +21,15 @@ export interface Dataset {
   accounts: Account[];
   categories: Category[];
   budgets: Budget[];
+  /** Titoli, ETF e crypto di cui esiste almeno un'operazione registrata. */
+  instruments: Instrument[];
   settings: Settings;
   /** Transazioni raggruppate per anno (chiave = anno come stringa, es. "2026"). */
   transactionsByYear: Record<string, Transaction[]>;
   /** Trasferimenti tra conti raggruppati per anno (chiave = anno come stringa). */
   accountTransfersByYear: Record<string, AccountTransfer[]>;
+  /** Acquisti e vendite raggruppati per anno (chiave = anno come stringa). */
+  tradesByYear: Record<string, Trade[]>;
   /** Metadati di sync cifrati nel bundle (timestamp per campo, tombstone). */
   syncMeta?: SyncMetadata;
 }
@@ -38,9 +44,27 @@ export function emptyDataset(): Dataset {
     accounts: [],
     categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
     budgets: [],
+    instruments: [],
     settings: { ...DEFAULT_SETTINGS },
     transactionsByYear: {},
     accountTransfersByYear: {},
+    tradesByYear: {},
     syncMeta: emptySyncMetadata(),
   };
+}
+
+/**
+ * I bundle creati prima di una nuova collezione non ne contengono la chiave.
+ * Non esiste un numero di versione del dataset, quindi le collezioni mancanti si
+ * ripristinano a ogni apertura invece che con una migrazione una tantum.
+ */
+export function normalizeDataset(dataset: Dataset): Dataset {
+  dataset.accounts ??= [];
+  dataset.categories ??= [];
+  dataset.budgets ??= [];
+  dataset.instruments ??= [];
+  dataset.transactionsByYear ??= {};
+  dataset.accountTransfersByYear ??= {};
+  dataset.tradesByYear ??= {};
+  return dataset;
 }

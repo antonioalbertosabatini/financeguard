@@ -4,6 +4,7 @@ import {
   DASHBOARD,
   TRANSACTIONS,
   ACCOUNTS,
+  INVESTMENTS,
   BUDGET,
   REPORTS,
   CATEGORIES,
@@ -38,7 +39,14 @@ export function useNavConfig() {
       },
       {
         labelKey: "nav.group.management" as const,
-        items: [TRANSACTIONS, ACCOUNTS, BUDGET, REPORTS, CATEGORIES],
+        items: [
+          TRANSACTIONS,
+          ACCOUNTS,
+          INVESTMENTS,
+          BUDGET,
+          REPORTS,
+          CATEGORIES,
+        ],
       },
       {
         labelKey: "nav.group.system" as const,
@@ -57,6 +65,7 @@ export function useNavConfig() {
       dashboard: translateNavItem(DASHBOARD, t),
       transactions: translateNavItem(TRANSACTIONS, t),
       accounts: translateNavItem(ACCOUNTS, t),
+      investments: translateNavItem(INVESTMENTS, t),
       budget: translateNavItem(BUDGET, t),
       reports: translateNavItem(REPORTS, t),
       categories: translateNavItem(CATEGORIES, t),

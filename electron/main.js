@@ -9,10 +9,11 @@
  * secure context, necessario perche' Web Crypto (`crypto.subtle`, usato per la
  * cifratura del vault) sia disponibile.
  */
-const { app, BrowserWindow, protocol, net } = require("electron");
+const { app, BrowserWindow, ipcMain, protocol, net } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
+const { isAllowedMarketUrl } = require("./market-hosts.cjs");
 
 const isDev = !app.isPackaged;
 const OUT_DIR = path.join(__dirname, "..", "out");
@@ -66,6 +67,24 @@ function createWindow() {
     win.loadURL("app://local/index.html");
   }
 }
+
+/**
+ * Ponte quotazioni: le fonti di mercato gratuite non mandano header CORS, che
+ * nel renderer bloccherebbero la risposta. Qui non c'e' politica di same-origin,
+ * ma l'accesso resta limitato agli host noti.
+ */
+ipcMain.handle("market:fetch", async (_event, url) => {
+  if (!isAllowedMarketUrl(url)) {
+    throw new Error("Host non consentito");
+  }
+  const response = await net.fetch(url, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.text();
+});
 
 app.whenReady().then(() => {
   if (!isDev) {

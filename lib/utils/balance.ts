@@ -1,5 +1,6 @@
 import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
+import type { Trade } from "@/lib/schemas/trade";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
 import { getDaysInMonth } from "@/lib/utils/dates";
 
@@ -42,10 +43,21 @@ export function getAccountTransferEffect(
   return 0;
 }
 
+/**
+ * Un acquisto toglie contante dal conto, una vendita lo restituisce. Le
+ * operazioni non sono transazioni: non hanno categoria e non entrano in budget
+ * e report, esattamente come i trasferimenti tra conti.
+ */
+export function getTradeEffect(trade: Trade, accountId: string): number {
+  if (trade.accountId !== accountId) return 0;
+  return trade.side === "buy" ? -trade.cashCents : trade.cashCents;
+}
+
 export function calculateAccountBalance(
   account: Account,
   transactions: ExpandedTransaction[],
-  transfers: AccountTransfer[] = []
+  transfers: AccountTransfer[] = [],
+  trades: Trade[] = []
 ): number {
   const txDelta = transactions
     .filter((tx) => tx.accountId === account.id)
@@ -56,16 +68,23 @@ export function calculateAccountBalance(
     0
   );
 
-  return account.initialBalance + txDelta + transferDelta;
+  const tradeDelta = trades.reduce(
+    (sum, trade) => sum + getTradeEffect(trade, account.id),
+    0
+  );
+
+  return account.initialBalance + txDelta + transferDelta + tradeDelta;
 }
 
 export function calculateTotalBalance(
   accounts: Account[],
   transactions: ExpandedTransaction[],
-  transfers: AccountTransfer[] = []
+  transfers: AccountTransfer[] = [],
+  trades: Trade[] = []
 ): number {
   return accounts.reduce(
-    (sum, account) => sum + calculateAccountBalance(account, transactions, transfers),
+    (sum, account) =>
+      sum + calculateAccountBalance(account, transactions, transfers, trades),
     0
   );
 }

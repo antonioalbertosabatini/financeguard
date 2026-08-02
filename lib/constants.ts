@@ -38,6 +38,16 @@ export const TRANSACTION_FORM_TYPES = ["income", "expense"] as const;
 
 export const TRANSACTION_FILTER_TYPES = ["income", "expense"] as const;
 
+export const INSTRUMENT_KINDS = ["stock", "etf", "crypto"] as const;
+
+export const TRADE_SIDES = ["buy", "sell"] as const;
+
+/**
+ * Criterio di scarico dei lotti in vendita. Il default e' FIFO; gli
+ * intermediari italiani usano spesso LIFO, per cambiarlo basta questa costante.
+ */
+export const LOT_MATCHING: "fifo" | "lifo" = "fifo";
+
 export const MONTH_KEYS = [
   "jan",
   "feb",

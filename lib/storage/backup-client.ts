@@ -5,8 +5,8 @@
  * restano compatibili tra le due:
  *
  *   data/accounts.json, data/categories.json, data/budgets.json,
- *   data/settings.json, data/transactions/<anno>.json,
- *   data/account-transfers/<anno>.json
+ *   data/instruments.json, data/settings.json, data/transactions/<anno>.json,
+ *   data/account-transfers/<anno>.json, data/trades/<anno>.json
  *
  * In chiaro questi file sono JSON leggibili; nel backup criptato sono envelope
  * cifrati e l'archivio include anche vault.json.
@@ -24,19 +24,23 @@ import { accountsFileSchema } from "@/lib/schemas/account";
 import { accountTransfersFileSchema } from "@/lib/schemas/account-transfer";
 import { budgetsFileSchema } from "@/lib/schemas/budget";
 import { parseCategoriesFile } from "@/lib/schemas/category";
+import { instrumentsFileSchema } from "@/lib/schemas/instrument";
 import { settingsSchema } from "@/lib/schemas/settings";
+import { tradesFileSchema } from "@/lib/schemas/trade";
 import { transactionsFileSchema } from "@/lib/schemas/transaction";
 import { emptyDataset, type Dataset } from "@/lib/storage/dataset";
 
 const ROOT = "data";
 const TX_DIR = `${ROOT}/transactions`;
 const TRF_DIR = `${ROOT}/account-transfers`;
+const TRADE_DIR = `${ROOT}/trades`;
 
 function datasetToFiles(dataset: Dataset): Record<string, unknown> {
   const files: Record<string, unknown> = {
     [`${ROOT}/accounts.json`]: { accounts: dataset.accounts },
     [`${ROOT}/categories.json`]: { categories: dataset.categories },
     [`${ROOT}/budgets.json`]: { budgets: dataset.budgets },
+    [`${ROOT}/instruments.json`]: { instruments: dataset.instruments },
     [`${ROOT}/settings.json`]: dataset.settings,
   };
   for (const [year, transactions] of Object.entries(dataset.transactionsByYear)) {
@@ -46,6 +50,9 @@ function datasetToFiles(dataset: Dataset): Record<string, unknown> {
     dataset.accountTransfersByYear
   )) {
     files[`${TRF_DIR}/${year}.json`] = { transfers };
+  }
+  for (const [year, trades] of Object.entries(dataset.tradesByYear)) {
+    files[`${TRADE_DIR}/${year}.json`] = { trades };
   }
   return files;
 }
@@ -86,6 +93,11 @@ async function filesToDataset(
 
   const budgets = await read(`${ROOT}/budgets.json`);
   if (budgets) dataset.budgets = budgetsFileSchema.parse(budgets).budgets;
+
+  const instruments = await read(`${ROOT}/instruments.json`);
+  if (instruments) {
+    dataset.instruments = instrumentsFileSchema.parse(instruments).instruments;
+  }
 
   const settings = await read(`${ROOT}/settings.json`);
   if (settings) dataset.settings = settingsSchema.parse(settings);
@@ -140,6 +152,13 @@ export async function readPlainBackup(file: File): Promise<Dataset> {
       raw
     ).transfers;
   }
+
+  const rawTrades = await readYearFolder(zip, TRADE_DIR, async (text) =>
+    JSON.parse(text)
+  );
+  for (const [year, raw] of Object.entries(rawTrades)) {
+    dataset.tradesByYear[year] = tradesFileSchema.parse(raw).trades;
+  }
   return dataset;
 }
 
@@ -178,6 +197,13 @@ export async function readEncryptedBackup(
     dataset.accountTransfersByYear[year] = accountTransfersFileSchema.parse(
       raw
     ).transfers;
+  }
+
+  const rawTrades = await readYearFolder(zip, TRADE_DIR, async (text) =>
+    decryptJsonWeb(text, key)
+  );
+  for (const [year, raw] of Object.entries(rawTrades)) {
+    dataset.tradesByYear[year] = tradesFileSchema.parse(raw).trades;
   }
   return dataset;
 }

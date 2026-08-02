@@ -5,7 +5,9 @@ import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
+import type { Instrument } from "@/lib/schemas/instrument";
 import type { Settings } from "@/lib/schemas/settings";
+import type { Trade } from "@/lib/schemas/trade";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { Dataset } from "@/lib/storage/dataset";
 import { getYearFromDate } from "@/lib/db/index";
@@ -166,6 +168,16 @@ function groupTransfersByYear(
   return byYear;
 }
 
+function groupTradesByYear(trades: Trade[]): Record<string, Trade[]> {
+  const byYear: Record<string, Trade[]> = {};
+  for (const trade of trades) {
+    const year = String(getYearFromDate(trade.date));
+    if (!byYear[year]) byYear[year] = [];
+    byYear[year].push(trade);
+  }
+  return byYear;
+}
+
 /** Unisce due dataset applicando LWW per campo/record. */
 export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
   const localMeta = local.syncMeta ?? emptySyncMetadata();
@@ -184,6 +196,14 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
     ...remote.categories.map((c) => ({ type: "category" as const, id: c.id })),
     ...local.budgets.map((b) => ({ type: "budget" as const, id: b.id })),
     ...remote.budgets.map((b) => ({ type: "budget" as const, id: b.id })),
+    ...(local.instruments ?? []).map((i) => ({
+      type: "instrument" as const,
+      id: i.id,
+    })),
+    ...(remote.instruments ?? []).map((i) => ({
+      type: "instrument" as const,
+      id: i.id,
+    })),
     { type: "settings", id: SETTINGS_RECORD_ID },
   ];
 
@@ -217,6 +237,21 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
     }
   }
 
+  const localTrades = new Map<string, Trade>();
+  const remoteTrades = new Map<string, Trade>();
+  for (const year of Object.keys(local.tradesByYear ?? {})) {
+    for (const trade of local.tradesByYear[year] ?? []) {
+      localTrades.set(trade.id, trade);
+      allKeys.add(recordKey("trade", trade.id));
+    }
+  }
+  for (const year of Object.keys(remote.tradesByYear ?? {})) {
+    for (const trade of remote.tradesByYear[year] ?? []) {
+      remoteTrades.set(trade.id, trade);
+      allKeys.add(recordKey("trade", trade.id));
+    }
+  }
+
   for (const { type, id } of entityKeys) {
     allKeys.add(recordKey(type, id));
   }
@@ -227,13 +262,17 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
   const remoteCategories = indexById(remote.categories);
   const localBudgets = indexById(local.budgets);
   const remoteBudgets = indexById(remote.budgets);
+  const localInstruments = indexById(local.instruments ?? []);
+  const remoteInstruments = indexById(remote.instruments ?? []);
 
   const mergedRecords: SyncMetadata["records"] = {};
   const accounts: Account[] = [];
   const categories: Category[] = [];
   const budgets: Budget[] = [];
+  const instruments: Instrument[] = [];
   const transactions: Transaction[] = [];
   const transfers: AccountTransfer[] = [];
+  const trades: Trade[] = [];
   let settings: Settings | undefined;
 
   for (const key of allKeys) {
@@ -291,6 +330,24 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
         );
         if (merged) transfers.push(merged as unknown as AccountTransfer);
         break;
+      case "instrument":
+        merged = mergeRecordData(
+          localInstruments.get(id) as Record<string, unknown> | undefined,
+          remoteInstruments.get(id) as Record<string, unknown> | undefined,
+          lMeta,
+          rMeta
+        );
+        if (merged) instruments.push(merged as unknown as Instrument);
+        break;
+      case "trade":
+        merged = mergeRecordData(
+          localTrades.get(id) as Record<string, unknown> | undefined,
+          remoteTrades.get(id) as Record<string, unknown> | undefined,
+          lMeta,
+          rMeta
+        );
+        if (merged) trades.push(merged as unknown as Trade);
+        break;
       case "settings":
         merged = mergeRecordData(
           local.settings as unknown as Record<string, unknown>,
@@ -310,9 +367,11 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
     accounts,
     categories,
     budgets,
+    instruments,
     settings: settings ?? local.settings,
     transactionsByYear: groupTransactionsByYear(transactions),
     accountTransfersByYear: groupTransfersByYear(transfers),
+    tradesByYear: groupTradesByYear(trades),
     syncMeta: mergeSyncMetadata(localMeta, remoteMeta, mergedRecords),
   };
 }

@@ -7,6 +7,7 @@ import {
   Settings,
   DatabaseBackup,
   Shapes,
+  TrendingUp,
   UserCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -40,6 +41,11 @@ export const ACCOUNTS: NavItem = {
   href: "/accounts",
   labelKey: "nav.accounts",
   icon: Wallet,
+};
+export const INVESTMENTS: NavItem = {
+  href: "/investments",
+  labelKey: "nav.investments",
+  icon: TrendingUp,
 };
 export const BUDGET: NavItem = {
   href: "/budget",
@@ -76,6 +82,7 @@ export const bottomNavLeft: NavItem[] = [DASHBOARD, TRANSACTIONS];
 export const bottomNavRight: NavItem[] = [ACCOUNTS];
 
 export const moreNavItems: NavItem[] = [
+  INVESTMENTS,
   BUDGET,
   REPORTS,
   CATEGORIES,
