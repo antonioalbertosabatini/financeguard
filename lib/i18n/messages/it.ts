@@ -4,6 +4,7 @@ export const itMessages = {
     transactions: "Transazioni",
     accounts: "Conti",
     budget: "Budget",
+    plans: "Piani di accumulo",
     reports: "Report",
     categories: "Categorie",
     backup: "Backup",
@@ -122,7 +123,9 @@ export const itMessages = {
   dashboard: {
     title: "Dashboard",
     description: "Panoramica finanziaria dell'anno selezionato",
-    totalBalance: "Saldo totale",
+    totalBalance: "Patrimonio",
+    availableBalance: "Disponibile",
+    inAccumulation: "In accumulo",
     monthlyIncome: "Entrate del mese",
     monthlyExpense: "Uscite del mese",
     expensesByCategory: "Spese per categoria",
@@ -283,6 +286,46 @@ export const itMessages = {
     deleteAria: "Elimina budget {name}",
     defaultName: "Budget",
   },
+  plans: {
+    title: "Piani di accumulo",
+    description:
+      "Metti da parte con una cadenza fissa. I versamenti contano come uscite, ma restano nel patrimonio.",
+    categoryName: "Piani di accumulo",
+    new: "Nuovo piano",
+    emptyTitle: "Nessun piano di accumulo",
+    emptyDescription:
+      "Crea un piano per accantonare una somma ogni settimana, ogni due settimane o ogni mese.",
+    needAccount: "Crea almeno un conto prima di avviare un piano di accumulo.",
+    goToAccounts: "Vai ai conti",
+    edit: "Modifica piano",
+    namePlaceholder: "es. Fondo emergenza",
+    amount: "Importo della rata (€)",
+    frequency: "Cadenza",
+    sourceAccount: "Conto di prelievo",
+    startDate: "Data di inizio",
+    selectAccount: "Seleziona conto",
+    rewriteHint:
+      "Modificare importo, cadenza o conto ricalcola tutta la storia visibile del piano.",
+    pause: "Metti in pausa",
+    resume: "Riprendi",
+    paused: "In pausa",
+    active: "Attivo",
+    accumulated: "Accumulato",
+    accumulatedYear: "Nell'anno {year}",
+    posted: "Versamenti effettuati",
+    upcoming: "Prossimi versamenti",
+    noneThisYear: "Nessun versamento in questo anno.",
+    insufficientFunds: "Il saldo del conto di prelievo è inferiore alla rata.",
+    created: "Piano creato",
+    updated: "Piano aggiornato",
+    deleted: "Piano eliminato",
+    pausedToast: "Piano in pausa",
+    resumedToast: "Piano ripreso",
+    deleteConfirm:
+      "Eliminare questo piano? I versamenti virtuali spariscono e l'importo torna sul conto di prelievo.",
+    editAria: "Modifica piano {name}",
+    deleteAria: "Elimina piano {name}",
+  },
   reports: {
     title: "Report",
     description: "Anno {year}",
@@ -432,6 +475,11 @@ export const itMessages = {
       expense: "Uscita",
       transfer: "Trasferimento",
     },
+    accumulationFrequency: {
+      weekly: "Ogni settimana",
+      biweekly: "Ogni due settimane",
+      monthly: "Ogni mese",
+    },
     chart: {
       income: "Entrate",
       expense: "Uscite",
@@ -500,11 +548,14 @@ export const itMessages = {
     transactionNotFound: "Transazione non trovata",
     transferNotFound: "Trasferimento non trovato",
     budgetNotFound: "Budget non trovato",
+    planNotFound: "Piano di accumulo non trovato",
     budgetDuplicate: "Esiste già un budget con questa combinazione",
     deleteAccountInTransactions:
       "Impossibile eliminare: conto usato in transazioni",
     deleteAccountInTransfers:
       "Impossibile eliminare: conto usato in trasferimenti",
+    deleteAccountInPlans:
+      "Impossibile eliminare: conto usato in un piano di accumulo",
     deleteCategoryInUse:
       "Impossibile eliminare: categoria usata in transazioni",
     invalidEncryptedBackup:

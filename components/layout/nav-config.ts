@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   Wallet,
   PiggyBank,
+  Vault,
   BarChart3,
   Settings,
   DatabaseBackup,
@@ -46,6 +47,11 @@ export const BUDGET: NavItem = {
   labelKey: "nav.budget",
   icon: PiggyBank,
 };
+export const PLANS: NavItem = {
+  href: "/plans",
+  labelKey: "nav.plans",
+  icon: Vault,
+};
 export const REPORTS: NavItem = {
   href: "/reports",
   labelKey: "nav.reports",
@@ -77,6 +83,7 @@ export const bottomNavRight: NavItem[] = [ACCOUNTS];
 
 export const moreNavItems: NavItem[] = [
   BUDGET,
+  PLANS,
   REPORTS,
   CATEGORIES,
   BACKUP,

@@ -7,6 +7,7 @@
  */
 import { DEFAULT_CATEGORIES } from "@/lib/db/seed";
 import type { Account } from "@/lib/schemas/account";
+import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
@@ -24,8 +25,18 @@ export interface Dataset {
   transactionsByYear: Record<string, Transaction[]>;
   /** Trasferimenti tra conti raggruppati per anno (chiave = anno come stringa). */
   accountTransfersByYear: Record<string, AccountTransfer[]>;
+  /** Piani di accumulo (entità lunga durata, non partizionata per anno). */
+  accumulationPlans: AccumulationPlan[];
   /** Metadati di sync cifrati nel bundle (timestamp per campo, tombstone). */
   syncMeta?: SyncMetadata;
+}
+
+/** Completa campi introdotti dopo il primo vault, mutando in place. */
+export function normalizeDataset(dataset: Dataset): Dataset {
+  if (!dataset.accumulationPlans) {
+    dataset.accumulationPlans = [];
+  }
+  return dataset;
 }
 
 /**
@@ -41,6 +52,7 @@ export function emptyDataset(): Dataset {
     settings: { ...DEFAULT_SETTINGS },
     transactionsByYear: {},
     accountTransfersByYear: {},
+    accumulationPlans: [],
     syncMeta: emptySyncMetadata(),
   };
 }

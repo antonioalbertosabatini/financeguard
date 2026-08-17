@@ -15,8 +15,9 @@ FinanceGuard runs fully offline as a local-only app, or optionally syncs an **en
 
 ## Features
 
-- **Dashboard** — total balance, monthly income/expense, category breakdown and trends.
+- **Dashboard** — net worth vs available cash, monthly income/expense, category breakdown and trends.
 - **Accounts** — checking, cash, savings, credit card; per-account currency and initial balance.
+- **Savings plans** — scheduled contributions from an account; they count as expenses in reports but stay in net worth. Plans can be paused.
 - **Transactions** — income, expenses and inter-account transfers, with tags, search and year filtering.
 - **Recurrences** — recurring transactions with start/end dates.
 - **Categories** — customizable income/expense categories (sensible defaults seeded).

@@ -1,4 +1,5 @@
 import { getAccounts } from "@/lib/db/accounts";
+import { getAccumulationPlans } from "@/lib/db/accumulation-plans";
 import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getBudgets } from "@/lib/db/budgets";
 import { getCategories } from "@/lib/db/categories";
@@ -17,6 +18,7 @@ import { mapLocale } from "@/lib/i18n/config";
 import { translate } from "@/lib/i18n/translate";
 import {
   createTransactionSchemas,
+  type ExpandedTransaction,
   type TransactionFilters,
   type TransactionInput,
 } from "@/lib/schemas/transaction";
@@ -31,6 +33,14 @@ import {
 } from "@/lib/utils/balance";
 import { currentYear } from "@/lib/utils/dates";
 import {
+  accumulationCategory,
+  contributionsForYear,
+  postedContributionsForYear,
+  sumAccumulation,
+  toSyntheticExpenses,
+  type AccumulationContribution,
+} from "@/lib/utils/accumulation";
+import {
   expandRecurrences,
   filterExpandedTransactions,
   filterOccurrencesForListView,
@@ -43,7 +53,8 @@ function mapCategoryExpenses(
   amounts: Record<string, number>,
   sort = false
 ) {
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const withSystem = [...categories, accumulationCategory(accumulationCategoryName())];
+  const categoryMap = Object.fromEntries(withSystem.map((c) => [c.id, c]));
   const items = Object.entries(amounts).map(([categoryId, amount]) => ({
     categoryId,
     name: categoryMap[categoryId]?.name ?? categoryId,
@@ -51,6 +62,27 @@ function mapCategoryExpenses(
     amount,
   }));
   return sort ? items.sort((a, b) => b.amount - a.amount) : items;
+}
+
+function accumulationCategoryName() {
+  return translate(getCurrentLanguage(), "plans.categoryName");
+}
+
+function withAccumulationExpenses(
+  expanded: ExpandedTransaction[],
+  contributions: AccumulationContribution[]
+) {
+  return [...expanded, ...toSyntheticExpenses(contributions)];
+}
+
+async function postedAccumulation(year: number, asOfISO?: string) {
+  const plans = await getAccumulationPlans();
+  return postedContributionsForYear(plans, year, asOfISO);
+}
+
+async function yearAccumulation(year: number) {
+  const plans = await getAccumulationPlans();
+  return contributionsForYear(plans, year);
 }
 
 async function expandedForYear(year: number, asOfISO?: string) {
@@ -61,7 +93,16 @@ async function expandedForYear(year: number, asOfISO?: string) {
 }
 
 export async function getAvailableYears() {
-  const years = await listTransactionYears();
+  const [years, plans] = await Promise.all([
+    listTransactionYears(),
+    getAccumulationPlans(),
+  ]);
+  for (const plan of plans) {
+    const startYear = parseInt(plan.startDate.slice(0, 4), 10);
+    if (!Number.isNaN(startYear) && !years.includes(startYear)) {
+      years.push(startYear);
+    }
+  }
   const now = currentYear();
   if (!years.includes(now)) years.unshift(now);
   return [...new Set(years)].sort((a, b) => b - a);
@@ -131,28 +172,40 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
 }
 
 export async function getDashboardData(year: number) {
-  const [accounts, categories, settings, transfers, expanded] = await Promise.all([
-    getAccounts(),
-    getCategories(),
-    getSettings(),
-    getAccountTransfersForYear(year),
-    expandedForYear(year),
-  ]);
+  const [accounts, categories, settings, transfers, expanded, posted] =
+    await Promise.all([
+      getAccounts(),
+      getCategories(),
+      getSettings(),
+      getAccountTransfersForYear(year),
+      expandedForYear(year),
+      postedAccumulation(year),
+    ]);
 
   const now = new Date();
   const monthPrefix = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthTxs = expanded.filter((tx) => tx.date.startsWith(monthPrefix));
+  const reportTxs = withAccumulationExpenses(expanded, posted);
+  const monthTxs = reportTxs.filter((tx) => tx.date.startsWith(monthPrefix));
+  const liquidBalance = calculateTotalBalance(
+    accounts,
+    expanded,
+    transfers,
+    posted
+  );
+  const inAccumulation = sumAccumulation(posted);
 
   return {
     settings,
-    totalBalance: calculateTotalBalance(accounts, expanded, transfers),
+    totalBalance: liquidBalance + inAccumulation,
+    availableBalance: liquidBalance,
+    inAccumulation,
     monthlyIncome: sumByType(monthTxs, "income"),
     monthlyExpense: sumByType(monthTxs, "expense"),
     expensesByCategory: mapCategoryExpenses(
       categories,
-      sumExpensesByCategory(expanded)
+      sumExpensesByCategory(reportTxs)
     ),
-    monthlyTrend: sumByMonth(expanded, year),
+    monthlyTrend: sumByMonth(reportTxs, year),
   };
 }
 
@@ -185,13 +238,22 @@ export async function getAvailableTags(
 }
 
 export async function getMonthlyReport(year: number, month: number) {
-  const [categories, settings, expanded] = await Promise.all([
+  const [categories, settings, expanded, posted] = await Promise.all([
     getCategories(),
     getSettings(),
     expandedForYear(year),
+    postedAccumulation(year),
   ]);
 
-  const monthTxs = filterByMonth(expanded, year, month);
+  const monthTxs = filterByMonth(
+    withAccumulationExpenses(expanded, posted),
+    year,
+    month
+  );
+  const reportCategories = [
+    ...categories,
+    accumulationCategory(accumulationCategoryName()),
+  ];
 
   return {
     settings,
@@ -207,85 +269,112 @@ export async function getMonthlyReport(year: number, month: number) {
       monthTxs,
       year,
       month,
-      categories.map((c) => ({ id: c.id, name: c.name, color: c.color }))
+      reportCategories.map((c) => ({ id: c.id, name: c.name, color: c.color }))
     ),
   };
 }
 
 export async function getAnnualReport(year: number) {
-  const [categories, settings, expanded] = await Promise.all([
+  const [categories, settings, expanded, posted] = await Promise.all([
     getCategories(),
     getSettings(),
     expandedForYear(year),
+    postedAccumulation(year),
   ]);
+
+  const reportTxs = withAccumulationExpenses(expanded, posted);
 
   return {
     settings,
-    income: sumByType(expanded, "income"),
-    expense: sumByType(expanded, "expense"),
-    net: sumByType(expanded, "income") - sumByType(expanded, "expense"),
-    monthlyTrend: sumByMonth(expanded, year),
+    income: sumByType(reportTxs, "income"),
+    expense: sumByType(reportTxs, "expense"),
+    net: sumByType(reportTxs, "income") - sumByType(reportTxs, "expense"),
+    monthlyTrend: sumByMonth(reportTxs, year),
     expensesByCategory: mapCategoryExpenses(
       categories,
-      sumExpensesByCategory(expanded),
+      sumExpensesByCategory(reportTxs),
       true
     ),
   };
 }
 
 export async function getAccountsWithBalances(year: number) {
-  const [accounts, expanded, transfers] = await Promise.all([
+  const [accounts, expanded, transfers, posted] = await Promise.all([
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
+    yearAccumulation(year),
   ]);
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers),
+    balance: calculateAccountBalance(account, expanded, transfers, posted),
   }));
 }
 
 export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string) {
-  const [accounts, expanded, transfers] = await Promise.all([
+  const [accounts, expanded, transfers, posted] = await Promise.all([
     getAccounts(),
     expandedForYear(year, asOfISO),
     getAccountTransfersForYear(year).then((items) =>
       items.filter((tr) => tr.date <= asOfISO)
     ),
+    postedAccumulation(year, asOfISO),
   ]);
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers),
+    balance: calculateAccountBalance(account, expanded, transfers, posted),
   }));
 }
 
 export async function getAccountsAnalysisSummary(year: number, asOfISO: string) {
-  const [accounts, expandedAll, transfersAll] = await Promise.all([
+  const [accounts, expandedAll, transfersAll, yearPosted] = await Promise.all([
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
+    yearAccumulation(year),
   ]);
 
   const expandedAsOf = expandedAll.filter((tx) => tx.date <= asOfISO);
   const transfersAsOf = transfersAll.filter((tr) => tr.date <= asOfISO);
+  const postedAsOfDate = yearPosted.filter((item) => item.date <= asOfISO);
 
   const accountsAsOf = accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expandedAsOf, transfersAsOf),
+    balance: calculateAccountBalance(
+      account,
+      expandedAsOf,
+      transfersAsOf,
+      postedAsOfDate
+    ),
   }));
 
   const accountsAll = accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expandedAll, transfersAll),
+    balance: calculateAccountBalance(
+      account,
+      expandedAll,
+      transfersAll,
+      yearPosted
+    ),
   }));
 
   return {
     accountsAsOf,
     accountsAll,
-    totalAsOf: calculateTotalBalance(accounts, expandedAsOf, transfersAsOf),
-    totalAll: calculateTotalBalance(accounts, expandedAll, transfersAll),
+    totalAsOf: calculateTotalBalance(
+      accounts,
+      expandedAsOf,
+      transfersAsOf,
+      postedAsOfDate
+    ),
+    totalAll: calculateTotalBalance(
+      accounts,
+      expandedAll,
+      transfersAll,
+      yearPosted
+    ),
     asOfISO,
   };
 }

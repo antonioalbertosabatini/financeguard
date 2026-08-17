@@ -3,6 +3,7 @@
  * Traccia timestamp per campo/record e tombstone per eliminazioni.
  */
 import type { Account } from "@/lib/schemas/account";
+import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
@@ -19,6 +20,7 @@ export type SyncEntityType =
   | "budget"
   | "transaction"
   | "accountTransfer"
+  | "accumulationPlan"
   | "settings";
 
 export interface FieldTimestamp {
@@ -164,6 +166,13 @@ function collectEntities(dataset: Dataset): Array<{
       type: "budget",
       id: budget.id,
       data: budget as unknown as Record<string, unknown>,
+    });
+  }
+  for (const plan of dataset.accumulationPlans ?? []) {
+    items.push({
+      type: "accumulationPlan",
+      id: plan.id,
+      data: plan as unknown as Record<string, unknown>,
     });
   }
   items.push({
@@ -335,6 +344,22 @@ export function trackTransferUpsert(
     "accountTransfer",
     tr.id,
     tr as unknown as Record<string, unknown>,
+    deviceId,
+    previous as unknown as Record<string, unknown> | undefined
+  );
+}
+
+export function trackAccumulationPlanUpsert(
+  dataset: Dataset,
+  plan: AccumulationPlan,
+  deviceId: string,
+  previous?: AccumulationPlan
+): void {
+  trackUpsert(
+    dataset,
+    "accumulationPlan",
+    plan.id,
+    plan as unknown as Record<string, unknown>,
     deviceId,
     previous as unknown as Record<string, unknown> | undefined
   );

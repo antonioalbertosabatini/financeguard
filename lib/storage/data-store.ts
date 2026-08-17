@@ -22,7 +22,7 @@ import {
   openBundle,
   saveBundle,
 } from "@/lib/storage/bundle";
-import { emptyDataset, type Dataset } from "@/lib/storage/dataset";
+import { emptyDataset, normalizeDataset, type Dataset } from "@/lib/storage/dataset";
 import { IndexedDbAdapter } from "@/lib/storage/idb-adapter";
 import { getLocalDeviceId } from "@/lib/storage/local-store";
 import {
@@ -122,7 +122,7 @@ export async function unlockApp(password: string): Promise<AuthError | void> {
   key = opened.key;
   vault = opened.vault;
   revision = opened.revision;
-  dataset = opened.dataset;
+  dataset = normalizeDataset(opened.dataset);
   sessionPassword = password;
   if (migrateSyncMetadataIfNeeded(dataset, deviceId)) {
     emit({ version: snapshot.version + 1 });
@@ -180,7 +180,7 @@ export function getDataset(): Dataset {
   if (!dataset) {
     throw new AppError("errors.appLockedWithHint");
   }
-  return dataset;
+  return normalizeDataset(dataset);
 }
 
 /**
@@ -189,6 +189,7 @@ export function getDataset(): Dataset {
  */
 export async function replaceDataset(next: Dataset): Promise<void> {
   if (!key || !vault) throw new AppError("errors.appLocked");
+  normalizeDataset(next);
   stampDatasetAsAuthoritative(next, deviceId);
   dataset = next;
   emit({ version: snapshot.version + 1 });
@@ -203,6 +204,7 @@ export async function replaceDatasetWithPassword(
   next: Dataset,
   password: string
 ): Promise<void> {
+  normalizeDataset(next);
   stampDatasetAsAuthoritative(next, deviceId);
   const created = await createBundle(password, next, deviceId);
   await getAdapter().save(created.text);

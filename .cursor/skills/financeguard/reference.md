@@ -36,7 +36,7 @@ Traccia per ogni record:
 - `updatedAt` per campo (merge last-write-wins per campo)
 - Tombstone su delete
 
-Entità tracciate: accounts, categories, budgets, transactions, accountTransfers, settings.
+Entità tracciate: accounts, categories, budgets, transactions, accountTransfers, accumulationPlans, settings.
 
 ## Account transfers vs transaction transfer
 
@@ -55,6 +55,10 @@ Preferire `AccountTransfer` per nuovi trasferimenti tra conti.
 
 Transazioni con `isRecurring: true` hanno `recurrenceStart` / `recurrenceEnd` nello stesso anno della `date`.
 `expandRecurrences()` genera occorrenze virtuali (`ExpandedTransaction`) per visualizzazione e filtri.
+
+## Accumulation plans (`lib/utils/accumulation.ts`)
+
+Piani in `dataset.accumulationPlans` (non partizionati per anno). I versamenti sono occorrenze virtuali: debitano il conto sorgente, contano come uscita nei report (categoria sistema `cat_accumulation`) e restano nel patrimonio. Il budget li ignora.
 
 ## Balance (`lib/utils/balance.ts`)
 

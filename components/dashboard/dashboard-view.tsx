@@ -25,6 +25,8 @@ import { useI18n } from "@/providers/i18n-provider";
 
 type DashboardProps = {
   totalBalance: number;
+  availableBalance: number;
+  inAccumulation: number;
   monthlyIncome: number;
   monthlyExpense: number;
   currency: string;
@@ -76,6 +78,8 @@ function FlowTile({
 
 export function DashboardView({
   totalBalance,
+  availableBalance,
+  inAccumulation,
   monthlyIncome,
   monthlyExpense,
   currency,
@@ -123,6 +127,24 @@ export function DashboardView({
           <p className="mt-2 text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">
             {formatAmount(totalBalance, currency)}
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-primary-foreground/70">
+                {t("dashboard.availableBalance")}
+              </p>
+              <p className="mt-0.5 font-semibold tabular-nums">
+                {formatAmount(availableBalance, currency)}
+              </p>
+            </div>
+            <div>
+              <p className="text-primary-foreground/70">
+                {t("dashboard.inAccumulation")}
+              </p>
+              <p className="mt-0.5 font-semibold tabular-nums">
+                {formatAmount(inAccumulation, currency)}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

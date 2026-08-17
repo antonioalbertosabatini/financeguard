@@ -1,6 +1,7 @@
 import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
+import type { AccumulationContribution } from "@/lib/utils/accumulation";
 import { getDaysInMonth } from "@/lib/utils/dates";
 
 export type DailyExpenseRow = {
@@ -42,10 +43,18 @@ export function getAccountTransferEffect(
   return 0;
 }
 
+export function getAccumulationEffect(
+  contribution: AccumulationContribution,
+  accountId: string
+): number {
+  return contribution.sourceAccountId === accountId ? -contribution.amount : 0;
+}
+
 export function calculateAccountBalance(
   account: Account,
   transactions: ExpandedTransaction[],
-  transfers: AccountTransfer[] = []
+  transfers: AccountTransfer[] = [],
+  contributions: AccumulationContribution[] = []
 ): number {
   const txDelta = transactions
     .filter((tx) => tx.accountId === account.id)
@@ -56,16 +65,24 @@ export function calculateAccountBalance(
     0
   );
 
-  return account.initialBalance + txDelta + transferDelta;
+  const accumulationDelta = contributions.reduce(
+    (sum, item) => sum + getAccumulationEffect(item, account.id),
+    0
+  );
+
+  return account.initialBalance + txDelta + transferDelta + accumulationDelta;
 }
 
 export function calculateTotalBalance(
   accounts: Account[],
   transactions: ExpandedTransaction[],
-  transfers: AccountTransfer[] = []
+  transfers: AccountTransfer[] = [],
+  contributions: AccumulationContribution[] = []
 ): number {
   return accounts.reduce(
-    (sum, account) => sum + calculateAccountBalance(account, transactions, transfers),
+    (sum, account) =>
+      sum +
+      calculateAccountBalance(account, transactions, transfers, contributions),
     0
   );
 }

@@ -104,6 +104,49 @@ describe("mergeDatasets", () => {
     expect(merged.accounts).toHaveLength(1);
     expect(merged.accounts[0].name).toBe("Aggiornato");
   });
+
+  it("merges accumulation plans", () => {
+    const local = emptyDataset();
+    const remote = emptyDataset();
+    const plan = {
+      id: "pac_1",
+      name: "Locale",
+      amount: 1000,
+      frequency: "monthly" as const,
+      sourceAccountId: "acc_1",
+      startDate: "2026-01-01",
+      status: "active" as const,
+      pausePeriods: [],
+    };
+    local.accumulationPlans = [plan];
+    remote.accumulationPlans = [{ ...plan, name: "Remoto", amount: 2000 }];
+
+    const at = "2026-01-01T10:00:00.000Z";
+    const later = "2026-01-02T10:00:00.000Z";
+    const key = recordKey("accumulationPlan", "pac_1");
+
+    local.syncMeta!.records[key] = {
+      updatedAt: at,
+      deviceId: "dev-a",
+      fields: {
+        name: { updatedAt: at, deviceId: "dev-a" },
+        amount: { updatedAt: at, deviceId: "dev-a" },
+      },
+    };
+    remote.syncMeta!.records[key] = {
+      updatedAt: later,
+      deviceId: "dev-b",
+      fields: {
+        name: { updatedAt: later, deviceId: "dev-b" },
+        amount: { updatedAt: at, deviceId: "dev-a" },
+      },
+    };
+
+    const merged = mergeDatasets(local, remote);
+    expect(merged.accumulationPlans).toHaveLength(1);
+    expect(merged.accumulationPlans[0].name).toBe("Remoto");
+    expect(merged.accumulationPlans[0].amount).toBe(1000);
+  });
 });
 
 describe("sync metadata", () => {

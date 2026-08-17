@@ -15,6 +15,8 @@ export default function DashboardPage() {
   return (
     <DashboardView
       totalBalance={data.totalBalance}
+      availableBalance={data.availableBalance}
+      inAccumulation={data.inAccumulation}
       monthlyIncome={data.monthlyIncome}
       monthlyExpense={data.monthlyExpense}
       currency={data.settings.defaultCurrency}

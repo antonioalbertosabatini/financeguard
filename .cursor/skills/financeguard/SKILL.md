@@ -28,6 +28,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 | Entità | Schema | Note |
 |--------|--------|------|
 | Account | `lib/schemas/account.ts` | Saldo in centesimi (`initialBalance`), tipi: checking/cash/savings/credit_card |
+| Piano di accumulo | `lib/schemas/accumulation-plan.ts` | Busta virtuale; versamenti espansi a runtime (`lib/utils/accumulation.ts`) |
 | Categoria | `lib/schemas/category.ts` | income/expense, icone in `lib/constants/category-icons.ts` |
 | Transazione | `lib/schemas/transaction.ts` | Importi interi positivi; date `YYYY-MM-DD`; raggruppate per anno in `transactionsByYear` |
 | Trasferimento | `lib/schemas/account-transfer.ts` | Entità separata in `accountTransfersByYear` (non confondere con `type: "transfer"` legacy) |
@@ -37,6 +38,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 **Regole dominio:**
 - Tutti gli importi sono **interi in centesimi** — usare `lib/utils/money.ts` (`toCents`, `formatCents`, `parseEuroInput`).
 - Le transazioni ricorrenti si espandono a runtime con `lib/utils/recurrence.ts` (`expandRecurrences`).
+- I piani di accumulo si espandono a runtime con `lib/utils/accumulation.ts`; i versamenti sono uscite nei report ma restano nel patrimonio.
 - Gli ID seguono `generateId(prefix)` in `lib/db/index.ts` (es. `tx_a1b2c3d4`).
 - Per entrate/uscite la categoria è obbligatoria; i trasferimenti tra conti usano `account-transfers`.
 
@@ -100,6 +102,7 @@ npm run cap:android  # sync + apri Android Studio
 | `/` | Dashboard |
 | `/transactions`, `/add` | Lista e creazione transazioni |
 | `/accounts` | Conti |
+| `/plans` | Piani di accumulo |
 | `/budget` | Budget |
 | `/reports` | Report |
 | `/categories` | Categorie |

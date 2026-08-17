@@ -5,8 +5,8 @@
  * restano compatibili tra le due:
  *
  *   data/accounts.json, data/categories.json, data/budgets.json,
- *   data/settings.json, data/transactions/<anno>.json,
- *   data/account-transfers/<anno>.json
+ *   data/settings.json, data/accumulation-plans.json,
+ *   data/transactions/<anno>.json, data/account-transfers/<anno>.json
  *
  * In chiaro questi file sono JSON leggibili; nel backup criptato sono envelope
  * cifrati e l'archivio include anche vault.json.
@@ -21,6 +21,7 @@ import {
   type VaultFile,
 } from "@/lib/crypto/web-crypto";
 import { accountsFileSchema } from "@/lib/schemas/account";
+import { accumulationPlansFileSchema } from "@/lib/schemas/accumulation-plan";
 import { accountTransfersFileSchema } from "@/lib/schemas/account-transfer";
 import { budgetsFileSchema } from "@/lib/schemas/budget";
 import { parseCategoriesFile } from "@/lib/schemas/category";
@@ -38,6 +39,9 @@ function datasetToFiles(dataset: Dataset): Record<string, unknown> {
     [`${ROOT}/categories.json`]: { categories: dataset.categories },
     [`${ROOT}/budgets.json`]: { budgets: dataset.budgets },
     [`${ROOT}/settings.json`]: dataset.settings,
+    [`${ROOT}/accumulation-plans.json`]: {
+      accumulationPlans: dataset.accumulationPlans ?? [],
+    },
   };
   for (const [year, transactions] of Object.entries(dataset.transactionsByYear)) {
     files[`${TX_DIR}/${year}.json`] = { transactions };
@@ -89,6 +93,12 @@ async function filesToDataset(
 
   const settings = await read(`${ROOT}/settings.json`);
   if (settings) dataset.settings = settingsSchema.parse(settings);
+
+  const plans = await read(`${ROOT}/accumulation-plans.json`);
+  if (plans) {
+    dataset.accumulationPlans =
+      accumulationPlansFileSchema.parse(plans).accumulationPlans;
+  }
 
   return dataset;
 }

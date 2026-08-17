@@ -14,6 +14,7 @@ export const enMessages: {
     transactions: "Transactions",
     accounts: "Accounts",
     budget: "Budget",
+    plans: "Savings plans",
     reports: "Reports",
     categories: "Categories",
     backup: "Backup",
@@ -132,7 +133,9 @@ export const enMessages: {
   dashboard: {
     title: "Dashboard",
     description: "Financial overview for the selected year",
-    totalBalance: "Total balance",
+    totalBalance: "Net worth",
+    availableBalance: "Available",
+    inAccumulation: "In savings plans",
     monthlyIncome: "Monthly income",
     monthlyExpense: "Monthly expenses",
     expensesByCategory: "Expenses by category",
@@ -293,6 +296,46 @@ export const enMessages: {
     deleteAria: "Delete budget {name}",
     defaultName: "Budget",
   },
+  plans: {
+    title: "Savings plans",
+    description:
+      "Set money aside on a schedule. Contributions count as expenses, but they stay in your net worth.",
+    categoryName: "Savings plans",
+    new: "New plan",
+    emptyTitle: "No savings plans",
+    emptyDescription:
+      "Create a plan to set aside an amount every week, every two weeks, or every month.",
+    needAccount: "Create at least one account before starting a savings plan.",
+    goToAccounts: "Go to accounts",
+    edit: "Edit plan",
+    namePlaceholder: "e.g. Emergency fund",
+    amount: "Installment amount (€)",
+    frequency: "Frequency",
+    sourceAccount: "Source account",
+    startDate: "Start date",
+    selectAccount: "Select account",
+    rewriteHint:
+      "Changing amount, frequency, or account recalculates the whole visible history of the plan.",
+    pause: "Pause",
+    resume: "Resume",
+    paused: "Paused",
+    active: "Active",
+    accumulated: "Saved",
+    accumulatedYear: "In {year}",
+    posted: "Posted contributions",
+    upcoming: "Upcoming contributions",
+    noneThisYear: "No contributions in this year.",
+    insufficientFunds: "The source account balance is lower than the installment.",
+    created: "Plan created",
+    updated: "Plan updated",
+    deleted: "Plan deleted",
+    pausedToast: "Plan paused",
+    resumedToast: "Plan resumed",
+    deleteConfirm:
+      "Delete this plan? Virtual contributions disappear and the amount returns to the source account.",
+    editAria: "Edit plan {name}",
+    deleteAria: "Delete plan {name}",
+  },
   reports: {
     title: "Reports",
     description: "Year {year}",
@@ -442,6 +485,11 @@ export const enMessages: {
       expense: "Expense",
       transfer: "Transfer",
     },
+    accumulationFrequency: {
+      weekly: "Weekly",
+      biweekly: "Every two weeks",
+      monthly: "Monthly",
+    },
     chart: {
       income: "Income",
       expense: "Expenses",
@@ -508,11 +556,14 @@ export const enMessages: {
     transactionNotFound: "Transaction not found",
     transferNotFound: "Transfer not found",
     budgetNotFound: "Budget not found",
+    planNotFound: "Savings plan not found",
     budgetDuplicate: "A budget with this combination already exists",
     deleteAccountInTransactions:
       "Cannot delete: account used in transactions",
     deleteAccountInTransfers:
       "Cannot delete: account used in transfers",
+    deleteAccountInPlans:
+      "Cannot delete: account used in a savings plan",
     deleteCategoryInUse:
       "Cannot delete: category used in transactions",
     invalidEncryptedBackup:
