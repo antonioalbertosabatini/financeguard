@@ -6,7 +6,10 @@
  * (vedi lib/storage/bundle.ts) tramite lo StorageAdapter.
  */
 import { DEFAULT_CATEGORIES } from "@/lib/db/seed";
-import type { Account } from "@/lib/schemas/account";
+import {
+  assignAccountOrders,
+  type Account,
+} from "@/lib/schemas/account";
 import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
@@ -35,6 +38,9 @@ export interface Dataset {
 export function normalizeDataset(dataset: Dataset): Dataset {
   if (!dataset.accumulationPlans) {
     dataset.accumulationPlans = [];
+  }
+  if (Array.isArray(dataset.accounts)) {
+    dataset.accounts = assignAccountOrders(dataset.accounts);
   }
   return dataset;
 }

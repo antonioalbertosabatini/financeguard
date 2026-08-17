@@ -230,6 +230,8 @@ export const itMessages = {
     created: "Conto creato",
     deleted: "Conto eliminato",
     deleteConfirm: "Eliminare questo conto?",
+    moveUp: "Sposta su",
+    moveDown: "Sposta giù",
     transferTitle: "Trasferimento tra conti",
     transferAmount: "Importo ({currency})",
     swapAccounts: "Scambia conti",
@@ -544,6 +546,7 @@ export const itMessages = {
     appLockedWithHint:
       "App bloccata: inserisci la password per accedere ai dati.",
     accountNotFound: "Conto non trovato",
+    invalidAccountOrder: "Ordine dei conti non valido",
     categoryNotFound: "Categoria non trovata",
     transactionNotFound: "Transazione non trovata",
     transferNotFound: "Trasferimento non trovato",

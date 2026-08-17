@@ -16,6 +16,7 @@ function makeAccount(id: string, name: string): Account {
     initialBalance: 0,
     currency: "EUR",
     icon: "wallet",
+    order: 0,
   };
 }
 

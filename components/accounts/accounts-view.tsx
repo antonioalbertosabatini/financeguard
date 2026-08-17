@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   ArrowLeftRight,
   ChevronDown,
+  ChevronUp,
   Filter,
   Shuffle,
   Pencil,
@@ -56,6 +57,7 @@ import {
 import {
   createAccount,
   deleteAccount,
+  reorderAccounts,
   updateAccount,
 } from "@/lib/actions/accounts";
 import {
@@ -316,6 +318,19 @@ export function AccountsView({
     }
   }
 
+  async function handleMove(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= accounts.length) return;
+    const ids = accounts.map((account) => account.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(target, 0, moved);
+    try {
+      await reorderAccounts(ids);
+    } catch (err) {
+      toast.error(formatErrorMessage(language, err));
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -348,7 +363,7 @@ export function AccountsView({
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
+          {accounts.map((account, index) => (
             <Card key={account.id}>
               <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-start gap-3">
@@ -371,7 +386,27 @@ export function AccountsView({
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex items-start gap-1">
+                  <div className="flex flex-col">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={index === 0}
+                      aria-label={t("accounts.moveUp")}
+                      onClick={() => handleMove(index, -1)}
+                    >
+                      <ChevronUp className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={index === accounts.length - 1}
+                      aria-label={t("accounts.moveDown")}
+                      onClick={() => handleMove(index, 1)}
+                    >
+                      <ChevronDown className="size-3.5" />
+                    </Button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon-sm"

@@ -17,7 +17,7 @@ export function normalizeAccountIcon(value: unknown): string {
     : ACCOUNT_ICON_FALLBACK;
 }
 
-export const accountSchema = z.object({
+const accountBaseSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   type: z.enum(ACCOUNT_TYPES),
@@ -26,11 +26,36 @@ export const accountSchema = z.object({
   icon: z.preprocess(normalizeAccountIcon, z.string().min(1)),
 });
 
-export const accountInputSchema = accountSchema.omit({ id: true });
-
-export const accountsFileSchema = z.object({
-  accounts: z.array(accountSchema),
+export const accountSchema = accountBaseSchema.extend({
+  order: z.number().int().nonnegative(),
 });
+
+const rawAccountSchema = accountBaseSchema.extend({
+  order: z.number().int().nonnegative().optional(),
+});
+
+export const accountInputSchema = accountSchema.omit({ id: true, order: true });
 
 export type Account = z.infer<typeof accountSchema>;
 export type AccountInput = z.infer<typeof accountInputSchema>;
+export type AccountDraft = z.infer<typeof rawAccountSchema>;
+
+/** Vault e backup senza `order`: usa l'indice nell'array JSON. */
+export function assignAccountOrders(accounts: AccountDraft[]): Account[] {
+  return accounts.map((account, index) => ({
+    ...account,
+    order: account.order ?? index,
+  }));
+}
+
+export function sortAccounts<T extends Pick<Account, "id" | "order">>(
+  accounts: T[]
+): T[] {
+  return [...accounts].sort(
+    (a, b) => a.order - b.order || a.id.localeCompare(b.id)
+  );
+}
+
+export const accountsFileSchema = z.object({
+  accounts: z.array(rawAccountSchema).transform(assignAccountOrders),
+});

@@ -27,7 +27,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 
 | Entità | Schema | Note |
 |--------|--------|------|
-| Account | `lib/schemas/account.ts` | Saldo in centesimi (`initialBalance`), tipi: checking/cash/savings/credit_card |
+| Account | `lib/schemas/account.ts` | Saldo in centesimi (`initialBalance`), tipi: checking/cash/savings/credit_card, `order` (ordine di visualizzazione; se assente = posizione nell'array JSON) |
 | Piano di accumulo | `lib/schemas/accumulation-plan.ts` | Busta virtuale; versamenti espansi a runtime (`lib/utils/accumulation.ts`) |
 | Categoria | `lib/schemas/category.ts` | income/expense, icone in `lib/constants/category-icons.ts` |
 | Transazione | `lib/schemas/transaction.ts` | Importi interi positivi; date `YYYY-MM-DD`; raggruppate per anno in `transactionsByYear` |

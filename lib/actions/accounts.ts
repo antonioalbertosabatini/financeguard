@@ -1,7 +1,9 @@
+import { z } from "zod";
 import {
   createAccount as dbCreateAccount,
   deleteAccount as dbDeleteAccount,
   getAccounts as dbGetAccounts,
+  reorderAccounts as dbReorderAccounts,
   updateAccount as dbUpdateAccount,
 } from "@/lib/db/accounts";
 import { getAllAccountTransfers } from "@/lib/db/account-transfers";
@@ -25,6 +27,11 @@ export async function createAccount(data: AccountInput) {
 export async function updateAccount(id: string, data: AccountInput) {
   const parsed = accountInputSchema.parse(data);
   return dbUpdateAccount(id, parsed);
+}
+
+export async function reorderAccounts(orderedIds: string[]) {
+  const parsed = z.array(z.string().min(1)).parse(orderedIds);
+  return dbReorderAccounts(parsed);
 }
 
 export async function deleteAccount(id: string) {

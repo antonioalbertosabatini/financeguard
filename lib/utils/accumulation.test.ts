@@ -34,6 +34,7 @@ function makeAccount(): Account {
     initialBalance: 50000,
     currency: "EUR",
     icon: "wallet",
+    order: 0,
   };
 }
 

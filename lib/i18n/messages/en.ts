@@ -240,6 +240,8 @@ export const enMessages: {
     created: "Account created",
     deleted: "Account deleted",
     deleteConfirm: "Delete this account?",
+    moveUp: "Move up",
+    moveDown: "Move down",
     transferTitle: "Transfer between accounts",
     transferAmount: "Amount ({currency})",
     swapAccounts: "Swap accounts",
@@ -552,6 +554,7 @@ export const enMessages: {
     appLockedWithHint:
       "App is locked: enter your password to access data.",
     accountNotFound: "Account not found",
+    invalidAccountOrder: "Invalid account order",
     categoryNotFound: "Category not found",
     transactionNotFound: "Transaction not found",
     transferNotFound: "Transfer not found",
