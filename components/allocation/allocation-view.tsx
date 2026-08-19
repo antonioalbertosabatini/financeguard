@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Banknote, Settings2 } from "lucide-react";
+import { AllocationAssignDialog } from "@/components/allocation/allocation-assign-dialog";
 import { AllocationSettingsDialog } from "@/components/allocation/allocation-settings-dialog";
 import { ALLOCATION_BUCKETS } from "@/components/allocation/allocation-buckets";
 import { PageHeader } from "@/components/layout/page-header";
@@ -15,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,7 @@ import {
 import { getIncomeAllocation } from "@/lib/actions/income-allocation";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { getMonthLabelsFull } from "@/lib/i18n/translate";
+import type { IncomeAllocationBucketId } from "@/lib/schemas/settings";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { currentMonth } from "@/lib/utils/dates";
 import { cn } from "@/lib/utils";
@@ -35,6 +38,8 @@ export function AllocationView({ year }: { year: number }) {
   const formatAmount = useFormatCents();
   const [month, setMonth] = useState(String(currentMonth()));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [assigningBucket, setAssigningBucket] =
+    useState<IncomeAllocationBucketId | null>(null);
   const monthNum = parseInt(month, 10);
 
   const { data } = useAsyncData(
@@ -51,7 +56,16 @@ export function AllocationView({ year }: { year: number }) {
   if (!data) return <FullScreenLoader />;
 
   const stale = data.year !== year || data.month !== monthNum;
-  const { settings, incomeCategories, totalIncome, percents, amounts } = data;
+  const {
+    settings,
+    incomeCategories,
+    totalIncome,
+    percents,
+    expenses,
+    accumulation,
+    assignments,
+    progress,
+  } = data;
   const currency = settings.defaultCurrency;
 
   return (
@@ -135,6 +149,18 @@ export function AllocationView({ year }: { year: number }) {
           {ALLOCATION_BUCKETS.map((bucket) => {
             const Icon = bucket.icon;
             const percent = percents[bucket.id];
+            const item = progress[bucket.id];
+            const overspent = item.remaining < 0;
+            const pctRaw =
+              item.target === 0
+                ? item.spent > 0
+                  ? 100
+                  : 0
+                : (item.spent / item.target) * 100;
+            const assignedCount =
+              assignments[bucket.id].length +
+              (bucket.id === "longTerm" ? accumulation.length : 0);
+
             return (
               <Card key={bucket.id}>
                 <CardHeader className="flex flex-row items-start justify-between gap-3">
@@ -153,13 +179,63 @@ export function AllocationView({ year }: { year: number }) {
                   </div>
                   <Badge variant="secondary">{percent}%</Badge>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tracking-tight tabular-nums">
-                    {formatAmount(amounts[bucket.id], currency)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("allocation.percentOfIncome", { percent })}
-                  </p>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {t("allocation.target")}
+                    </p>
+                    <p className="text-2xl font-bold tracking-tight tabular-nums">
+                      {formatAmount(item.target, currency)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("allocation.percentOfIncome", { percent })}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        {t("allocation.spent")}
+                      </p>
+                      <p className="mt-1 font-medium tabular-nums">
+                        {formatAmount(item.spent, currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        {overspent
+                          ? t("allocation.overspent")
+                          : t("allocation.remaining")}
+                      </p>
+                      <p
+                        className={cn(
+                          "mt-1 font-medium tabular-nums",
+                          overspent ? "text-destructive" : "text-success"
+                        )}
+                      >
+                        {formatAmount(Math.abs(item.remaining), currency)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Progress
+                      value={Math.min(100, pctRaw)}
+                      className={cn(overspent && "[&>div]:bg-destructive")}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t("allocation.assignCount", { count: assignedCount })}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setAssigningBucket(bucket.id)}
+                  >
+                    {t("allocation.assignExpenses")}
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -173,6 +249,24 @@ export function AllocationView({ year }: { year: number }) {
           onOpenChange={setSettingsOpen}
           settings={settings}
           incomeCategories={incomeCategories}
+        />
+      )}
+
+      {assigningBucket && (
+        <AllocationAssignDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setAssigningBucket(null);
+          }}
+          bucketId={assigningBucket}
+          year={year}
+          month={monthNum}
+          monthLabel={monthLabel}
+          target={progress[assigningBucket].target}
+          currency={currency}
+          expenses={expenses}
+          accumulation={accumulation}
+          assignments={assignments}
         />
       )}
     </div>

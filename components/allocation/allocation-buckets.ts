@@ -62,3 +62,10 @@ const BUCKET_UI: Record<IncomeAllocationBucketId, Omit<AllocationBucketUi, "id">
 
 export const ALLOCATION_BUCKETS: AllocationBucketUi[] =
   INCOME_ALLOCATION_BUCKET_IDS.map((id) => ({ id, ...BUCKET_UI[id] }));
+
+export const ALLOCATION_BUCKET_BY_ID: Record<
+  IncomeAllocationBucketId,
+  AllocationBucketUi
+> = Object.fromEntries(
+  ALLOCATION_BUCKETS.map((bucket) => [bucket.id, bucket])
+) as Record<IncomeAllocationBucketId, AllocationBucketUi>;

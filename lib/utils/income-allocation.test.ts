@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_INCOME_ALLOCATION_PERCENTS,
+  emptyPeriodAssignments,
   settingsSchema,
 } from "@/lib/schemas/settings";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
 import {
   allocateCents,
   areAllocationPercentsValid,
+  bucketProgress,
   filterIncomeTransactions,
   persistIncomeCategoryIds,
+  persistPeriodAssignments,
+  periodKey,
   resolveIncomeCategoryIds,
+  sanitizePeriodAssignments,
+  spentByBucket,
   sumAllocationPercents,
 } from "@/lib/utils/income-allocation";
 
@@ -141,5 +147,103 @@ describe("legacy settings", () => {
       DEFAULT_INCOME_ALLOCATION_PERCENTS
     );
     expect(parsed.incomeAllocation.incomeCategoryIds).toEqual([]);
+    expect(parsed.incomeAllocationAssignments).toEqual({});
+  });
+});
+
+describe("period assignments", () => {
+  const valid = new Set(["tx_a", "tx_b", "tx_c"]);
+  const pac = new Set(["pac_1_2026-08-01"]);
+
+  it("builds YYYY-MM period keys", () => {
+    expect(periodKey(2026, 8)).toBe("2026-08");
+  });
+
+  it("drops orphans, PAC ids, and duplicate occupancy", () => {
+    const sanitized = sanitizePeriodAssignments(
+      {
+        essentials: ["tx_a", "gone", "pac_1_2026-08-01"],
+        discretionary: ["tx_a", "tx_b"],
+        debtOrInvest: [],
+        shortTerm: [],
+        longTerm: ["tx_c"],
+      },
+      valid,
+      pac
+    );
+    expect(sanitized.essentials).toEqual(["tx_a"]);
+    expect(sanitized.discretionary).toEqual(["tx_b"]);
+    expect(sanitized.longTerm).toEqual(["tx_c"]);
+  });
+
+  it("keeps PAC out of persisted longTerm and enforces exclusivity on save", () => {
+    const next = persistPeriodAssignments(
+      {
+        "2026-08": {
+          essentials: ["tx_a"],
+          discretionary: [],
+          debtOrInvest: [],
+          shortTerm: [],
+          longTerm: [],
+        },
+      },
+      2026,
+      8,
+      "discretionary",
+      ["tx_a", "tx_b", "pac_1_2026-08-01"],
+      valid,
+      pac
+    );
+    expect(next["2026-08"]?.essentials).toEqual([]);
+    expect(next["2026-08"]?.discretionary).toEqual(["tx_a", "tx_b"]);
+  });
+
+  it("removes an empty period from the map", () => {
+    const next = persistPeriodAssignments(
+      {
+        "2026-08": {
+          ...emptyPeriodAssignments(),
+          essentials: ["tx_a"],
+        },
+      },
+      2026,
+      8,
+      "essentials",
+      [],
+      valid,
+      pac
+    );
+    expect(next["2026-08"]).toBeUndefined();
+  });
+
+  it("adds PAC amounts only to longTerm spent", () => {
+    const amounts = new Map([
+      ["tx_a", 100],
+      ["pac_1_2026-08-01", 250],
+    ]);
+    const spent = spentByBucket(
+      amounts,
+      { ...emptyPeriodAssignments(), essentials: ["tx_a"] },
+      ["pac_1_2026-08-01"]
+    );
+    expect(spent.essentials).toBe(100);
+    expect(spent.longTerm).toBe(250);
+  });
+
+  it("reports remaining and excess against the target", () => {
+    const zero = {
+      essentials: 0,
+      discretionary: 0,
+      debtOrInvest: 0,
+      shortTerm: 0,
+      longTerm: 0,
+    };
+    const progress = bucketProgress(
+      { ...zero, essentials: 200 },
+      { ...zero, essentials: 250 }
+    );
+    expect(progress.essentials.target).toBe(200);
+    expect(progress.essentials.spent).toBe(250);
+    expect(progress.essentials.remaining).toBe(-50);
   });
 });

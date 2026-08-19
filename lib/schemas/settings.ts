@@ -26,6 +26,16 @@ export type IncomeAllocation = {
   incomeCategoryIds: string[];
 };
 
+export type IncomeAllocationPeriodAssignments = Record<
+  IncomeAllocationBucketId,
+  string[]
+>;
+
+export type IncomeAllocationAssignments = Record<
+  string,
+  IncomeAllocationPeriodAssignments
+>;
+
 export const DEFAULT_INCOME_ALLOCATION_PERCENTS: IncomeAllocationPercents = {
   essentials: 55,
   discretionary: 5,
@@ -38,6 +48,16 @@ export const DEFAULT_INCOME_ALLOCATION: IncomeAllocation = {
   percents: { ...DEFAULT_INCOME_ALLOCATION_PERCENTS },
   incomeCategoryIds: [],
 };
+
+export function emptyPeriodAssignments(): IncomeAllocationPeriodAssignments {
+  return {
+    essentials: [],
+    discretionary: [],
+    debtOrInvest: [],
+    shortTerm: [],
+    longTerm: [],
+  };
+}
 
 const percentValueSchema = z.number().int().min(0).max(100);
 
@@ -71,13 +91,28 @@ const incomeAllocationSchema = z
     incomeCategoryIds: [],
   });
 
+const periodAssignmentsSchema = z.object({
+  essentials: z.array(z.string()).default([]),
+  discretionary: z.array(z.string()).default([]),
+  debtOrInvest: z.array(z.string()).default([]),
+  shortTerm: z.array(z.string()).default([]),
+  longTerm: z.array(z.string()).default([]),
+});
+
+const incomeAllocationAssignmentsSchema = z
+  .record(z.string(), periodAssignmentsSchema)
+  .default({});
+
 const settingsFieldsSchema = z.object({
   defaultCurrency: z.string().min(3).max(3),
   language: z.enum(["it", "en"]).optional(),
   locale: z.string().min(2),
   showSyncWarning: z.boolean().default(true),
   incomeAllocation: incomeAllocationSchema,
+  incomeAllocationAssignments: incomeAllocationAssignmentsSchema,
 });
+
+const PERIOD_KEY = /^\d{4}-\d{2}$/;
 
 function percentsSumTo100(percents: IncomeAllocationPercents): boolean {
   return (
@@ -100,6 +135,23 @@ function normalizeIncomeAllocation(
   };
 }
 
+function normalizeAssignments(
+  value: IncomeAllocationAssignments
+): IncomeAllocationAssignments {
+  const result: IncomeAllocationAssignments = {};
+  for (const [key, period] of Object.entries(value)) {
+    if (!PERIOD_KEY.test(key)) continue;
+    result[key] = {
+      essentials: [...period.essentials],
+      discretionary: [...period.discretionary],
+      debtOrInvest: [...period.debtOrInvest],
+      shortTerm: [...period.shortTerm],
+      longTerm: [...period.longTerm],
+    };
+  }
+  return result;
+}
+
 function normalizeSettings(
   input: z.infer<typeof settingsFieldsSchema>
 ): Settings {
@@ -111,6 +163,9 @@ function normalizeSettings(
     locale: mapLocale(language),
     showSyncWarning: input.showSyncWarning,
     incomeAllocation: normalizeIncomeAllocation(input.incomeAllocation),
+    incomeAllocationAssignments: normalizeAssignments(
+      input.incomeAllocationAssignments
+    ),
   };
 }
 
@@ -122,6 +177,7 @@ export type Settings = {
   locale: string;
   showSyncWarning: boolean;
   incomeAllocation: IncomeAllocation;
+  incomeAllocationAssignments: IncomeAllocationAssignments;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -133,6 +189,7 @@ export const DEFAULT_SETTINGS: Settings = {
     percents: { ...DEFAULT_INCOME_ALLOCATION_PERCENTS },
     incomeCategoryIds: [],
   },
+  incomeAllocationAssignments: {},
 };
 
 export function settingsWithLanguage(

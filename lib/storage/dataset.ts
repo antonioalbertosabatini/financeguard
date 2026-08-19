@@ -63,6 +63,7 @@ export function emptyDataset(): Dataset {
           ...DEFAULT_SETTINGS.incomeAllocation.incomeCategoryIds,
         ],
       },
+      incomeAllocationAssignments: {},
     },
     transactionsByYear: {},
     accountTransfersByYear: {},

@@ -1,7 +1,10 @@
 import {
+  emptyPeriodAssignments,
   INCOME_ALLOCATION_BUCKET_IDS,
+  type IncomeAllocationAssignments,
   type IncomeAllocationBucketId,
   type IncomeAllocationPercents,
+  type IncomeAllocationPeriodAssignments,
 } from "@/lib/schemas/settings";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
 
@@ -106,4 +109,120 @@ export function persistIncomeCategoryIds(
     return [];
   }
   return selectedIds;
+}
+
+export function periodKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+export function occupancyMap(
+  assignments: IncomeAllocationPeriodAssignments
+): Map<string, IncomeAllocationBucketId> {
+  const map = new Map<string, IncomeAllocationBucketId>();
+  for (const bucket of INCOME_ALLOCATION_BUCKET_IDS) {
+    for (const id of assignments[bucket]) {
+      if (!map.has(id)) map.set(id, bucket);
+    }
+  }
+  return map;
+}
+
+export function sanitizePeriodAssignments(
+  stored: IncomeAllocationPeriodAssignments | undefined,
+  validExpenseIds: Set<string>,
+  accumulationIds: Set<string>
+): IncomeAllocationPeriodAssignments {
+  const seen = new Set<string>();
+  const result = emptyPeriodAssignments();
+  for (const bucket of INCOME_ALLOCATION_BUCKET_IDS) {
+    for (const id of stored?.[bucket] ?? []) {
+      if (accumulationIds.has(id)) continue;
+      if (!validExpenseIds.has(id)) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      result[bucket].push(id);
+    }
+  }
+  return result;
+}
+
+export function persistPeriodAssignments(
+  allAssignments: IncomeAllocationAssignments,
+  year: number,
+  month: number,
+  bucketId: IncomeAllocationBucketId,
+  selectedIds: string[],
+  validExpenseIds: Set<string>,
+  accumulationIds: Set<string>
+): IncomeAllocationAssignments {
+  const key = periodKey(year, month);
+  const current = sanitizePeriodAssignments(
+    allAssignments[key],
+    validExpenseIds,
+    accumulationIds
+  );
+  const selected = [
+    ...new Set(
+      selectedIds.filter(
+        (id) => validExpenseIds.has(id) && !accumulationIds.has(id)
+      )
+    ),
+  ];
+  const selectedSet = new Set(selected);
+  for (const bucket of INCOME_ALLOCATION_BUCKET_IDS) {
+    current[bucket] = current[bucket].filter((id) => !selectedSet.has(id));
+  }
+  current[bucketId] = selected;
+
+  const next = { ...allAssignments };
+  const isEmpty = INCOME_ALLOCATION_BUCKET_IDS.every(
+    (id) => current[id].length === 0
+  );
+  if (isEmpty) {
+    delete next[key];
+  } else {
+    next[key] = current;
+  }
+  return next;
+}
+
+export function spentByBucket(
+  amountByOccurrence: Map<string, number>,
+  assignments: IncomeAllocationPeriodAssignments,
+  accumulationIds: string[]
+): IncomeAllocationAmounts {
+  const spent = emptyAmounts();
+  for (const bucket of INCOME_ALLOCATION_BUCKET_IDS) {
+    for (const id of assignments[bucket]) {
+      spent[bucket] += amountByOccurrence.get(id) ?? 0;
+    }
+  }
+  for (const id of accumulationIds) {
+    spent.longTerm += amountByOccurrence.get(id) ?? 0;
+  }
+  return spent;
+}
+
+export type AllocationBucketProgress = {
+  target: number;
+  spent: number;
+  remaining: number;
+};
+
+export function bucketProgress(
+  targets: IncomeAllocationAmounts,
+  spent: IncomeAllocationAmounts
+): Record<IncomeAllocationBucketId, AllocationBucketProgress> {
+  const result = {} as Record<
+    IncomeAllocationBucketId,
+    AllocationBucketProgress
+  >;
+  for (const id of INCOME_ALLOCATION_BUCKET_IDS) {
+    result[id] = {
+      target: targets[id],
+      spent: spent[id],
+      remaining: targets[id] - spent[id],
+    };
+  }
+  return result;
 }
