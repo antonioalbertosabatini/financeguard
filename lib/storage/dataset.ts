@@ -55,7 +55,15 @@ export function emptyDataset(): Dataset {
     accounts: [],
     categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
     budgets: [],
-    settings: { ...DEFAULT_SETTINGS },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      incomeAllocation: {
+        percents: { ...DEFAULT_SETTINGS.incomeAllocation.percents },
+        incomeCategoryIds: [
+          ...DEFAULT_SETTINGS.incomeAllocation.incomeCategoryIds,
+        ],
+      },
+    },
     transactionsByYear: {},
     accountTransfersByYear: {},
     accumulationPlans: [],

@@ -5,6 +5,7 @@ import {
   PiggyBank,
   Vault,
   BarChart3,
+  PieChart,
   Settings,
   DatabaseBackup,
   Shapes,
@@ -57,6 +58,11 @@ export const REPORTS: NavItem = {
   labelKey: "nav.reports",
   icon: BarChart3,
 };
+export const ALLOCATION: NavItem = {
+  href: "/allocation",
+  labelKey: "nav.allocation",
+  icon: PieChart,
+};
 export const CATEGORIES: NavItem = {
   href: "/categories",
   labelKey: "nav.categories",
@@ -85,6 +91,7 @@ export const moreNavItems: NavItem[] = [
   BUDGET,
   PLANS,
   REPORTS,
+  ALLOCATION,
   CATEGORIES,
   BACKUP,
   PROFILE,

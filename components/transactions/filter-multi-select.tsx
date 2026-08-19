@@ -28,6 +28,7 @@ type FilterMultiSelectProps = {
   /** Show search field when option count is at least this (default 8). Pass 0 to always show. */
   searchThreshold?: number;
   searchPlaceholder?: string;
+  contentClassName?: string;
 };
 
 function toggleValue(values: string[], value: string): string[] {
@@ -45,6 +46,7 @@ export function FilterMultiSelect({
   emptyLabel,
   searchThreshold = 8,
   searchPlaceholder = "…",
+  contentClassName,
 }: FilterMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -83,7 +85,10 @@ export function FilterMultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-1"
+        className={cn(
+          "w-[var(--radix-popover-trigger-width)] p-1",
+          contentClassName
+        )}
         align="start"
       >
         {options.length === 0 ? (
