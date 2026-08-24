@@ -9,9 +9,15 @@ import {
   accumulationPlansFileSchema,
   type AccumulationPlan,
   type AccumulationPlanInput,
+  type ChangeAccumulationPlanAmountInput,
 } from "@/lib/schemas/accumulation-plan";
 import { generateId } from "@/lib/db/index";
 import { todayISO } from "@/lib/utils/dates";
+import {
+  applyAmountChange,
+  removeAmountChange,
+  withNormalizedAmount,
+} from "@/lib/utils/accumulation";
 
 export async function getAccumulationPlans(): Promise<AccumulationPlan[]> {
   return accumulationPlansFileSchema.parse({
@@ -27,6 +33,7 @@ export async function createAccumulationPlan(
     id: generateId("pac"),
     status: "active",
     pausePeriods: [],
+    amountSchedule: [{ from: input.startDate, amount: input.amount }],
   });
   const dataset = getDataset();
   dataset.accumulationPlans.push(plan);
@@ -43,11 +50,88 @@ export async function updateAccumulationPlan(
   const index = plans.findIndex((plan) => plan.id === id);
   if (index === -1) throw new AppError("errors.planNotFound");
   const previous = plans[index];
+  const { amountSchedule, amount } = withNormalizedAmount({
+    ...previous,
+    startDate: input.startDate,
+  });
   const updated = accumulationPlanSchema.parse({
     ...input,
     id,
+    amount,
     status: previous.status,
     pausePeriods: previous.pausePeriods,
+    amountSchedule,
+  });
+  plans[index] = updated;
+  trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
+  commit();
+  return updated;
+}
+
+export async function changeAccumulationPlanAmount(
+  id: string,
+  input: ChangeAccumulationPlanAmountInput
+): Promise<AccumulationPlan> {
+  const plans = getDataset().accumulationPlans;
+  const index = plans.findIndex((plan) => plan.id === id);
+  if (index === -1) throw new AppError("errors.planNotFound");
+  const previous = plans[index];
+  if (input.effectiveFrom < previous.startDate) {
+    throw new AppError("errors.amountChangeBeforeStart");
+  }
+
+  const normalized = withNormalizedAmount(previous);
+  const amountSchedule = applyAmountChange(
+    normalized.amountSchedule,
+    input.effectiveFrom,
+    input.amount
+  );
+  const { amount } = withNormalizedAmount({
+    ...previous,
+    amountSchedule,
+  });
+  const updated = accumulationPlanSchema.parse({
+    ...previous,
+    amount,
+    amountSchedule,
+  });
+  plans[index] = updated;
+  trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
+  commit();
+  return updated;
+}
+
+export async function removeAccumulationPlanAmountChange(
+  id: string,
+  from: string
+): Promise<AccumulationPlan> {
+  const plans = getDataset().accumulationPlans;
+  const index = plans.findIndex((plan) => plan.id === id);
+  if (index === -1) throw new AppError("errors.planNotFound");
+  const previous = plans[index];
+  const normalized = withNormalizedAmount(previous);
+  if (
+    normalized.amountSchedule.length <= 1 ||
+    normalized.amountSchedule[0].from === from
+  ) {
+    throw new AppError("errors.cannotRemoveInitialAmount");
+  }
+  if (!normalized.amountSchedule.some((segment) => segment.from === from)) {
+    return previous;
+  }
+
+  const amountSchedule = removeAmountChange(
+    normalized.amountSchedule,
+    from
+  );
+  const { amount } = withNormalizedAmount({
+    ...previous,
+    amountSchedule,
+  });
+  const updated = accumulationPlanSchema.parse({
+    ...previous,
+    amount,
+    amountSchedule,
   });
   plans[index] = updated;
   trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
@@ -71,10 +155,13 @@ export async function pauseAccumulationPlan(
     pausePeriods.push({ from: today });
   }
 
+  const { amountSchedule, amount } = withNormalizedAmount(previous);
   const updated = accumulationPlanSchema.parse({
     ...previous,
     status: "paused",
     pausePeriods,
+    amountSchedule,
+    amount,
   });
   plans[index] = updated;
   trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
@@ -100,10 +187,13 @@ export async function resumeAccumulationPlan(
     return period;
   });
 
+  const { amountSchedule, amount } = withNormalizedAmount(previous);
   const updated = accumulationPlanSchema.parse({
     ...previous,
     status: "active",
     pausePeriods,
+    amountSchedule,
+    amount,
   });
   plans[index] = updated;
   trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);

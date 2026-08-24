@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  Banknote,
   ChevronDown,
   Pause,
   Pencil,
@@ -11,6 +12,7 @@ import {
   Plus,
   Trash2,
   Vault,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +41,11 @@ import {
 } from "@/components/ui/sheet";
 import { ACCUMULATION_FREQUENCIES } from "@/lib/constants";
 import {
+  changeAccumulationPlanAmount,
   createAccumulationPlan,
   deleteAccumulationPlan,
   pauseAccumulationPlan,
+  removeAccumulationPlanAmountChange,
   resumeAccumulationPlan,
   updateAccumulationPlan,
 } from "@/lib/actions/accumulation-plans";
@@ -49,8 +53,10 @@ import type { Account } from "@/lib/schemas/account";
 import type {
   AccumulationFrequency,
   AccumulationPlan,
+  AmountSegment,
 } from "@/lib/schemas/accumulation-plan";
 import type { AccumulationContribution } from "@/lib/utils/accumulation";
+import { normalizeAmountSchedule } from "@/lib/utils/accumulation";
 import { formatErrorMessage } from "@/lib/i18n/translate";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
 import { formatDate, todayISO } from "@/lib/utils/dates";
@@ -82,18 +88,30 @@ export function PlansView({
   const { t, language } = useI18n();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlanListItem | null>(null);
+  const [changingAmount, setChangingAmount] = useState<PlanListItem | null>(
+    null
+  );
   const [name, setName] = useState("");
   const [amountEuro, setAmountEuro] = useState("");
   const [frequency, setFrequency] =
     useState<AccumulationFrequency>("monthly");
   const [sourceAccountId, setSourceAccountId] = useState("");
   const [startDate, setStartDate] = useState(() => defaultStartDate(year));
+  const [changeAmountEuro, setChangeAmountEuro] = useState("");
+  const [changeEffectiveFrom, setChangeEffectiveFrom] = useState(todayISO);
 
-  const canSubmit =
-    !!name.trim() &&
-    toCents(amountEuro) > 0 &&
-    !!sourceAccountId &&
-    !!startDate;
+  const canSubmit = editing
+    ? !!name.trim() && !!sourceAccountId && !!startDate
+    : !!name.trim() &&
+      toCents(amountEuro) > 0 &&
+      !!sourceAccountId &&
+      !!startDate;
+
+  const canSubmitAmount =
+    changingAmount != null &&
+    toCents(changeAmountEuro) > 0 &&
+    !!changeEffectiveFrom &&
+    changeEffectiveFrom >= changingAmount.startDate;
 
   function resetForm() {
     setEditing(null);
@@ -102,6 +120,12 @@ export function PlansView({
     setFrequency("monthly");
     setSourceAccountId(accounts[0]?.id ?? "");
     setStartDate(defaultStartDate(year));
+  }
+
+  function resetAmountForm() {
+    setChangingAmount(null);
+    setChangeAmountEuro("");
+    setChangeEffectiveFrom(todayISO());
   }
 
   function openCreate() {
@@ -120,12 +144,18 @@ export function PlansView({
     setOpen(true);
   }
 
+  function openChangeAmount(item: PlanListItem) {
+    setChangingAmount(item);
+    setChangeAmountEuro("");
+    setChangeEffectiveFrom(defaultEffectiveFrom(item.startDate));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     const payload = {
       name: name.trim(),
-      amount: toCents(amountEuro),
+      amount: editing ? editing.amount : toCents(amountEuro),
       frequency,
       sourceAccountId,
       startDate,
@@ -140,6 +170,31 @@ export function PlansView({
       }
       setOpen(false);
       resetForm();
+    } catch (err) {
+      toast.error(formatErrorMessage(language, err));
+    }
+  }
+
+  async function handleChangeAmount(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmitAmount || !changingAmount) return;
+    try {
+      await changeAccumulationPlanAmount(changingAmount.id, {
+        amount: toCents(changeAmountEuro),
+        effectiveFrom: changeEffectiveFrom,
+      });
+      toast.success(t("plans.amountChanged"));
+      resetAmountForm();
+    } catch (err) {
+      toast.error(formatErrorMessage(language, err));
+    }
+  }
+
+  async function handleRemoveAmountChange(from: string) {
+    if (!changingAmount) return;
+    try {
+      await removeAccumulationPlanAmountChange(changingAmount.id, from);
+      toast.success(t("plans.amountChanged"));
     } catch (err) {
       toast.error(formatErrorMessage(language, err));
     }
@@ -172,6 +227,13 @@ export function PlansView({
       toast.error(formatErrorMessage(language, err));
     }
   }
+
+  const changingLive = changingAmount
+    ? items.find((item) => item.id === changingAmount.id)
+    : undefined;
+  const amountHistory = changingLive
+    ? normalizeAmountSchedule(changingLive)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -219,6 +281,7 @@ export function PlansView({
               currency={currency}
               locale={locale}
               onEdit={openEdit}
+              onChangeAmount={openChangeAmount}
               onDelete={handleDelete}
               onPause={handlePause}
               onResume={handleResume}
@@ -250,16 +313,18 @@ export function PlansView({
                 placeholder={t("plans.namePlaceholder")}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="plan-amount">{t("plans.amount")}</Label>
-              <Input
-                id="plan-amount"
-                inputMode="decimal"
-                value={amountEuro}
-                onChange={(e) => setAmountEuro(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
+            {editing ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="plan-amount">{t("plans.amount")}</Label>
+                <Input
+                  id="plan-amount"
+                  inputMode="decimal"
+                  value={amountEuro}
+                  onChange={(e) => setAmountEuro(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>{t("plans.frequency")}</Label>
               <Select
@@ -315,6 +380,63 @@ export function PlansView({
           </form>
         </SheetContent>
       </Sheet>
+
+      <Sheet
+        open={changingAmount != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) resetAmountForm();
+        }}
+      >
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{t("plans.changeAmount")}</SheetTitle>
+          </SheetHeader>
+          <form
+            onSubmit={handleChangeAmount}
+            className="flex flex-1 flex-col gap-4 px-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="plan-new-amount">{t("plans.amount")}</Label>
+              <Input
+                id="plan-new-amount"
+                inputMode="decimal"
+                value={changeAmountEuro}
+                onChange={(e) => setChangeAmountEuro(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-effective-from">
+                {t("plans.effectiveFrom")}
+              </Label>
+              <Input
+                id="plan-effective-from"
+                type="date"
+                min={changingAmount?.startDate}
+                value={changeEffectiveFrom}
+                onChange={(e) => setChangeEffectiveFrom(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("plans.changeAmountHint")}
+            </p>
+            {amountHistory.length > 0 ? (
+              <AmountHistoryList
+                segments={amountHistory}
+                currency={currency}
+                locale={locale}
+                language={language}
+                onRemove={handleRemoveAmountChange}
+              />
+            ) : null}
+            <SheetFooter>
+              <Button type="submit" disabled={!canSubmitAmount}>
+                {t("common.update")}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -325,6 +447,7 @@ function PlanCard({
   currency,
   locale,
   onEdit,
+  onChangeAmount,
   onDelete,
   onPause,
   onResume,
@@ -334,6 +457,7 @@ function PlanCard({
   currency: string;
   locale: string;
   onEdit: (item: PlanListItem) => void;
+  onChangeAmount: (item: PlanListItem) => void;
   onDelete: (id: string) => void;
   onPause: (id: string) => void;
   onResume: (id: string) => void;
@@ -407,6 +531,15 @@ function PlanCard({
               {t("plans.pause")}
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={t("plans.changeAmountAria", { name: item.name })}
+            onClick={() => onChangeAmount(item)}
+          >
+            <Banknote className="size-3.5" />
+            {t("plans.changeAmount")}
+          </Button>
         </div>
 
         <ContributionList
@@ -425,6 +558,61 @@ function PlanCard({
         />
       </CardContent>
     </Card>
+  );
+}
+
+function AmountHistoryList({
+  segments,
+  currency,
+  locale,
+  language,
+  onRemove,
+}: {
+  segments: AmountSegment[];
+  currency: string;
+  locale: string;
+  language: "it" | "en";
+  onRemove: (from: string) => void;
+}) {
+  const { t } = useI18n();
+  const formatAmount = useFormatCents();
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{t("plans.amountHistory")}</p>
+      <ul className="divide-y text-sm">
+        {segments.map((segment, index) => (
+          <li
+            key={segment.from}
+            className="flex items-center justify-between gap-2 py-1.5"
+          >
+            <span className="text-muted-foreground">
+              {t("plans.amountHistoryFrom", {
+                date: formatDate(segment.from, "dd/MM/yyyy", language),
+              })}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="tabular-nums">
+                {formatAmount(segment.amount, currency, locale)}
+              </span>
+              {index > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("plans.removeAmountChangeAria", {
+                    date: formatDate(segment.from, "dd/MM/yyyy", language),
+                  })}
+                  onClick={() => onRemove(segment.from)}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -482,4 +670,9 @@ function ContributionList({
 function defaultStartDate(year: number): string {
   const today = todayISO();
   return today.startsWith(String(year)) ? today : `${year}-01-01`;
+}
+
+function defaultEffectiveFrom(startDate: string): string {
+  const today = todayISO();
+  return today < startDate ? startDate : today;
 }

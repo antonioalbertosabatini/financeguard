@@ -2,7 +2,10 @@ import {
   ACCUMULATION_CATEGORY_COLOR,
   ACCUMULATION_CATEGORY_ID,
 } from "@/lib/constants";
-import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
+import type {
+  AccumulationPlan,
+  AmountSegment,
+} from "@/lib/schemas/accumulation-plan";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
 import {
   getDayFromDate,
@@ -25,6 +28,120 @@ export type AccumulationContribution = {
   amount: number;
   sourceAccountId: string;
 };
+
+type PlanAmountLookup = Pick<AccumulationPlan, "amount" | "startDate"> & {
+  amountSchedule?: AmountSegment[];
+};
+
+function sortAndUniq(segments: AmountSegment[]): AmountSegment[] {
+  const sorted = [...segments].sort((a, b) => a.from.localeCompare(b.from));
+  const unique: AmountSegment[] = [];
+  for (const segment of sorted) {
+    const last = unique[unique.length - 1];
+    if (last && last.from === segment.from) {
+      unique[unique.length - 1] = segment;
+    } else {
+      unique.push({ from: segment.from, amount: segment.amount });
+    }
+  }
+  return unique;
+}
+
+function collapseConsecutive(segments: AmountSegment[]): AmountSegment[] {
+  const result: AmountSegment[] = [];
+  for (const segment of segments) {
+    const last = result[result.length - 1];
+    if (last && last.amount === segment.amount) continue;
+    result.push(segment);
+  }
+  return result;
+}
+
+function amountFromSchedule(
+  schedule: AmountSegment[],
+  date: string,
+  fallbackAmount: number
+): number {
+  if (schedule.length === 0) return fallbackAmount;
+  let amount = schedule[0].amount;
+  for (const segment of schedule) {
+    if (segment.from <= date) amount = segment.amount;
+    else break;
+  }
+  return amount;
+}
+
+/**
+ * Segmenti half-open [from, next.from): l'importo in vigore in una data è
+ * quello dell'ultimo segmento con from <= date. Array vuoto (vault vecchi) =
+ * un solo segmento da startDate con plan.amount.
+ */
+export function normalizeAmountSchedule(
+  plan: PlanAmountLookup
+): AmountSegment[] {
+  const raw = plan.amountSchedule ?? [];
+  if (raw.length === 0) {
+    return [{ from: plan.startDate, amount: plan.amount }];
+  }
+
+  const unique = sortAndUniq(raw);
+  const start = plan.startDate;
+  let coverIndex = -1;
+  for (let i = 0; i < unique.length; i++) {
+    if (unique[i].from <= start) coverIndex = i;
+    else break;
+  }
+
+  const covering =
+    coverIndex === -1
+      ? { from: start, amount: unique[0].amount }
+      : { from: start, amount: unique[coverIndex].amount };
+  const rest = unique.filter((segment) => segment.from > start);
+  return collapseConsecutive([covering, ...rest]);
+}
+
+export function amountOnDate(plan: PlanAmountLookup, date: string): number {
+  return amountFromSchedule(
+    normalizeAmountSchedule(plan),
+    date,
+    plan.amount
+  );
+}
+
+export function applyAmountChange(
+  schedule: AmountSegment[],
+  effectiveFrom: string,
+  amount: number
+): AmountSegment[] {
+  const sorted = sortAndUniq(schedule);
+  if (sorted.length === 0) return [{ from: effectiveFrom, amount }];
+  const current = amountFromSchedule(sorted, effectiveFrom, sorted[0].amount);
+  if (current === amount) return collapseConsecutive(sorted);
+
+  const next = sorted.filter((segment) => segment.from !== effectiveFrom);
+  next.push({ from: effectiveFrom, amount });
+  return collapseConsecutive(sortAndUniq(next));
+}
+
+export function removeAmountChange(
+  schedule: AmountSegment[],
+  from: string
+): AmountSegment[] {
+  const sorted = sortAndUniq(schedule);
+  if (sorted.length <= 1 || sorted[0]?.from === from) return sorted;
+  return collapseConsecutive(sorted.filter((segment) => segment.from !== from));
+}
+
+export function withNormalizedAmount(
+  plan: PlanAmountLookup,
+  asOfISO: string = todayISO()
+): { amountSchedule: AmountSegment[]; amount: number } {
+  const amountSchedule = normalizeAmountSchedule(plan);
+  return {
+    amountSchedule,
+    amount: amountFromSchedule(amountSchedule, asOfISO, plan.amount),
+  };
+}
 
 /** Intervallo di pausa [from, to): `to` assente = ancora in pausa. */
 export function isDatePaused(plan: AccumulationPlan, date: string): boolean {
@@ -72,7 +189,7 @@ function pushContribution(
     planId: plan.id,
     occurrenceId: `${plan.id}_${date}`,
     date,
-    amount: plan.amount,
+    amount: amountOnDate(plan, date),
     sourceAccountId: plan.sourceAccountId,
   });
 }

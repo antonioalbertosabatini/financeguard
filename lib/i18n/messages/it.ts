@@ -308,7 +308,16 @@ export const itMessages = {
     startDate: "Data di inizio",
     selectAccount: "Seleziona conto",
     rewriteHint:
-      "Modificare importo, cadenza o conto ricalcola tutta la storia visibile del piano.",
+      "Modificare cadenza, data di inizio o conto può spostare le date dei versamenti. Gli importi restano quelli in vigore in ciascun giorno.",
+    changeAmount: "Cambia rata",
+    changeAmountHint:
+      "I versamenti fino al giorno precedente restano con la rata vecchia. Puoi indicare anche una data già passata.",
+    effectiveFrom: "Effettivo dal",
+    amountHistory: "Storico rate",
+    amountHistoryFrom: "Dal {date}",
+    removeAmountChangeAria: "Rimuovi rata dal {date}",
+    amountChanged: "Rata aggiornata",
+    changeAmountAria: "Cambia rata di {name}",
     pause: "Metti in pausa",
     resume: "Riprendi",
     paused: "In pausa",
@@ -598,6 +607,10 @@ export const itMessages = {
     transferNotFound: "Trasferimento non trovato",
     budgetNotFound: "Budget non trovato",
     planNotFound: "Piano di accumulo non trovato",
+    amountChangeBeforeStart:
+      "La data di effetto non può precedere l'inizio del piano",
+    cannotRemoveInitialAmount:
+      "Non puoi rimuovere la rata iniziale del piano",
     budgetDuplicate: "Esiste già un budget con questa combinazione",
     deleteAccountInTransactions:
       "Impossibile eliminare: conto usato in transazioni",

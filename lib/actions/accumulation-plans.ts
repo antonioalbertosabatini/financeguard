@@ -1,9 +1,11 @@
 import { getAccounts } from "@/lib/db/accounts";
 import {
+  changeAccumulationPlanAmount as dbChangeAmount,
   createAccumulationPlan as dbCreate,
   deleteAccumulationPlan as dbDelete,
   getAccumulationPlans as dbGetPlans,
   pauseAccumulationPlan as dbPause,
+  removeAccumulationPlanAmountChange as dbRemoveAmountChange,
   resumeAccumulationPlan as dbResume,
   updateAccumulationPlan as dbUpdate,
 } from "@/lib/db/accumulation-plans";
@@ -11,13 +13,17 @@ import { getSettings } from "@/lib/db/settings";
 import { AppError } from "@/lib/i18n/app-error";
 import {
   accumulationPlanInputSchema,
+  changeAccumulationPlanAmountSchema,
+  removeAccumulationPlanAmountChangeSchema,
   type AccumulationPlanInput,
+  type ChangeAccumulationPlanAmountInput,
 } from "@/lib/schemas/accumulation-plan";
 import {
   calculateAccountBalance,
 } from "@/lib/utils/balance";
 import {
   accumulationAsOfISO,
+  amountOnDate,
   contributionsForYear,
   lifetimePostedContributions,
   postedAsOf,
@@ -52,6 +58,22 @@ export async function updateAccumulationPlan(
   const parsed = accumulationPlanInputSchema.parse(data);
   await requireSourceAccount(parsed.sourceAccountId);
   return dbUpdate(id, parsed);
+}
+
+export async function changeAccumulationPlanAmount(
+  id: string,
+  data: ChangeAccumulationPlanAmountInput
+) {
+  const parsed = changeAccumulationPlanAmountSchema.parse(data);
+  return dbChangeAmount(id, parsed);
+}
+
+export async function removeAccumulationPlanAmountChange(
+  id: string,
+  from: string
+) {
+  const parsed = removeAccumulationPlanAmountChangeSchema.parse({ from });
+  return dbRemoveAmountChange(id, parsed.from);
 }
 
 export async function pauseAccumulationPlan(id: string) {
@@ -101,9 +123,11 @@ export async function getAccumulationPlansPageData(year: number) {
           ? yearItems
           : [];
     const sourceBalance = accountBalances[plan.sourceAccountId] ?? 0;
+    const currentAmount = amountOnDate(plan, today);
 
     return {
       ...plan,
+      amount: currentAmount,
       sourceAccountName:
         accounts.find((account) => account.id === plan.sourceAccountId)?.name ??
         plan.sourceAccountId,
@@ -113,7 +137,7 @@ export async function getAccumulationPlansPageData(year: number) {
       yearBalance: sumAccumulation(posted),
       posted,
       upcoming,
-      insufficientFunds: sourceBalance < plan.amount,
+      insufficientFunds: sourceBalance < currentAmount,
     };
   });
 

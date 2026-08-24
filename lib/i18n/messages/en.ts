@@ -318,7 +318,16 @@ export const enMessages: {
     startDate: "Start date",
     selectAccount: "Select account",
     rewriteHint:
-      "Changing amount, frequency, or account recalculates the whole visible history of the plan.",
+      "Changing frequency, start date, or account can shift contribution dates. Amounts stay those in effect on each day.",
+    changeAmount: "Change installment",
+    changeAmountHint:
+      "Contributions until the previous day keep the old installment. You can also pick a date already in the past.",
+    effectiveFrom: "Effective from",
+    amountHistory: "Installment history",
+    amountHistoryFrom: "From {date}",
+    removeAmountChangeAria: "Remove installment from {date}",
+    amountChanged: "Installment updated",
+    changeAmountAria: "Change installment for {name}",
     pause: "Pause",
     resume: "Resume",
     paused: "Paused",
@@ -606,6 +615,10 @@ export const enMessages: {
     transferNotFound: "Transfer not found",
     budgetNotFound: "Budget not found",
     planNotFound: "Savings plan not found",
+    amountChangeBeforeStart:
+      "The effective date cannot be before the plan start date",
+    cannotRemoveInitialAmount:
+      "You cannot remove the plan's initial installment",
     budgetDuplicate: "A budget with this combination already exists",
     deleteAccountInTransactions:
       "Cannot delete: account used in transactions",

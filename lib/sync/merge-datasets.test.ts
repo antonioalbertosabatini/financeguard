@@ -118,6 +118,7 @@ describe("mergeDatasets", () => {
       startDate: "2026-01-01",
       status: "active" as const,
       pausePeriods: [],
+      amountSchedule: [],
     };
     local.accumulationPlans = [plan];
     remote.accumulationPlans = [{ ...plan, name: "Remoto", amount: 2000 }];
