@@ -27,6 +27,7 @@ function makePlan(
     status: "active",
     pausePeriods: [],
     amountSchedule: [],
+    oneTimeContributions: [],
     ...overrides,
   };
 }
@@ -249,5 +250,109 @@ describe("accumulation balances", () => {
     expect(envelope).toBe(40000);
     expect(source).toBe(10000);
     expect(source + envelope).toBe(50000);
+  });
+});
+
+describe("one-time contributions", () => {
+  it("keeps a one-time deposit on the same day as an installment", () => {
+    const plan = makePlan({
+      oneTimeContributions: [
+        {
+          id: "pax_1",
+          date: "2026-01-05",
+          amount: 25000,
+          sourceAccountId: "acc_1",
+        },
+      ],
+    });
+    const contributions = expandPlanContributions(plan, "2026-01-05");
+
+    expect(contributions).toEqual([
+      {
+        planId: "pac_1",
+        occurrenceId: "pac_1_2026-01-05",
+        date: "2026-01-05",
+        amount: 10000,
+        sourceAccountId: "acc_1",
+        kind: "scheduled",
+      },
+      {
+        planId: "pac_1",
+        occurrenceId: "pax_1",
+        date: "2026-01-05",
+        amount: 25000,
+        sourceAccountId: "acc_1",
+        kind: "oneTime",
+      },
+    ]);
+  });
+
+  it("posts a one-time deposit during a pause", () => {
+    const plan = makePlan({
+      pausePeriods: [{ from: "2026-01-12", to: "2026-01-26" }],
+      oneTimeContributions: [
+        {
+          id: "pax_1",
+          date: "2026-01-12",
+          amount: 5000,
+          sourceAccountId: "acc_1",
+        },
+      ],
+    });
+    const contributions = expandPlanContributions(plan, "2026-01-26");
+
+    expect(contributions.map((item) => [item.date, item.kind, item.amount])).toEqual([
+      ["2026-01-05", "scheduled", 10000],
+      ["2026-01-12", "oneTime", 5000],
+      ["2026-01-26", "scheduled", 10000],
+    ]);
+  });
+
+  it("debits a different source account and keeps the envelope invariant", () => {
+    const plan = makePlan({
+      oneTimeContributions: [
+        {
+          id: "pax_1",
+          date: "2026-01-05",
+          amount: 5000,
+          sourceAccountId: "acc_2",
+        },
+      ],
+    });
+    const posted = lifetimePostedContributions(plan, "2026-01-05");
+    const envelope = sumAccumulation(posted);
+    const checking = makeAccount();
+    const cash: Account = {
+      ...checking,
+      id: "acc_2",
+      name: "Contanti",
+      initialBalance: 50000,
+    };
+    const checkingBalance = calculateAccountBalance(checking, [], [], posted);
+    const cashBalance = calculateAccountBalance(cash, [], [], posted);
+
+    expect(envelope).toBe(15000);
+    expect(checkingBalance).toBe(40000);
+    expect(cashBalance).toBe(45000);
+    expect(checkingBalance + cashBalance + envelope).toBe(100000);
+  });
+
+  it("includes a one-time deposit before the plan start date", () => {
+    const plan = makePlan({
+      oneTimeContributions: [
+        {
+          id: "pax_1",
+          date: "2025-12-20",
+          amount: 8000,
+          sourceAccountId: "acc_1",
+        },
+      ],
+    });
+    const posted = lifetimePostedContributions(plan, "2026-01-05");
+
+    expect(posted.map((item) => [item.date, item.kind, item.amount])).toEqual([
+      ["2025-12-20", "oneTime", 8000],
+      ["2026-01-05", "scheduled", 10000],
+    ]);
   });
 });

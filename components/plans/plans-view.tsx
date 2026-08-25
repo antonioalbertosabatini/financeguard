@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Banknote,
   ChevronDown,
+  CirclePlus,
   Pause,
   Pencil,
   Play,
@@ -41,11 +42,13 @@ import {
 } from "@/components/ui/sheet";
 import { ACCUMULATION_FREQUENCIES } from "@/lib/constants";
 import {
+  addAccumulationPlanOneTimeContribution,
   changeAccumulationPlanAmount,
   createAccumulationPlan,
   deleteAccumulationPlan,
   pauseAccumulationPlan,
   removeAccumulationPlanAmountChange,
+  removeAccumulationPlanOneTimeContribution,
   resumeAccumulationPlan,
   updateAccumulationPlan,
 } from "@/lib/actions/accumulation-plans";
@@ -54,6 +57,7 @@ import type {
   AccumulationFrequency,
   AccumulationPlan,
   AmountSegment,
+  OneTimeContribution,
 } from "@/lib/schemas/accumulation-plan";
 import type { AccumulationContribution } from "@/lib/utils/accumulation";
 import { normalizeAmountSchedule } from "@/lib/utils/accumulation";
@@ -91,6 +95,7 @@ export function PlansView({
   const [changingAmount, setChangingAmount] = useState<PlanListItem | null>(
     null
   );
+  const [addingOneTime, setAddingOneTime] = useState<PlanListItem | null>(null);
   const [name, setName] = useState("");
   const [amountEuro, setAmountEuro] = useState("");
   const [frequency, setFrequency] =
@@ -99,6 +104,9 @@ export function PlansView({
   const [startDate, setStartDate] = useState(() => defaultStartDate(year));
   const [changeAmountEuro, setChangeAmountEuro] = useState("");
   const [changeEffectiveFrom, setChangeEffectiveFrom] = useState(todayISO);
+  const [oneTimeAmountEuro, setOneTimeAmountEuro] = useState("");
+  const [oneTimeAccountId, setOneTimeAccountId] = useState("");
+  const [oneTimeDate, setOneTimeDate] = useState(todayISO);
 
   const canSubmit = editing
     ? !!name.trim() && !!sourceAccountId && !!startDate
@@ -113,6 +121,12 @@ export function PlansView({
     !!changeEffectiveFrom &&
     changeEffectiveFrom >= changingAmount.startDate;
 
+  const canSubmitOneTime =
+    addingOneTime != null &&
+    toCents(oneTimeAmountEuro) > 0 &&
+    !!oneTimeAccountId &&
+    !!oneTimeDate;
+
   function resetForm() {
     setEditing(null);
     setName("");
@@ -126,6 +140,13 @@ export function PlansView({
     setChangingAmount(null);
     setChangeAmountEuro("");
     setChangeEffectiveFrom(todayISO());
+  }
+
+  function resetOneTimeForm() {
+    setAddingOneTime(null);
+    setOneTimeAmountEuro("");
+    setOneTimeAccountId("");
+    setOneTimeDate(todayISO());
   }
 
   function openCreate() {
@@ -148,6 +169,13 @@ export function PlansView({
     setChangingAmount(item);
     setChangeAmountEuro("");
     setChangeEffectiveFrom(defaultEffectiveFrom(item.startDate));
+  }
+
+  function openOneTime(item: PlanListItem) {
+    setAddingOneTime(item);
+    setOneTimeAmountEuro("");
+    setOneTimeAccountId(item.sourceAccountId);
+    setOneTimeDate(todayISO());
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -200,6 +228,33 @@ export function PlansView({
     }
   }
 
+  async function handleAddOneTime(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmitOneTime || !addingOneTime) return;
+    try {
+      await addAccumulationPlanOneTimeContribution(addingOneTime.id, {
+        amount: toCents(oneTimeAmountEuro),
+        date: oneTimeDate,
+        sourceAccountId: oneTimeAccountId,
+      });
+      toast.success(t("plans.oneTimeAdded"));
+      setOneTimeAmountEuro("");
+      setOneTimeDate(todayISO());
+    } catch (err) {
+      toast.error(formatErrorMessage(language, err));
+    }
+  }
+
+  async function handleRemoveOneTime(planId: string, contributionId: string) {
+    if (!confirm(t("plans.oneTimeRemoveConfirm"))) return;
+    try {
+      await removeAccumulationPlanOneTimeContribution(planId, contributionId);
+      toast.success(t("plans.oneTimeRemoved"));
+    } catch (err) {
+      toast.error(formatErrorMessage(language, err));
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm(t("plans.deleteConfirm"))) return;
     try {
@@ -234,6 +289,12 @@ export function PlansView({
   const amountHistory = changingLive
     ? normalizeAmountSchedule(changingLive)
     : [];
+  const addingLive = addingOneTime
+    ? items.find((item) => item.id === addingOneTime.id)
+    : undefined;
+  const oneTimeHistory = [...(addingLive?.oneTimeContributions ?? [])].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+  );
 
   return (
     <div className="space-y-6">
@@ -282,6 +343,8 @@ export function PlansView({
               locale={locale}
               onEdit={openEdit}
               onChangeAmount={openChangeAmount}
+              onAddOneTime={openOneTime}
+              onRemoveOneTime={handleRemoveOneTime}
               onDelete={handleDelete}
               onPause={handlePause}
               onResume={handleResume}
@@ -437,6 +500,80 @@ export function PlansView({
           </form>
         </SheetContent>
       </Sheet>
+
+      <Sheet
+        open={addingOneTime != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) resetOneTimeForm();
+        }}
+      >
+        <SheetContent className="sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{t("plans.oneTime")}</SheetTitle>
+          </SheetHeader>
+          <form
+            onSubmit={handleAddOneTime}
+            className="flex flex-1 flex-col gap-4 px-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="plan-one-time-amount">{t("plans.amount")}</Label>
+              <Input
+                id="plan-one-time-amount"
+                inputMode="decimal"
+                value={oneTimeAmountEuro}
+                onChange={(e) => setOneTimeAmountEuro(e.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("plans.sourceAccount")}</Label>
+              <Select
+                value={oneTimeAccountId}
+                onValueChange={setOneTimeAccountId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("plans.selectAccount")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-one-time-date">{t("common.date")}</Label>
+              <Input
+                id="plan-one-time-date"
+                type="date"
+                value={oneTimeDate}
+                onChange={(e) => setOneTimeDate(e.target.value)}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("plans.oneTimeHint")}
+            </p>
+            {oneTimeHistory.length > 0 && addingOneTime ? (
+              <OneTimeHistoryList
+                planId={addingOneTime.id}
+                extras={oneTimeHistory}
+                accounts={accounts}
+                currency={currency}
+                locale={locale}
+                language={language}
+                onRemove={handleRemoveOneTime}
+              />
+            ) : null}
+            <SheetFooter>
+              <Button type="submit" disabled={!canSubmitOneTime}>
+                {t("common.save")}
+              </Button>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -448,6 +585,8 @@ function PlanCard({
   locale,
   onEdit,
   onChangeAmount,
+  onAddOneTime,
+  onRemoveOneTime,
   onDelete,
   onPause,
   onResume,
@@ -458,6 +597,8 @@ function PlanCard({
   locale: string;
   onEdit: (item: PlanListItem) => void;
   onChangeAmount: (item: PlanListItem) => void;
+  onAddOneTime: (item: PlanListItem) => void;
+  onRemoveOneTime: (planId: string, contributionId: string) => void;
   onDelete: (id: string) => void;
   onPause: (id: string) => void;
   onResume: (id: string) => void;
@@ -540,6 +681,15 @@ function PlanCard({
             <Banknote className="size-3.5" />
             {t("plans.changeAmount")}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={t("plans.oneTimeAria", { name: item.name })}
+            onClick={() => onAddOneTime(item)}
+          >
+            <CirclePlus className="size-3.5" />
+            {t("plans.oneTime")}
+          </Button>
         </div>
 
         <ContributionList
@@ -548,6 +698,9 @@ function PlanCard({
           currency={currency}
           locale={locale}
           language={language}
+          onRemoveOneTime={(contributionId) =>
+            onRemoveOneTime(item.id, contributionId)
+          }
         />
         <ContributionList
           title={t("plans.upcoming")}
@@ -555,6 +708,9 @@ function PlanCard({
           currency={currency}
           locale={locale}
           language={language}
+          onRemoveOneTime={(contributionId) =>
+            onRemoveOneTime(item.id, contributionId)
+          }
         />
       </CardContent>
     </Card>
@@ -616,18 +772,78 @@ function AmountHistoryList({
   );
 }
 
+function OneTimeHistoryList({
+  planId,
+  extras,
+  accounts,
+  currency,
+  locale,
+  language,
+  onRemove,
+}: {
+  planId: string;
+  extras: OneTimeContribution[];
+  accounts: Account[];
+  currency: string;
+  locale: string;
+  language: "it" | "en";
+  onRemove: (planId: string, contributionId: string) => void;
+}) {
+  const { t } = useI18n();
+  const formatAmount = useFormatCents();
+  const accountName = (id: string) =>
+    accounts.find((account) => account.id === id)?.name ?? id;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{t("plans.oneTimeHistory")}</p>
+      <ul className="divide-y text-sm">
+        {extras.map((extra) => (
+          <li
+            key={extra.id}
+            className="flex items-center justify-between gap-2 py-1.5"
+          >
+            <span className="text-muted-foreground">
+              {formatDate(extra.date, "dd/MM/yyyy", language)} ·{" "}
+              {accountName(extra.sourceAccountId)}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="tabular-nums">
+                {formatAmount(extra.amount, currency, locale)}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("plans.removeOneTimeAria", {
+                  date: formatDate(extra.date, "dd/MM/yyyy", language),
+                })}
+                onClick={() => onRemove(planId, extra.id)}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ContributionList({
   title,
   items,
   currency,
   locale,
   language,
+  onRemoveOneTime,
 }: {
   title: string;
   items: AccumulationContribution[];
   currency: string;
   locale: string;
   language: "it" | "en";
+  onRemoveOneTime: (contributionId: string) => void;
 }) {
   const { t } = useI18n();
   const formatAmount = useFormatCents();
@@ -650,13 +866,31 @@ function ContributionList({
             {items.map((item) => (
               <li
                 key={item.occurrenceId}
-                className="flex items-center justify-between py-1.5"
+                className="flex items-center justify-between gap-2 py-1.5"
               >
-                <span className="text-muted-foreground">
+                <span className="flex flex-wrap items-center gap-2 text-muted-foreground">
                   {formatDate(item.date, "dd/MM/yyyy", language)}
+                  {item.kind === "oneTime" ? (
+                    <Badge variant="secondary">{t("plans.oneTimeBadge")}</Badge>
+                  ) : null}
                 </span>
-                <span className="tabular-nums">
-                  {formatAmount(item.amount, currency, locale)}
+                <span className="flex items-center gap-1">
+                  <span className="tabular-nums">
+                    {formatAmount(item.amount, currency, locale)}
+                  </span>
+                  {item.kind === "oneTime" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("plans.removeOneTimeAria", {
+                        date: formatDate(item.date, "dd/MM/yyyy", language),
+                      })}
+                      onClick={() => onRemoveOneTime(item.occurrenceId)}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  ) : null}
                 </span>
               </li>
             ))}

@@ -1,11 +1,13 @@
 import { getAccounts } from "@/lib/db/accounts";
 import {
+  addAccumulationPlanOneTimeContribution as dbAddOneTime,
   changeAccumulationPlanAmount as dbChangeAmount,
   createAccumulationPlan as dbCreate,
   deleteAccumulationPlan as dbDelete,
   getAccumulationPlans as dbGetPlans,
   pauseAccumulationPlan as dbPause,
   removeAccumulationPlanAmountChange as dbRemoveAmountChange,
+  removeAccumulationPlanOneTimeContribution as dbRemoveOneTime,
   resumeAccumulationPlan as dbResume,
   updateAccumulationPlan as dbUpdate,
 } from "@/lib/db/accumulation-plans";
@@ -13,9 +15,12 @@ import { getSettings } from "@/lib/db/settings";
 import { AppError } from "@/lib/i18n/app-error";
 import {
   accumulationPlanInputSchema,
+  addAccumulationPlanOneTimeContributionSchema,
   changeAccumulationPlanAmountSchema,
   removeAccumulationPlanAmountChangeSchema,
+  removeAccumulationPlanOneTimeContributionSchema,
   type AccumulationPlanInput,
+  type AddAccumulationPlanOneTimeContributionInput,
   type ChangeAccumulationPlanAmountInput,
 } from "@/lib/schemas/accumulation-plan";
 import {
@@ -74,6 +79,25 @@ export async function removeAccumulationPlanAmountChange(
 ) {
   const parsed = removeAccumulationPlanAmountChangeSchema.parse({ from });
   return dbRemoveAmountChange(id, parsed.from);
+}
+
+export async function addAccumulationPlanOneTimeContribution(
+  id: string,
+  data: AddAccumulationPlanOneTimeContributionInput
+) {
+  const parsed = addAccumulationPlanOneTimeContributionSchema.parse(data);
+  await requireSourceAccount(parsed.sourceAccountId);
+  return dbAddOneTime(id, parsed);
+}
+
+export async function removeAccumulationPlanOneTimeContribution(
+  id: string,
+  contributionId: string
+) {
+  const parsed = removeAccumulationPlanOneTimeContributionSchema.parse({
+    contributionId,
+  });
+  return dbRemoveOneTime(id, parsed.contributionId);
 }
 
 export async function pauseAccumulationPlan(id: string) {

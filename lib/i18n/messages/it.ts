@@ -318,6 +318,17 @@ export const itMessages = {
     removeAmountChangeAria: "Rimuovi rata dal {date}",
     amountChanged: "Rata aggiornata",
     changeAmountAria: "Cambia rata di {name}",
+    oneTime: "Versamento una tantum",
+    oneTimeHint:
+      "Si aggiunge al piano una volta sola, senza cambiare la rata periodica. Puoi annullarlo se è un errore.",
+    oneTimeHistory: "Versamenti una tantum",
+    oneTimeBadge: "Una tantum",
+    oneTimeAdded: "Versamento aggiunto",
+    oneTimeRemoved: "Versamento annullato",
+    oneTimeRemoveConfirm:
+      "Annullare questo versamento una tantum? L'importo torna sul conto di prelievo.",
+    oneTimeAria: "Aggiungi versamento una tantum a {name}",
+    removeOneTimeAria: "Annulla versamento del {date}",
     pause: "Metti in pausa",
     resume: "Riprendi",
     paused: "In pausa",

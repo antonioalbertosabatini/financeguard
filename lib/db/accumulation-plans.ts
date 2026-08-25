@@ -9,6 +9,7 @@ import {
   accumulationPlansFileSchema,
   type AccumulationPlan,
   type AccumulationPlanInput,
+  type AddAccumulationPlanOneTimeContributionInput,
   type ChangeAccumulationPlanAmountInput,
 } from "@/lib/schemas/accumulation-plan";
 import { generateId } from "@/lib/db/index";
@@ -34,6 +35,7 @@ export async function createAccumulationPlan(
     status: "active",
     pausePeriods: [],
     amountSchedule: [{ from: input.startDate, amount: input.amount }],
+    oneTimeContributions: [],
   });
   const dataset = getDataset();
   dataset.accumulationPlans.push(plan);
@@ -61,6 +63,7 @@ export async function updateAccumulationPlan(
     status: previous.status,
     pausePeriods: previous.pausePeriods,
     amountSchedule,
+    oneTimeContributions: previous.oneTimeContributions ?? [],
   });
   plans[index] = updated;
   trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
@@ -194,6 +197,55 @@ export async function resumeAccumulationPlan(
     pausePeriods,
     amountSchedule,
     amount,
+  });
+  plans[index] = updated;
+  trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
+  commit();
+  return updated;
+}
+
+export async function addAccumulationPlanOneTimeContribution(
+  id: string,
+  input: AddAccumulationPlanOneTimeContributionInput
+): Promise<AccumulationPlan> {
+  const plans = getDataset().accumulationPlans;
+  const index = plans.findIndex((plan) => plan.id === id);
+  if (index === -1) throw new AppError("errors.planNotFound");
+  const previous = plans[index];
+  const extra = {
+    id: generateId("pax"),
+    date: input.date,
+    amount: input.amount,
+    sourceAccountId: input.sourceAccountId,
+  };
+  const updated = accumulationPlanSchema.parse({
+    ...previous,
+    oneTimeContributions: [
+      ...(previous.oneTimeContributions ?? []),
+      extra,
+    ],
+  });
+  plans[index] = updated;
+  trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);
+  commit();
+  return updated;
+}
+
+export async function removeAccumulationPlanOneTimeContribution(
+  id: string,
+  contributionId: string
+): Promise<AccumulationPlan> {
+  const plans = getDataset().accumulationPlans;
+  const index = plans.findIndex((plan) => plan.id === id);
+  if (index === -1) throw new AppError("errors.planNotFound");
+  const previous = plans[index];
+  const extras = previous.oneTimeContributions ?? [];
+  if (!extras.some((item) => item.id === contributionId)) {
+    return previous;
+  }
+  const updated = accumulationPlanSchema.parse({
+    ...previous,
+    oneTimeContributions: extras.filter((item) => item.id !== contributionId),
   });
   plans[index] = updated;
   trackAccumulationPlanUpsert(getDataset(), updated, getDeviceId(), previous);

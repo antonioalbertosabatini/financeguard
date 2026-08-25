@@ -27,6 +27,7 @@ export type AccumulationContribution = {
   date: string;
   amount: number;
   sourceAccountId: string;
+  kind: "scheduled" | "oneTime";
 };
 
 type PlanAmountLookup = Pick<AccumulationPlan, "amount" | "startDate"> & {
@@ -191,6 +192,7 @@ function pushContribution(
     date,
     amount: amountOnDate(plan, date),
     sourceAccountId: plan.sourceAccountId,
+    kind: "scheduled",
   });
 }
 
@@ -199,27 +201,44 @@ export function expandPlanContributions(
   rangeEnd: string,
   rangeStart: string = plan.startDate
 ): AccumulationContribution[] {
-  if (rangeEnd < plan.startDate) return [];
-
   const result: AccumulationContribution[] = [];
-  const start = plan.startDate;
 
-  if (plan.frequency === "monthly") {
-    for (let i = 0; i < MAX_OCCURRENCES; i++) {
-      const date = monthlyOccurrence(start, i);
-      if (date > rangeEnd) break;
-      pushContribution(result, plan, date, rangeStart, rangeEnd);
+  if (rangeEnd >= plan.startDate) {
+    const start = plan.startDate;
+
+    if (plan.frequency === "monthly") {
+      for (let i = 0; i < MAX_OCCURRENCES; i++) {
+        const date = monthlyOccurrence(start, i);
+        if (date > rangeEnd) break;
+        pushContribution(result, plan, date, rangeStart, rangeEnd);
+      }
+    } else {
+      const stepDays = plan.frequency === "weekly" ? 7 : 14;
+      let date = start;
+      for (let i = 0; i < MAX_OCCURRENCES; i++) {
+        if (date > rangeEnd) break;
+        pushContribution(result, plan, date, rangeStart, rangeEnd);
+        date = addDaysISO(date, stepDays);
+      }
     }
-    return result;
   }
 
-  const stepDays = plan.frequency === "weekly" ? 7 : 14;
-  let date = start;
-  for (let i = 0; i < MAX_OCCURRENCES; i++) {
-    if (date > rangeEnd) break;
-    pushContribution(result, plan, date, rangeStart, rangeEnd);
-    date = addDaysISO(date, stepDays);
+  for (const extra of plan.oneTimeContributions ?? []) {
+    if (extra.date > rangeEnd) continue;
+    result.push({
+      planId: plan.id,
+      occurrenceId: extra.id,
+      date: extra.date,
+      amount: extra.amount,
+      sourceAccountId: extra.sourceAccountId,
+      kind: "oneTime",
+    });
   }
+
+  result.sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) || a.occurrenceId.localeCompare(b.occurrenceId)
+  );
   return result;
 }
 

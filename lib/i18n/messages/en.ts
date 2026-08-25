@@ -328,6 +328,17 @@ export const enMessages: {
     removeAmountChangeAria: "Remove installment from {date}",
     amountChanged: "Installment updated",
     changeAmountAria: "Change installment for {name}",
+    oneTime: "One-time contribution",
+    oneTimeHint:
+      "Adds to the plan once, without changing the recurring installment. You can undo it if it was a mistake.",
+    oneTimeHistory: "One-time contributions",
+    oneTimeBadge: "One-time",
+    oneTimeAdded: "Contribution added",
+    oneTimeRemoved: "Contribution undone",
+    oneTimeRemoveConfirm:
+      "Undo this one-time contribution? The amount returns to the source account.",
+    oneTimeAria: "Add a one-time contribution to {name}",
+    removeOneTimeAria: "Undo contribution of {date}",
     pause: "Pause",
     resume: "Resume",
     paused: "Paused",

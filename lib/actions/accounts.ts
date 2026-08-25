@@ -47,7 +47,15 @@ export async function deleteAccount(id: string) {
   if (transfers.some((t) => t.fromAccountId === id || t.toAccountId === id)) {
     throw new AppError("errors.deleteAccountInTransfers");
   }
-  if (plans.some((plan) => plan.sourceAccountId === id)) {
+  if (
+    plans.some(
+      (plan) =>
+        plan.sourceAccountId === id ||
+        (plan.oneTimeContributions ?? []).some(
+          (extra) => extra.sourceAccountId === id
+        )
+    )
+  ) {
     throw new AppError("errors.deleteAccountInPlans");
   }
   await dbDeleteAccount(id);
