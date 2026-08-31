@@ -4,6 +4,7 @@ import { getAccountTransfersForYear } from "@/lib/db/account-transfers";
 import { getBudgets } from "@/lib/db/budgets";
 import { getCategories } from "@/lib/db/categories";
 import { getSettings } from "@/lib/db/settings";
+import { getStockHoldings } from "@/lib/db/stock-holdings";
 import {
   copyRecurringRules,
   createTransaction as dbCreateTransaction,
@@ -34,12 +35,20 @@ import {
 import { currentYear } from "@/lib/utils/dates";
 import {
   accumulationCategory,
+  contributionYears,
   contributionsForYear,
   postedContributionsForYear,
   sumAccumulation,
   toSyntheticExpenses,
   type AccumulationContribution,
 } from "@/lib/utils/accumulation";
+import {
+  postedPurchasesForYear,
+  purchaseYears,
+  purchasesForYear,
+  stockCategory,
+  toStockSyntheticExpenses,
+} from "@/lib/utils/stocks";
 import {
   expandRecurrences,
   filterExpandedTransactions,
@@ -53,7 +62,11 @@ function mapCategoryExpenses(
   amounts: Record<string, number>,
   sort = false
 ) {
-  const withSystem = [...categories, accumulationCategory(accumulationCategoryName())];
+  const withSystem = [
+    ...categories,
+    accumulationCategory(accumulationCategoryName()),
+    stockCategory(stockCategoryName()),
+  ];
   const categoryMap = Object.fromEntries(withSystem.map((c) => [c.id, c]));
   const items = Object.entries(amounts).map(([categoryId, amount]) => ({
     categoryId,
@@ -68,21 +81,42 @@ function accumulationCategoryName() {
   return translate(getCurrentLanguage(), "plans.categoryName");
 }
 
-function withAccumulationExpenses(
+function stockCategoryName() {
+  return translate(getCurrentLanguage(), "plans.stocksCategoryName");
+}
+
+function withInvestmentExpenses(
   expanded: ExpandedTransaction[],
-  contributions: AccumulationContribution[]
+  contributions: AccumulationContribution[],
+  purchases: AccumulationContribution[]
 ) {
-  return [...expanded, ...toSyntheticExpenses(contributions)];
+  return [
+    ...expanded,
+    ...toSyntheticExpenses(contributions),
+    ...toStockSyntheticExpenses(purchases),
+  ];
 }
 
-async function postedAccumulation(year: number, asOfISO?: string) {
-  const plans = await getAccumulationPlans();
-  return postedContributionsForYear(plans, year, asOfISO);
+async function postedInvestments(year: number, asOfISO?: string) {
+  const [plans, holdings] = await Promise.all([
+    getAccumulationPlans(),
+    getStockHoldings(),
+  ]);
+  return {
+    contributions: postedContributionsForYear(plans, year, asOfISO),
+    purchases: postedPurchasesForYear(holdings, year, asOfISO),
+  };
 }
 
-async function yearAccumulation(year: number) {
-  const plans = await getAccumulationPlans();
-  return contributionsForYear(plans, year);
+async function yearInvestments(year: number) {
+  const [plans, holdings] = await Promise.all([
+    getAccumulationPlans(),
+    getStockHoldings(),
+  ]);
+  return {
+    contributions: contributionsForYear(plans, year),
+    purchases: purchasesForYear(holdings, year),
+  };
 }
 
 async function expandedForYear(year: number, asOfISO?: string) {
@@ -93,15 +127,17 @@ async function expandedForYear(year: number, asOfISO?: string) {
 }
 
 export async function getAvailableYears() {
-  const [years, plans] = await Promise.all([
+  const [years, plans, holdings] = await Promise.all([
     listTransactionYears(),
     getAccumulationPlans(),
+    getStockHoldings(),
   ]);
-  for (const plan of plans) {
-    const startYear = parseInt(plan.startDate.slice(0, 4), 10);
-    if (!Number.isNaN(startYear) && !years.includes(startYear)) {
-      years.push(startYear);
-    }
+  const extraYears = [
+    ...contributionYears(plans),
+    ...purchaseYears(holdings),
+  ];
+  for (const year of extraYears) {
+    if (!years.includes(year)) years.push(year);
   }
   const now = currentYear();
   if (!years.includes(now)) years.unshift(now);
@@ -179,26 +215,33 @@ export async function getDashboardData(year: number) {
       getSettings(),
       getAccountTransfersForYear(year),
       expandedForYear(year),
-      postedAccumulation(year),
+      postedInvestments(year),
     ]);
 
   const now = new Date();
   const monthPrefix = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const reportTxs = withAccumulationExpenses(expanded, posted);
+  const reportTxs = withInvestmentExpenses(
+    expanded,
+    posted.contributions,
+    posted.purchases
+  );
   const monthTxs = reportTxs.filter((tx) => tx.date.startsWith(monthPrefix));
+  const accountDebits = [...posted.contributions, ...posted.purchases];
   const liquidBalance = calculateTotalBalance(
     accounts,
     expanded,
     transfers,
-    posted
+    accountDebits
   );
-  const inAccumulation = sumAccumulation(posted);
+  const inAccumulation = sumAccumulation(posted.contributions);
+  const inStocks = sumAccumulation(posted.purchases);
 
   return {
     settings,
-    totalBalance: liquidBalance + inAccumulation,
+    totalBalance: liquidBalance + inAccumulation + inStocks,
     availableBalance: liquidBalance,
     inAccumulation,
+    inStocks,
     monthlyIncome: sumByType(monthTxs, "income"),
     monthlyExpense: sumByType(monthTxs, "expense"),
     expensesByCategory: mapCategoryExpenses(
@@ -242,17 +285,18 @@ export async function getMonthlyReport(year: number, month: number) {
     getCategories(),
     getSettings(),
     expandedForYear(year),
-    postedAccumulation(year),
+    postedInvestments(year),
   ]);
 
   const monthTxs = filterByMonth(
-    withAccumulationExpenses(expanded, posted),
+    withInvestmentExpenses(expanded, posted.contributions, posted.purchases),
     year,
     month
   );
   const reportCategories = [
     ...categories,
     accumulationCategory(accumulationCategoryName()),
+    stockCategory(stockCategoryName()),
   ];
 
   return {
@@ -279,10 +323,14 @@ export async function getAnnualReport(year: number) {
     getCategories(),
     getSettings(),
     expandedForYear(year),
-    postedAccumulation(year),
+    postedInvestments(year),
   ]);
 
-  const reportTxs = withAccumulationExpenses(expanded, posted);
+  const reportTxs = withInvestmentExpenses(
+    expanded,
+    posted.contributions,
+    posted.purchases
+  );
 
   return {
     settings,
@@ -303,12 +351,13 @@ export async function getAccountsWithBalances(year: number) {
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
-    yearAccumulation(year),
+    yearInvestments(year),
   ]);
+  const accountDebits = [...posted.contributions, ...posted.purchases];
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers, posted),
+    balance: calculateAccountBalance(account, expanded, transfers, accountDebits),
   }));
 }
 
@@ -319,12 +368,13 @@ export async function getAccountsWithBalancesAsOf(year: number, asOfISO: string)
     getAccountTransfersForYear(year).then((items) =>
       items.filter((tr) => tr.date <= asOfISO)
     ),
-    postedAccumulation(year, asOfISO),
+    postedInvestments(year, asOfISO),
   ]);
+  const accountDebits = [...posted.contributions, ...posted.purchases];
 
   return accounts.map((account) => ({
     ...account,
-    balance: calculateAccountBalance(account, expanded, transfers, posted),
+    balance: calculateAccountBalance(account, expanded, transfers, accountDebits),
   }));
 }
 
@@ -333,12 +383,13 @@ export async function getAccountsAnalysisSummary(year: number, asOfISO: string) 
     getAccounts(),
     expandedForYear(year),
     getAccountTransfersForYear(year),
-    yearAccumulation(year),
+    yearInvestments(year),
   ]);
 
   const expandedAsOf = expandedAll.filter((tx) => tx.date <= asOfISO);
   const transfersAsOf = transfersAll.filter((tr) => tr.date <= asOfISO);
-  const postedAsOfDate = yearPosted.filter((item) => item.date <= asOfISO);
+  const yearDebits = [...yearPosted.contributions, ...yearPosted.purchases];
+  const postedAsOfDate = yearDebits.filter((item) => item.date <= asOfISO);
 
   const accountsAsOf = accounts.map((account) => ({
     ...account,
@@ -356,7 +407,7 @@ export async function getAccountsAnalysisSummary(year: number, asOfISO: string) 
       account,
       expandedAll,
       transfersAll,
-      yearPosted
+      yearDebits
     ),
   }));
 
@@ -373,7 +424,7 @@ export async function getAccountsAnalysisSummary(year: number, asOfISO: string) 
       accounts,
       expandedAll,
       transfersAll,
-      yearPosted
+      yearDebits
     ),
     asOfISO,
   };

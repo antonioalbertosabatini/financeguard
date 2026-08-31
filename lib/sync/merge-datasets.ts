@@ -7,6 +7,7 @@ import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
 import type { Settings } from "@/lib/schemas/settings";
+import type { StockHolding } from "@/lib/schemas/stock-holding";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { Dataset } from "@/lib/storage/dataset";
 import { getYearFromDate } from "@/lib/db/index";
@@ -193,6 +194,14 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
       type: "accumulationPlan" as const,
       id: p.id,
     })),
+    ...(local.stockHoldings ?? []).map((h) => ({
+      type: "stockHolding" as const,
+      id: h.id,
+    })),
+    ...(remote.stockHoldings ?? []).map((h) => ({
+      type: "stockHolding" as const,
+      id: h.id,
+    })),
     { type: "settings", id: SETTINGS_RECORD_ID },
   ];
 
@@ -238,12 +247,15 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
   const remoteBudgets = indexById(remote.budgets);
   const localPlans = indexById(local.accumulationPlans ?? []);
   const remotePlans = indexById(remote.accumulationPlans ?? []);
+  const localHoldings = indexById(local.stockHoldings ?? []);
+  const remoteHoldings = indexById(remote.stockHoldings ?? []);
 
   const mergedRecords: SyncMetadata["records"] = {};
   const accounts: Account[] = [];
   const categories: Category[] = [];
   const budgets: Budget[] = [];
   const accumulationPlans: AccumulationPlan[] = [];
+  const stockHoldings: StockHolding[] = [];
   const transactions: Transaction[] = [];
   const transfers: AccountTransfer[] = [];
   let settings: Settings | undefined;
@@ -294,6 +306,15 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
         );
         if (merged) accumulationPlans.push(merged as unknown as AccumulationPlan);
         break;
+      case "stockHolding":
+        merged = mergeRecordData(
+          localHoldings.get(id) as Record<string, unknown> | undefined,
+          remoteHoldings.get(id) as Record<string, unknown> | undefined,
+          lMeta,
+          rMeta
+        );
+        if (merged) stockHoldings.push(merged as unknown as StockHolding);
+        break;
       case "transaction":
         merged = mergeRecordData(
           localTx.get(id) as Record<string, unknown> | undefined,
@@ -335,6 +356,7 @@ export function mergeDatasets(local: Dataset, remote: Dataset): Dataset {
     transactionsByYear: groupTransactionsByYear(transactions),
     accountTransfersByYear: groupTransfersByYear(transfers),
     accumulationPlans,
+    stockHoldings,
     syncMeta: mergeSyncMetadata(localMeta, remoteMeta, mergedRecords),
   };
 }

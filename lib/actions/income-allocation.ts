@@ -1,8 +1,14 @@
 import { getAccumulationPlans } from "@/lib/db/accumulation-plans";
 import { getCategories } from "@/lib/db/categories";
 import { getSettings, updateSettings } from "@/lib/db/settings";
+import { getStockHoldings } from "@/lib/db/stock-holdings";
 import { getTransactionsForYear } from "@/lib/db/transactions";
-import { ACCUMULATION_CATEGORY_COLOR, ACCUMULATION_CATEGORY_ID } from "@/lib/constants";
+import {
+  ACCUMULATION_CATEGORY_COLOR,
+  ACCUMULATION_CATEGORY_ID,
+  STOCK_CATEGORY_COLOR,
+  STOCK_CATEGORY_ID,
+} from "@/lib/constants";
 import { getCurrentLanguage } from "@/lib/i18n/runtime";
 import { translate } from "@/lib/i18n/translate";
 import type { IncomeAllocationBucketId } from "@/lib/schemas/settings";
@@ -22,6 +28,7 @@ import {
   postedContributionsForYear,
   type AccumulationContribution,
 } from "@/lib/utils/accumulation";
+import { postedPurchasesForYear } from "@/lib/utils/stocks";
 import { expandRecurrences } from "@/lib/utils/recurrence";
 
 export type AllocationExpenseItem = {
@@ -34,11 +41,16 @@ export type AllocationExpenseItem = {
   categoryIcon: string;
   categoryColor: string;
   isAccumulation: boolean;
+  lockKind?: "plan" | "stock";
   planName?: string;
 };
 
 function accumulationCategoryName() {
   return translate(getCurrentLanguage(), "plans.categoryName");
+}
+
+function stockCategoryName() {
+  return translate(getCurrentLanguage(), "plans.stocksCategoryName");
 }
 
 function contributionsInMonth(
@@ -51,11 +63,12 @@ function contributionsInMonth(
 }
 
 export async function getIncomeAllocation(year: number, month: number) {
-  const [settings, categories, raw, plans] = await Promise.all([
+  const [settings, categories, raw, plans, holdings] = await Promise.all([
     getSettings(),
     getCategories(),
     getTransactionsForYear(year),
     getAccumulationPlans(),
+    getStockHoldings(),
   ]);
 
   const monthTxs = filterByMonth(expandRecurrences(raw, year), year, month);
@@ -87,26 +100,50 @@ export async function getIncomeAllocation(year: number, month: number) {
     });
 
   const planNames = Object.fromEntries(plans.map((plan) => [plan.id, plan.name]));
+  const holdingNames = Object.fromEntries(
+    holdings.map((holding) => [holding.id, holding.name])
+  );
   const posted = contributionsInMonth(
     postedContributionsForYear(plans, year),
     year,
     month
   );
-  const accumulation: AllocationExpenseItem[] = posted.map((item) => ({
-    occurrenceId: item.occurrenceId,
-    date: item.date,
-    amount: item.amount,
-    notes: planNames[item.planId] ?? item.planId,
-    categoryId: ACCUMULATION_CATEGORY_ID,
-    categoryName: accumulationCategoryName(),
-    categoryIcon: "piggy-bank",
-    categoryColor: ACCUMULATION_CATEGORY_COLOR,
-    isAccumulation: true,
-    planName: planNames[item.planId],
-  }));
+  const postedStocks = contributionsInMonth(
+    postedPurchasesForYear(holdings, year),
+    year,
+    month
+  );
+  const accumulation: AllocationExpenseItem[] = [
+    ...posted.map((item) => ({
+      occurrenceId: item.occurrenceId,
+      date: item.date,
+      amount: item.amount,
+      notes: planNames[item.planId] ?? item.planId,
+      categoryId: ACCUMULATION_CATEGORY_ID,
+      categoryName: accumulationCategoryName(),
+      categoryIcon: "piggy-bank",
+      categoryColor: ACCUMULATION_CATEGORY_COLOR,
+      isAccumulation: true,
+      lockKind: "plan" as const,
+      planName: planNames[item.planId],
+    })),
+    ...postedStocks.map((item) => ({
+      occurrenceId: item.occurrenceId,
+      date: item.date,
+      amount: item.amount,
+      notes: holdingNames[item.planId] ?? item.planId,
+      categoryId: STOCK_CATEGORY_ID,
+      categoryName: stockCategoryName(),
+      categoryIcon: "trending-up",
+      categoryColor: STOCK_CATEGORY_COLOR,
+      isAccumulation: true,
+      lockKind: "stock" as const,
+      planName: holdingNames[item.planId],
+    })),
+  ];
 
   const validExpenseIds = new Set(expenses.map((item) => item.occurrenceId));
-  const accumulationIds = posted.map((item) => item.occurrenceId);
+  const accumulationIds = accumulation.map((item) => item.occurrenceId);
   const assignments = sanitizePeriodAssignments(
     settings.incomeAllocationAssignments[periodKey(year, month)],
     validExpenseIds,
@@ -150,10 +187,11 @@ export async function saveIncomeAllocationAssignments(
     return getSettings();
   }
 
-  const [settings, raw, plans] = await Promise.all([
+  const [settings, raw, plans, holdings] = await Promise.all([
     getSettings(),
     getTransactionsForYear(year),
     getAccumulationPlans(),
+    getStockHoldings(),
   ]);
 
   const monthTxs = filterByMonth(expandRecurrences(raw, year), year, month);
@@ -162,13 +200,18 @@ export async function saveIncomeAllocationAssignments(
       .filter((tx) => tx.type === "expense")
       .map((tx) => tx.occurrenceId)
   );
-  const accumulationIds = new Set(
-    contributionsInMonth(
+  const accumulationIds = new Set([
+    ...contributionsInMonth(
       postedContributionsForYear(plans, year),
       year,
       month
-    ).map((item) => item.occurrenceId)
-  );
+    ).map((item) => item.occurrenceId),
+    ...contributionsInMonth(
+      postedPurchasesForYear(holdings, year),
+      year,
+      month
+    ).map((item) => item.occurrenceId),
+  ]);
 
   const nextAssignments = persistPeriodAssignments(
     settings.incomeAllocationAssignments,

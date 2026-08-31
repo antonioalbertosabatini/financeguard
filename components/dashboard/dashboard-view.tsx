@@ -27,6 +27,7 @@ type DashboardProps = {
   totalBalance: number;
   availableBalance: number;
   inAccumulation: number;
+  inStocks: number;
   monthlyIncome: number;
   monthlyExpense: number;
   currency: string;
@@ -80,6 +81,7 @@ export function DashboardView({
   totalBalance,
   availableBalance,
   inAccumulation,
+  inStocks,
   monthlyIncome,
   monthlyExpense,
   currency,
@@ -127,7 +129,7 @@ export function DashboardView({
           <p className="mt-2 text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">
             {formatAmount(totalBalance, currency)}
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
             <div>
               <p className="text-primary-foreground/70">
                 {t("dashboard.availableBalance")}
@@ -142,6 +144,14 @@ export function DashboardView({
               </p>
               <p className="mt-0.5 font-semibold tabular-nums">
                 {formatAmount(inAccumulation, currency)}
+              </p>
+            </div>
+            <div>
+              <p className="text-primary-foreground/70">
+                {t("dashboard.inStocks")}
+              </p>
+              <p className="mt-0.5 font-semibold tabular-nums">
+                {formatAmount(inStocks, currency)}
               </p>
             </div>
           </div>

@@ -6,6 +6,7 @@
  *
  *   data/accounts.json, data/categories.json, data/budgets.json,
  *   data/settings.json, data/accumulation-plans.json,
+ *   data/stock-holdings.json,
  *   data/transactions/<anno>.json, data/account-transfers/<anno>.json
  *
  * In chiaro questi file sono JSON leggibili; nel backup criptato sono envelope
@@ -22,6 +23,7 @@ import {
 } from "@/lib/crypto/web-crypto";
 import { accountsFileSchema } from "@/lib/schemas/account";
 import { accumulationPlansFileSchema } from "@/lib/schemas/accumulation-plan";
+import { stockHoldingsFileSchema } from "@/lib/schemas/stock-holding";
 import { accountTransfersFileSchema } from "@/lib/schemas/account-transfer";
 import { budgetsFileSchema } from "@/lib/schemas/budget";
 import { parseCategoriesFile } from "@/lib/schemas/category";
@@ -41,6 +43,9 @@ function datasetToFiles(dataset: Dataset): Record<string, unknown> {
     [`${ROOT}/settings.json`]: dataset.settings,
     [`${ROOT}/accumulation-plans.json`]: {
       accumulationPlans: dataset.accumulationPlans ?? [],
+    },
+    [`${ROOT}/stock-holdings.json`]: {
+      stockHoldings: dataset.stockHoldings ?? [],
     },
   };
   for (const [year, transactions] of Object.entries(dataset.transactionsByYear)) {
@@ -98,6 +103,12 @@ async function filesToDataset(
   if (plans) {
     dataset.accumulationPlans =
       accumulationPlansFileSchema.parse(plans).accumulationPlans;
+  }
+
+  const holdings = await read(`${ROOT}/stock-holdings.json`);
+  if (holdings) {
+    dataset.stockHoldings =
+      stockHoldingsFileSchema.parse(holdings).stockHoldings;
   }
 
   return dataset;

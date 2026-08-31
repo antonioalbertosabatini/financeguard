@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyDataset } from "@/lib/storage/dataset";
+import { emptyDataset, normalizeDataset } from "@/lib/storage/dataset";
 import { mergeDatasets } from "@/lib/sync/merge-datasets";
 import {
   recordKey,
@@ -112,17 +112,10 @@ describe("mergeDatasets", () => {
     const plan = {
       id: "pac_1",
       name: "Locale",
-      amount: 1000,
-      frequency: "monthly" as const,
-      sourceAccountId: "acc_1",
-      startDate: "2026-01-01",
-      status: "active" as const,
-      pausePeriods: [],
-      amountSchedule: [],
       oneTimeContributions: [],
     };
     local.accumulationPlans = [plan];
-    remote.accumulationPlans = [{ ...plan, name: "Remoto", amount: 2000 }];
+    remote.accumulationPlans = [{ ...plan, name: "Remoto" }];
 
     const at = "2026-01-01T10:00:00.000Z";
     const later = "2026-01-02T10:00:00.000Z";
@@ -133,7 +126,6 @@ describe("mergeDatasets", () => {
       deviceId: "dev-a",
       fields: {
         name: { updatedAt: at, deviceId: "dev-a" },
-        amount: { updatedAt: at, deviceId: "dev-a" },
       },
     };
     remote.syncMeta!.records[key] = {
@@ -141,14 +133,88 @@ describe("mergeDatasets", () => {
       deviceId: "dev-b",
       fields: {
         name: { updatedAt: later, deviceId: "dev-b" },
-        amount: { updatedAt: at, deviceId: "dev-a" },
       },
     };
 
     const merged = mergeDatasets(local, remote);
     expect(merged.accumulationPlans).toHaveLength(1);
     expect(merged.accumulationPlans[0].name).toBe("Remoto");
-    expect(merged.accumulationPlans[0].amount).toBe(1000);
+  });
+
+  it("lets normalizeDataset drop automatic PAC fields after a legacy merge", () => {
+    const local = emptyDataset();
+    const remote = emptyDataset();
+    const legacy = {
+      id: "pac_1",
+      name: "VWCE",
+      amount: 2000,
+      frequency: "monthly",
+      sourceAccountId: "acc_1",
+      startDate: "2026-01-01",
+      status: "active",
+      pausePeriods: [],
+      amountSchedule: [],
+      oneTimeContributions: [
+        {
+          id: "pax_1",
+          date: "2026-01-10",
+          amount: 5000,
+          sourceAccountId: "acc_1",
+        },
+      ],
+    };
+    remote.accumulationPlans = [legacy as (typeof remote.accumulationPlans)[number]];
+
+    const merged = normalizeDataset(mergeDatasets(local, remote));
+    expect(merged.accumulationPlans).toEqual([
+      {
+        id: "pac_1",
+        name: "VWCE",
+        oneTimeContributions: [
+          {
+            id: "pax_1",
+            date: "2026-01-10",
+            amount: 5000,
+            sourceAccountId: "acc_1",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("merges stock holdings", () => {
+    const local = emptyDataset();
+    const remote = emptyDataset();
+    const holding = {
+      id: "stk_1",
+      name: "Locale",
+      purchases: [],
+    };
+    local.stockHoldings = [holding];
+    remote.stockHoldings = [{ ...holding, name: "Remoto" }];
+
+    const at = "2026-01-01T10:00:00.000Z";
+    const later = "2026-01-02T10:00:00.000Z";
+    const key = recordKey("stockHolding", "stk_1");
+
+    local.syncMeta!.records[key] = {
+      updatedAt: at,
+      deviceId: "dev-a",
+      fields: {
+        name: { updatedAt: at, deviceId: "dev-a" },
+      },
+    };
+    remote.syncMeta!.records[key] = {
+      updatedAt: later,
+      deviceId: "dev-b",
+      fields: {
+        name: { updatedAt: later, deviceId: "dev-b" },
+      },
+    };
+
+    const merged = mergeDatasets(local, remote);
+    expect(merged.stockHoldings).toHaveLength(1);
+    expect(merged.stockHoldings[0].name).toBe("Remoto");
   });
 });
 

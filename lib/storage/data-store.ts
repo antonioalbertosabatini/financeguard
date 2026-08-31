@@ -285,7 +285,7 @@ export async function applySyncedDataset(
   baseRevision: number
 ): Promise<number> {
   if (!key || !vault || !dataset) throw new AppError("errors.appLocked");
-  dataset = next;
+  dataset = normalizeDataset(next);
   revision = baseRevision;
   emit({ version: snapshot.version + 1 });
   const newRevision = await saveBundle(

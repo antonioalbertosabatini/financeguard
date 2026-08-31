@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/accounts";
 import { getAllAccountTransfers } from "@/lib/db/account-transfers";
 import { getAccumulationPlans } from "@/lib/db/accumulation-plans";
+import { getStockHoldings } from "@/lib/db/stock-holdings";
 import { getAllTransactions } from "@/lib/db/transactions";
 import { AppError } from "@/lib/i18n/app-error";
 import {
@@ -35,10 +36,11 @@ export async function reorderAccounts(orderedIds: string[]) {
 }
 
 export async function deleteAccount(id: string) {
-  const [transactions, transfers, plans] = await Promise.all([
+  const [transactions, transfers, plans, holdings] = await Promise.all([
     getAllTransactions(),
     getAllAccountTransfers(),
     getAccumulationPlans(),
+    getStockHoldings(),
   ]);
 
   if (transactions.some((t) => t.accountId === id)) {
@@ -48,15 +50,20 @@ export async function deleteAccount(id: string) {
     throw new AppError("errors.deleteAccountInTransfers");
   }
   if (
-    plans.some(
-      (plan) =>
-        plan.sourceAccountId === id ||
-        (plan.oneTimeContributions ?? []).some(
-          (extra) => extra.sourceAccountId === id
-        )
+    plans.some((plan) =>
+      (plan.oneTimeContributions ?? []).some(
+        (extra) => extra.sourceAccountId === id
+      )
     )
   ) {
     throw new AppError("errors.deleteAccountInPlans");
+  }
+  if (
+    holdings.some((holding) =>
+      (holding.purchases ?? []).some((purchase) => purchase.sourceAccountId === id)
+    )
+  ) {
+    throw new AppError("errors.deleteAccountInHoldings");
   }
   await dbDeleteAccount(id);
 }

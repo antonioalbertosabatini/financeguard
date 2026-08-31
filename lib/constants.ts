@@ -22,16 +22,14 @@ export const ROOT_DATA_FILES = [
   "budgets.json",
   "settings.json",
   "accumulation-plans.json",
-] as const;
-
-export const ACCUMULATION_FREQUENCIES = [
-  "weekly",
-  "biweekly",
-  "monthly",
+  "stock-holdings.json",
 ] as const;
 
 export const ACCUMULATION_CATEGORY_ID = "cat_accumulation";
 export const ACCUMULATION_CATEGORY_COLOR = "#0F766E";
+
+export const STOCK_CATEGORY_ID = "cat_stocks";
+export const STOCK_CATEGORY_COLOR = "#4338CA";
 
 export const ACCOUNT_TYPES = [
   "checking",

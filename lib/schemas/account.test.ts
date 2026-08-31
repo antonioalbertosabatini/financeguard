@@ -6,7 +6,7 @@ import {
   type Account,
   type AccountDraft,
 } from "@/lib/schemas/account";
-import { emptyDataset, normalizeDataset } from "@/lib/storage/dataset";
+import { emptyDataset, normalizeDataset, type Dataset } from "@/lib/storage/dataset";
 
 function draft(
   id: string,
@@ -108,5 +108,56 @@ describe("normalizeDataset", () => {
     normalizeDataset(dataset);
 
     expect(dataset.accounts.map((account) => account.order)).toEqual([0, 1]);
+  });
+
+  it("strips automatic PAC fields and keeps one-time contributions", () => {
+    const dataset = emptyDataset();
+    dataset.accumulationPlans = [
+      {
+        id: "pac_1",
+        name: "VWCE",
+        amount: 10000,
+        frequency: "monthly",
+        sourceAccountId: "acc_1",
+        startDate: "2026-01-01",
+        status: "active",
+        pausePeriods: [{ from: "2026-03-01" }],
+        amountSchedule: [{ from: "2026-01-01", amount: 10000 }],
+        oneTimeContributions: [
+          {
+            id: "pax_1",
+            date: "2026-01-15",
+            amount: 5000,
+            sourceAccountId: "acc_1",
+          },
+        ],
+      } as Dataset["accumulationPlans"][number] & Record<string, unknown>,
+    ];
+
+    normalizeDataset(dataset);
+
+    expect(dataset.accumulationPlans).toEqual([
+      {
+        id: "pac_1",
+        name: "VWCE",
+        oneTimeContributions: [
+          {
+            id: "pax_1",
+            date: "2026-01-15",
+            amount: 5000,
+            sourceAccountId: "acc_1",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("initializes missing stockHoldings", () => {
+    const dataset = emptyDataset();
+    delete (dataset as { stockHoldings?: unknown }).stockHoldings;
+
+    normalizeDataset(dataset);
+
+    expect(dataset.stockHoldings).toEqual([]);
   });
 });

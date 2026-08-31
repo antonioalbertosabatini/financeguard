@@ -166,8 +166,16 @@ export function AllocationAssignDialog({
                     item={item}
                     checked
                     disabled
-                    hint={t("allocation.accumulationLocked")}
-                    badge={t("allocation.accumulationBadge")}
+                    hint={
+                      item.lockKind === "stock"
+                        ? t("allocation.stockLocked")
+                        : t("allocation.accumulationLocked")
+                    }
+                    badge={
+                      item.lockKind === "stock"
+                        ? t("allocation.stockBadge")
+                        : t("allocation.accumulationBadge")
+                    }
                     formatAmount={formatAmount}
                     currency={currency}
                     language={language}

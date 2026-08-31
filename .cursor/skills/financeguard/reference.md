@@ -36,7 +36,7 @@ Traccia per ogni record:
 - `updatedAt` per campo (merge last-write-wins per campo)
 - Tombstone su delete
 
-Entità tracciate: accounts, categories, budgets, transactions, accountTransfers, accumulationPlans, settings.
+Entità tracciate: accounts, categories, budgets, transactions, accountTransfers, accumulationPlans, stockHoldings, settings.
 
 ## Account transfers vs transaction transfer
 
@@ -58,7 +58,11 @@ Transazioni con `isRecurring: true` hanno `recurrenceStart` / `recurrenceEnd` ne
 
 ## Accumulation plans (`lib/utils/accumulation.ts`)
 
-Piani in `dataset.accumulationPlans` (non partizionati per anno). I versamenti sono occorrenze virtuali: debitano il conto sorgente, contano come uscita nei report (categoria sistema `cat_accumulation`) e restano nel patrimonio. Il budget li ignora.
+Piani in `dataset.accumulationPlans` (non partizionati per anno): solo nome + versamenti una tantum. I versamenti debitano il conto sorgente, contano come uscita nei report (categoria sistema `cat_accumulation`) e restano nel patrimonio. Il budget li ignora. Campi legacy di accumulo automatico vengono scartati in `normalizeDataset`.
+
+## Stock holdings (`lib/utils/stocks.ts`)
+
+Azioni in `dataset.stockHoldings`: catalogo nominato + acquisti (`amount` in centesimi, `quantity` frazionaria, conto e data). Stesso effetto economico dei PAC; categoria report `cat_stocks`.
 
 ## Balance (`lib/utils/balance.ts`)
 

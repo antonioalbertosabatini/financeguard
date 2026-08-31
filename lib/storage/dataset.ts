@@ -15,6 +15,7 @@ import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
 import { DEFAULT_SETTINGS, type Settings } from "@/lib/schemas/settings";
+import type { StockHolding } from "@/lib/schemas/stock-holding";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { SyncMetadata } from "@/lib/sync/sync-metadata";
 import { emptySyncMetadata } from "@/lib/sync/sync-metadata";
@@ -30,14 +31,32 @@ export interface Dataset {
   accountTransfersByYear: Record<string, AccountTransfer[]>;
   /** Piani di accumulo (entità lunga durata, non partizionata per anno). */
   accumulationPlans: AccumulationPlan[];
+  /** Azioni singole (catalogo + lotti di acquisto). */
+  stockHoldings: StockHolding[];
   /** Metadati di sync cifrati nel bundle (timestamp per campo, tombstone). */
   syncMeta?: SyncMetadata;
+}
+
+function stripLegacyAccumulationPlan(
+  plan: AccumulationPlan
+): AccumulationPlan {
+  return {
+    id: plan.id,
+    name: plan.name,
+    oneTimeContributions: plan.oneTimeContributions ?? [],
+  };
 }
 
 /** Completa campi introdotti dopo il primo vault, mutando in place. */
 export function normalizeDataset(dataset: Dataset): Dataset {
   if (!dataset.accumulationPlans) {
     dataset.accumulationPlans = [];
+  }
+  dataset.accumulationPlans = dataset.accumulationPlans.map(
+    stripLegacyAccumulationPlan
+  );
+  if (!dataset.stockHoldings) {
+    dataset.stockHoldings = [];
   }
   if (Array.isArray(dataset.accounts)) {
     dataset.accounts = assignAccountOrders(dataset.accounts);
@@ -68,6 +87,7 @@ export function emptyDataset(): Dataset {
     transactionsByYear: {},
     accountTransfersByYear: {},
     accumulationPlans: [],
+    stockHoldings: [],
     syncMeta: emptySyncMetadata(),
   };
 }

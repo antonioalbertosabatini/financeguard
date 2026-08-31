@@ -17,6 +17,7 @@ export default function DashboardPage() {
       totalBalance={data.totalBalance}
       availableBalance={data.availableBalance}
       inAccumulation={data.inAccumulation}
+      inStocks={data.inStocks}
       monthlyIncome={data.monthlyIncome}
       monthlyExpense={data.monthlyExpense}
       currency={data.settings.defaultCurrency}

@@ -8,6 +8,7 @@ import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { Budget } from "@/lib/schemas/budget";
 import type { Category } from "@/lib/schemas/category";
 import type { Settings } from "@/lib/schemas/settings";
+import type { StockHolding } from "@/lib/schemas/stock-holding";
 import type { Transaction } from "@/lib/schemas/transaction";
 import type { Dataset } from "@/lib/storage/dataset";
 
@@ -21,6 +22,7 @@ export type SyncEntityType =
   | "transaction"
   | "accountTransfer"
   | "accumulationPlan"
+  | "stockHolding"
   | "settings";
 
 export interface FieldTimestamp {
@@ -173,6 +175,13 @@ function collectEntities(dataset: Dataset): Array<{
       type: "accumulationPlan",
       id: plan.id,
       data: plan as unknown as Record<string, unknown>,
+    });
+  }
+  for (const holding of dataset.stockHoldings ?? []) {
+    items.push({
+      type: "stockHolding",
+      id: holding.id,
+      data: holding as unknown as Record<string, unknown>,
     });
   }
   items.push({
@@ -360,6 +369,22 @@ export function trackAccumulationPlanUpsert(
     "accumulationPlan",
     plan.id,
     plan as unknown as Record<string, unknown>,
+    deviceId,
+    previous as unknown as Record<string, unknown> | undefined
+  );
+}
+
+export function trackStockHoldingUpsert(
+  dataset: Dataset,
+  holding: StockHolding,
+  deviceId: string,
+  previous?: StockHolding
+): void {
+  trackUpsert(
+    dataset,
+    "stockHolding",
+    holding.id,
+    holding as unknown as Record<string, unknown>,
     deviceId,
     previous as unknown as Record<string, unknown> | undefined
   );

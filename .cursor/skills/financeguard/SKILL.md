@@ -28,7 +28,8 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 | Entità | Schema | Note |
 |--------|--------|------|
 | Account | `lib/schemas/account.ts` | Saldo in centesimi (`initialBalance`), tipi: checking/cash/savings/credit_card, `order` (ordine di visualizzazione; se assente = posizione nell'array JSON) |
-| Piano di accumulo | `lib/schemas/accumulation-plan.ts` | Busta virtuale; versamenti espansi a runtime (`lib/utils/accumulation.ts`) |
+| Piano di accumulo | `lib/schemas/accumulation-plan.ts` | Indice nominato; solo versamenti una tantum (`oneTimeContributions`). Campi automatici (rata/cadenza) strippati in `normalizeDataset`. |
+| Azione | `lib/schemas/stock-holding.ts` | Catalogo + lotti di acquisto (`amount` in centesimi, `quantity` frazionaria) |
 | Categoria | `lib/schemas/category.ts` | income/expense, icone in `lib/constants/category-icons.ts` |
 | Transazione | `lib/schemas/transaction.ts` | Importi interi positivi; date `YYYY-MM-DD`; raggruppate per anno in `transactionsByYear` |
 | Trasferimento | `lib/schemas/account-transfer.ts` | Entità separata in `accountTransfersByYear` (non confondere con `type: "transfer"` legacy) |
@@ -38,7 +39,7 @@ UI (components/, app/) → lib/actions/* → lib/db/* → lib/storage/data-store
 **Regole dominio:**
 - Tutti gli importi sono **interi in centesimi** — usare `lib/utils/money.ts` (`toCents`, `formatCents`, `parseEuroInput`).
 - Le transazioni ricorrenti si espandono a runtime con `lib/utils/recurrence.ts` (`expandRecurrences`).
-- I piani di accumulo si espandono a runtime con `lib/utils/accumulation.ts`; i versamenti sono uscite nei report ma restano nel patrimonio.
+- I piani di accumulo (indici) e gli acquisti di azioni si espandono a runtime (`lib/utils/accumulation.ts`, `lib/utils/stocks.ts`); i versamenti/acquisti sono uscite nei report ma restano nel patrimonio.
 - Gli ID seguono `generateId(prefix)` in `lib/db/index.ts` (es. `tx_a1b2c3d4`).
 - Per entrate/uscite la categoria è obbligatoria; i trasferimenti tra conti usano `account-transfers`.
 

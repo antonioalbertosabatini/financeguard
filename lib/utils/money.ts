@@ -21,6 +21,20 @@ export function toCents(euroString: string): number {
   return Math.round(value * 100);
 }
 
+export function parseQuantity(input: string): number {
+  const normalized = input.replace(",", ".").trim();
+  if (!normalized) return 0;
+  const value = parseFloat(normalized);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value;
+}
+
+export function formatQuantity(quantity: number, locale = "it-IT"): string {
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 8,
+  }).format(quantity);
+}
+
 export function centsToEuroString(cents: number): string {
   return (cents / 100).toFixed(2);
 }
