@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DialogContent: bg-popover rounded-xl ring-1 ring-foreground/10 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/qa_card" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/qa_foreground_10" />
+    <corners android:radius="20dp" />
+</shape>

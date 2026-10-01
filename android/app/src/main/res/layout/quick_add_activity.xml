@@ -1,29 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Mirrors the web TransactionForm inside a DialogContent (components/transactions/transaction-form.tsx). -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true">
+    android:background="@drawable/qa_bg_dialog"
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minWidth="280dp"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="16dp">
 
-        <TextView
-            android:id="@+id/quick_add_title"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/quick_add_title"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/qa_bg_icon_badge">
+
+                <ImageView
+                    android:id="@+id/quick_add_header_icon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/lucide_circle_plus"
+                    app:tint="@color/qa_primary" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/quick_add_title"
+                style="@style/QuickAdd.Title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="@string/quick_add_title" />
+
+            <ImageButton
+                android:id="@+id/quick_add_close"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="@drawable/qa_btn_ghost_icon"
+                android:contentDescription="@string/quick_add_cancel"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/lucide_x"
+                app:tint="@color/qa_foreground" />
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/quick_add_message_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -31,19 +69,23 @@
                 android:id="@+id/quick_add_message_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textStyle="bold" />
+                android:fontFamily="@font/dm_sans_semibold"
+                android:textColor="@color/qa_foreground"
+                android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/quick_add_message_body"
+                style="@style/QuickAdd.Body"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="6dp" />
 
             <Button
                 android:id="@+id/quick_add_open_app"
+                style="@style/QuickAdd.Button.Primary"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_weight="0"
+                android:layout_marginTop="20dp"
                 android:text="@string/quick_add_open_app" />
         </LinearLayout>
 
@@ -51,89 +93,231 @@
             android:id="@+id/quick_add_form"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:orientation="vertical"
             android:visibility="gone">
-
-            <RadioGroup
-                android:id="@+id/quick_add_type"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <RadioButton
-                    android:id="@+id/quick_add_type_expense"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:checked="true"
-                    android:text="@string/quick_add_type_expense" />
-
-                <RadioButton
-                    android:id="@+id/quick_add_type_income"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/quick_add_type_income" />
-            </RadioGroup>
-
-            <TextView
-                android:id="@+id/quick_add_amount_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/quick_add_amount" />
-
-            <EditText
-                android:id="@+id/quick_add_amount"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="0.00"
-                android:importantForAutofill="no"
-                android:inputType="numberDecimal"
-                android:maxLines="1" />
-
-            <TextView
-                android:id="@+id/quick_add_category_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/quick_add_category" />
-
-            <Spinner
-                android:id="@+id/quick_add_category"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <TextView
-                android:id="@+id/quick_add_account_label"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="@string/quick_add_account" />
-
-            <Spinner
-                android:id="@+id/quick_add_account"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:gravity="end"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    style="@style/QuickAdd.LabelIcon"
+                    android:src="@drawable/lucide_arrow_left_right" />
+
+                <TextView
+                    android:id="@+id/quick_add_type_label"
+                    style="@style/QuickAdd.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quick_add_type" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/qa_bg_segment_track"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <LinearLayout
+                    android:id="@+id/quick_add_type_expense"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/quick_add_type_expense_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/lucide_trending_down" />
+
+                    <TextView
+                        android:id="@+id/quick_add_type_expense_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:fontFamily="@font/dm_sans_medium"
+                        android:text="@string/quick_add_type_expense"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/quick_add_type_income"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/quick_add_type_income_icon"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/lucide_trending_up" />
+
+                    <TextView
+                        android:id="@+id/quick_add_type_income_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:fontFamily="@font/dm_sans_medium"
+                        android:text="@string/quick_add_type_income"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    style="@style/QuickAdd.LabelIcon"
+                    android:src="@drawable/lucide_euro" />
+
+                <TextView
+                    android:id="@+id/quick_add_amount_label"
+                    style="@style/QuickAdd.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quick_add_amount" />
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/quick_add_amount"
+                style="@style/QuickAdd.Field"
+                android:layout_height="56dp"
+                android:fontFamily="@font/dm_sans_semibold"
+                android:fontFeatureSettings="tnum"
+                android:hint="@string/quick_add_amount_hint"
+                android:importantForAutofill="no"
+                android:inputType="numberDecimal"
+                android:maxLines="1"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:textColor="@color/qa_foreground"
+                android:textColorHint="@color/qa_muted_fg"
+                android:textSize="24sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    style="@style/QuickAdd.LabelIcon"
+                    android:src="@drawable/lucide_tags" />
+
+                <TextView
+                    android:id="@+id/quick_add_category_label"
+                    style="@style/QuickAdd.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quick_add_category" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp">
+
+                <Spinner
+                    android:id="@+id/quick_add_category"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/qa_bg_input"
+                    android:dropDownVerticalOffset="48dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:popupBackground="@drawable/qa_bg_popup"
+                    android:spinnerMode="dropdown" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="10dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/lucide_chevron_down"
+                    app:tint="@color/qa_muted_fg" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    style="@style/QuickAdd.LabelIcon"
+                    android:src="@drawable/lucide_wallet" />
+
+                <TextView
+                    android:id="@+id/quick_add_account_label"
+                    style="@style/QuickAdd.Label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/quick_add_account" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginTop="8dp">
+
+                <Spinner
+                    android:id="@+id/quick_add_account"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/qa_bg_input"
+                    android:dropDownVerticalOffset="48dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:popupBackground="@drawable/qa_bg_popup"
+                    android:spinnerMode="dropdown" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="10dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/lucide_chevron_down"
+                    app:tint="@color/qa_muted_fg" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
                 android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/quick_add_cancel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    style="@style/QuickAdd.Button.Outline"
                     android:text="@string/quick_add_cancel" />
 
                 <Button
                     android:id="@+id/quick_add_save"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    style="@style/QuickAdd.Button.Primary"
                     android:layout_marginStart="8dp"
                     android:text="@string/quick_add_save" />
             </LinearLayout>

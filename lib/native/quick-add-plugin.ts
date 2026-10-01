@@ -11,7 +11,7 @@ export type QuickAddPendingItem = {
 
 export type QuickAddCatalogPayload = {
   accounts: Array<{ id: string; name: string; type: string; icon: string }>;
-  categories: Array<{ id: string; name: string; type: string; icon: string }>;
+  categories: Array<{ id: string; name: string; type: string; icon: string; color: string }>;
   language: "it" | "en";
   defaultCurrency: string;
   defaults: {

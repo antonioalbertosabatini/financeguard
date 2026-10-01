@@ -14,6 +14,7 @@ export function buildQuickAddCatalog(dataset: Dataset): QuickAddCatalogPayload {
     name: category.name,
     type: category.type,
     icon: category.icon,
+    color: category.color,
   }));
   const expense = categories.find((category) => category.type === "expense");
   const income = categories.find((category) => category.type === "income");

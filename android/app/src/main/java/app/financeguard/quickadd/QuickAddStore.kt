@@ -18,7 +18,8 @@ internal data class CatalogCategory(
     val id: String,
     val name: String,
     val type: String,
-    val icon: String
+    val icon: String,
+    val color: String
 )
 
 internal data class QuickAddCatalog(
@@ -46,6 +47,7 @@ internal object QuickAddStore {
     private const val DIR = "quickadd"
     private const val CATALOG_FILE = "catalog.bin"
     private const val QUEUE_FILE = "queue.bin"
+    private const val DEFAULT_CATEGORY_COLOR = "#6366F1"
 
     @Volatile
     private var lastDrained: List<PendingItem>? = null
@@ -191,7 +193,8 @@ internal object QuickAddStore {
                     id = id,
                     name = name,
                     type = item.optString("type"),
-                    icon = item.optString("icon")
+                    icon = item.optString("icon"),
+                    color = item.optString("color", DEFAULT_CATEGORY_COLOR)
                 )
             )
         }
@@ -226,6 +229,7 @@ internal object QuickAddStore {
                     .put("name", category.name)
                     .put("type", category.type)
                     .put("icon", category.icon)
+                    .put("color", category.color)
             )
         }
         val defaults = JSONObject()

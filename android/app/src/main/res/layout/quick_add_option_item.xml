@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SelectTrigger value: icon + label. The Spinner adds 4dp per side, so the popup lines up with it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="44dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="28dp">
+
+    <ImageView
+        android:id="@+id/quick_add_option_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/quick_add_option_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/qa_foreground"
+        android:textSize="14sp" />
+</LinearLayout>

@@ -4,7 +4,22 @@
     <color name="colorPrimaryDark">#3730A3</color>
     <color name="colorAccent">#4F46E5</color>
     <color name="quick_add_on_primary">#FFFFFF</color>
-    <color name="quick_add_surface">#FFFFFF</color>
-    <color name="quick_add_on_surface">#1C1B1F</color>
-    <color name="quick_add_muted">#5F5E62</color>
+
+    <!-- Quick Add dialog: light palette from app/globals.css (:root). -->
+    <color name="qa_card">#FFFFFF</color>
+    <color name="qa_foreground">#0E0E1A</color>
+    <color name="qa_foreground_10">#1A0E0E1A</color>
+    <color name="qa_primary">#6951DE</color>
+    <color name="qa_primary_10">#1A6951DE</color>
+    <color name="qa_primary_30">#4D6951DE</color>
+    <color name="qa_on_primary">#FBFBFF</color>
+    <color name="qa_muted">#F1F1F8</color>
+    <color name="qa_muted_fg">#5B5C6E</color>
+    <color name="qa_border">#E0E0E9</color>
+    <color name="qa_input_bg">#FFFFFF</color>
+    <color name="qa_outline_bg">#F9FAFE</color>
+    <color name="qa_success">#0FA05C</color>
+    <color name="qa_danger">#E0284A</color>
+    <color name="qa_ripple">#140E0E1A</color>
+    <color name="qa_ripple_on_primary">#33FBFBFF</color>
 </resources>

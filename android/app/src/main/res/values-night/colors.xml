@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Quick Add dialog: dark palette from app/globals.css (.dark). -->
+    <color name="qa_card">#12111C</color>
+    <color name="qa_foreground">#F4F5F9</color>
+    <color name="qa_foreground_10">#1AF4F5F9</color>
+    <color name="qa_primary">#8A7BFF</color>
+    <color name="qa_primary_10">#1A8A7BFF</color>
+    <color name="qa_primary_30">#4D8A7BFF</color>
+    <color name="qa_on_primary">#07060F</color>
+    <color name="qa_muted">#1B1B2A</color>
+    <color name="qa_muted_fg">#9696AB</color>
+    <color name="qa_border">#2C2C3A</color>
+    <color name="qa_input_bg">#1A1925</color>
+    <color name="qa_outline_bg">#1A1925</color>
+    <color name="qa_success">#3BB974</color>
+    <color name="qa_danger">#F75B6B</color>
+    <color name="qa_ripple">#14F4F5F9</color>
+    <color name="qa_ripple_on_primary">#3307060F</color>
+</resources>

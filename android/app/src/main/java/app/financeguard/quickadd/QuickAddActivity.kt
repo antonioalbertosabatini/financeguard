@@ -2,18 +2,23 @@ package app.financeguard.quickadd
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
-import android.widget.ArrayAdapter
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.widget.ImageViewCompat
 import app.financeguard.MainActivity
 import app.financeguard.R
 import java.text.SimpleDateFormat
@@ -22,17 +27,21 @@ import java.util.Locale
 
 class QuickAddActivity : AppCompatActivity() {
     private var catalog: QuickAddCatalog? = null
+    private var selectedType = "expense"
     private lateinit var loc: Context
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         loc = this
         setContentView(R.layout.quick_add_activity)
+        applyDialogWidth()
+        findViewById<View>(R.id.quick_add_close).setOnClickListener { finish() }
 
         if (!QuickAddStore.isEnabled(this)) {
             showMessage(
                 getString(R.string.quick_add_disabled_title),
-                getString(R.string.quick_add_disabled_body)
+                getString(R.string.quick_add_disabled_body),
+                R.drawable.lucide_lock
             )
             return
         }
@@ -40,7 +49,8 @@ class QuickAddActivity : AppCompatActivity() {
         if (!QuickAddAuth.canAuthenticate(this)) {
             showMessage(
                 getString(R.string.quick_add_auth_failed),
-                getString(R.string.quick_add_auth_subtitle)
+                getString(R.string.quick_add_auth_subtitle),
+                R.drawable.lucide_lock
             )
             return
         }
@@ -61,13 +71,22 @@ class QuickAddActivity : AppCompatActivity() {
                 applyLanguage(loaded?.language ?: "it")
                 showMessage(
                     loc.getString(R.string.quick_add_empty_title),
-                    loc.getString(R.string.quick_add_empty_body)
+                    loc.getString(R.string.quick_add_empty_body),
+                    R.drawable.lucide_info
                 )
                 return@authenticate
             }
             applyLanguage(loaded.language)
             showForm(loaded)
         }
+    }
+
+    /** Same sizing as the web DialogContent: max-w-[calc(100%-2rem)] sm:max-w-sm. */
+    private fun applyDialogWidth() {
+        val density = resources.displayMetrics.density
+        val available = resources.displayMetrics.widthPixels - (32 * density).toInt()
+        val width = minOf(available, (384 * density).toInt())
+        window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     private fun applyLanguage(language: String) {
@@ -77,8 +96,9 @@ class QuickAddActivity : AppCompatActivity() {
         loc = createConfigurationContext(config)
     }
 
-    private fun showMessage(title: String, body: String) {
+    private fun showMessage(title: String, body: String, @DrawableRes iconRes: Int) {
         findViewById<LinearLayout>(R.id.quick_add_form).visibility = View.GONE
+        findViewById<ImageView>(R.id.quick_add_header_icon).setImageResource(iconRes)
         val container = findViewById<LinearLayout>(R.id.quick_add_message_container)
         container.visibility = View.VISIBLE
         findViewById<TextView>(R.id.quick_add_title).text =
@@ -104,60 +124,96 @@ class QuickAddActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.quick_add_title).text =
             loc.getString(R.string.quick_add_title)
+        findViewById<TextView>(R.id.quick_add_type_label).text =
+            loc.getString(R.string.quick_add_type)
         findViewById<TextView>(R.id.quick_add_amount_label).text =
             loc.getString(R.string.quick_add_amount)
         findViewById<TextView>(R.id.quick_add_category_label).text =
             loc.getString(R.string.quick_add_category)
         findViewById<TextView>(R.id.quick_add_account_label).text =
             loc.getString(R.string.quick_add_account)
-        findViewById<android.widget.RadioButton>(R.id.quick_add_type_expense).text =
+        findViewById<TextView>(R.id.quick_add_type_expense_text).text =
             loc.getString(R.string.quick_add_type_expense)
-        findViewById<android.widget.RadioButton>(R.id.quick_add_type_income).text =
+        findViewById<TextView>(R.id.quick_add_type_income_text).text =
             loc.getString(R.string.quick_add_type_income)
         findViewById<Button>(R.id.quick_add_save).text =
             loc.getString(R.string.quick_add_save)
         findViewById<Button>(R.id.quick_add_cancel).text =
             loc.getString(R.string.quick_add_cancel)
+        val amountInput = findViewById<EditText>(R.id.quick_add_amount)
+        amountInput.hint = loc.getString(R.string.quick_add_amount_hint)
 
-        val typeGroup = findViewById<RadioGroup>(R.id.quick_add_type)
         val categorySpinner = findViewById<Spinner>(R.id.quick_add_category)
         val accountSpinner = findViewById<Spinner>(R.id.quick_add_account)
-        val amountInput = findViewById<EditText>(R.id.quick_add_amount)
 
         bindAccounts(accountSpinner, catalog)
-        bindCategories(categorySpinner, catalog, currentType(typeGroup))
+        setType("expense", catalog, categorySpinner)
 
-        typeGroup.setOnCheckedChangeListener { _, _ ->
-            bindCategories(categorySpinner, catalog, currentType(typeGroup))
+        findViewById<View>(R.id.quick_add_type_expense).setOnClickListener {
+            setType("expense", catalog, categorySpinner)
+        }
+        findViewById<View>(R.id.quick_add_type_income).setOnClickListener {
+            setType("income", catalog, categorySpinner)
         }
 
         findViewById<Button>(R.id.quick_add_cancel).setOnClickListener { finish() }
         findViewById<Button>(R.id.quick_add_save).setOnClickListener {
-            save(catalog, typeGroup, categorySpinner, accountSpinner, amountInput)
+            save(catalog, categorySpinner, accountSpinner, amountInput)
         }
     }
 
-    private fun currentType(group: RadioGroup): String =
-        if (group.checkedRadioButtonId == R.id.quick_add_type_income) "income" else "expense"
+    private fun setType(type: String, catalog: QuickAddCatalog, categorySpinner: Spinner) {
+        selectedType = type
+        styleTypeSegment(
+            R.id.quick_add_type_expense,
+            R.id.quick_add_type_expense_icon,
+            R.id.quick_add_type_expense_text,
+            active = type == "expense",
+            activeColor = R.color.qa_danger
+        )
+        styleTypeSegment(
+            R.id.quick_add_type_income,
+            R.id.quick_add_type_income_icon,
+            R.id.quick_add_type_income_text,
+            active = type == "income",
+            activeColor = R.color.qa_success
+        )
+        bindCategories(categorySpinner, catalog, type)
+    }
+
+    private fun styleTypeSegment(
+        segmentId: Int,
+        iconId: Int,
+        textId: Int,
+        active: Boolean,
+        activeColor: Int
+    ) {
+        val color = ContextCompat.getColor(this, if (active) activeColor else R.color.qa_muted_fg)
+        val segment = findViewById<View>(segmentId)
+        segment.setBackgroundResource(
+            if (active) R.drawable.qa_bg_segment_active else R.drawable.qa_bg_segment_inactive
+        )
+        segment.isSelected = active
+        ImageViewCompat.setImageTintList(findViewById(iconId), ColorStateList.valueOf(color))
+        findViewById<TextView>(textId).setTextColor(color)
+    }
 
     private fun bindAccounts(spinner: Spinner, catalog: QuickAddCatalog) {
-        val names = catalog.accounts.map { it.name }
-        spinner.adapter = ArrayAdapter(
-            loc,
-            android.R.layout.simple_spinner_dropdown_item,
-            names
-        )
+        val tint = ContextCompat.getColor(this, R.color.qa_muted_fg)
+        val options = catalog.accounts.map {
+            IconOption(it.id, it.name, LucideIcons.resolve(it.icon, "wallet"), tint)
+        }
+        spinner.adapter = IconOptionAdapter(this, spinner, options)
         val index = catalog.accounts.indexOfFirst { it.id == catalog.defaultAccountId }
         if (index >= 0) spinner.setSelection(index)
     }
 
     private fun bindCategories(spinner: Spinner, catalog: QuickAddCatalog, type: String) {
         val filtered = catalog.categories.filter { it.type == type }
-        spinner.adapter = ArrayAdapter(
-            loc,
-            android.R.layout.simple_spinner_dropdown_item,
-            filtered.map { it.name }
-        )
+        val options = filtered.map {
+            IconOption(it.id, it.name, LucideIcons.resolve(it.icon, "circle"), parseColor(it.color))
+        }
+        spinner.adapter = IconOptionAdapter(this, spinner, options)
         val defaultId =
             if (type == "income") catalog.defaultIncomeCategoryId else catalog.defaultExpenseCategoryId
         val index = filtered.indexOfFirst { it.id == defaultId }
@@ -165,9 +221,15 @@ class QuickAddActivity : AppCompatActivity() {
         spinner.tag = filtered
     }
 
+    private fun parseColor(value: String): Int =
+        try {
+            Color.parseColor(value)
+        } catch (_: IllegalArgumentException) {
+            ContextCompat.getColor(this, R.color.qa_primary)
+        }
+
     private fun save(
         catalog: QuickAddCatalog,
-        typeGroup: RadioGroup,
         categorySpinner: Spinner,
         accountSpinner: Spinner,
         amountInput: EditText
@@ -177,7 +239,7 @@ class QuickAddActivity : AppCompatActivity() {
             Toast.makeText(this, loc.getString(R.string.quick_add_invalid_amount), Toast.LENGTH_SHORT).show()
             return
         }
-        val type = currentType(typeGroup)
+        val type = selectedType
         @Suppress("UNCHECKED_CAST")
         val categories = categorySpinner.tag as? List<CatalogCategory> ?: emptyList()
         val category = categories.getOrNull(categorySpinner.selectedItemPosition)

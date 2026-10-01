@@ -13,6 +13,8 @@
     <string name="quick_add_auth_subtitle">Conferma con biometria o PIN del telefono. La password del vault non viene usata.</string>
     <string name="quick_add_type_income">Entrata</string>
     <string name="quick_add_type_expense">Uscita</string>
+    <string name="quick_add_type">Tipo</string>
+    <string name="quick_add_amount_hint">0,00</string>
     <string name="quick_add_amount">Importo</string>
     <string name="quick_add_category">Categoria</string>
     <string name="quick_add_account">Conto</string>

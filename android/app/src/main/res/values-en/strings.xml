@@ -8,6 +8,8 @@
     <string name="quick_add_auth_subtitle">Confirm with biometrics or your device PIN. The vault password is not used.</string>
     <string name="quick_add_type_income">Income</string>
     <string name="quick_add_type_expense">Expense</string>
+    <string name="quick_add_type">Type</string>
+    <string name="quick_add_amount_hint">0.00</string>
     <string name="quick_add_amount">Amount</string>
     <string name="quick_add_category">Category</string>
     <string name="quick_add_account">Account</string>
