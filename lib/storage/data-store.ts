@@ -86,6 +86,13 @@ function ensureValidPassword(password: string): string | null {
 }
 
 export type AuthError = { error: string };
+export type UnlockOk = { imported: number; skipped: number };
+
+function syncQuickAddCatalogSafe(): void {
+  void import("@/lib/native/quick-add")
+    .then((mod) => mod.syncQuickAddCatalog())
+    .catch(() => {});
+}
 
 /** Crea un nuovo vault con il dataset iniziale e sblocca l'app. */
 export async function setupPassword(
@@ -108,10 +115,13 @@ export async function setupPassword(
   dataset = data;
   sessionPassword = password;
   emit({ status: "unlocked", version: snapshot.version + 1 });
+  syncQuickAddCatalogSafe();
 }
 
 /** Apre e decifra il bundle esistente con la password fornita. */
-export async function unlockApp(password: string): Promise<AuthError | void> {
+export async function unlockApp(
+  password: string
+): Promise<AuthError | UnlockOk> {
   const opened = await openBundle<Dataset>(getAdapter(), password).catch(
     () => null
   );
@@ -128,7 +138,24 @@ export async function unlockApp(password: string): Promise<AuthError | void> {
     emit({ version: snapshot.version + 1 });
     await persistNow();
   }
+
+  let imported = 0;
+  let skipped = 0;
+  try {
+    const { drainAndMergePendingQuickAdd, syncQuickAddCatalog } = await import(
+      "@/lib/native/quick-add"
+    );
+    const merged = await drainAndMergePendingQuickAdd();
+    imported = merged.imported;
+    skipped = merged.skipped;
+    if (imported > 0) await persistNow();
+    await syncQuickAddCatalog();
+  } catch {
+    // Il widget è opt-in: un errore qui non deve bloccare lo sblocco del vault.
+  }
+
   emit({ status: "unlocked", version: snapshot.version + 1 });
+  return { imported, skipped };
 }
 
 /** Blocca la sessione: azzera chiave e dataset dalla memoria. */
@@ -173,6 +200,7 @@ export async function changePassword(
   vault = created.vault;
   revision = 1;
   sessionPassword = newPassword;
+  syncQuickAddCatalogSafe();
 }
 
 /** Restituisce il dataset vivo (muta in place); lancia se l'app e' bloccata. */
@@ -214,6 +242,7 @@ export async function replaceDatasetWithPassword(
   dataset = next;
   sessionPassword = password;
   emit({ status: "unlocked", version: snapshot.version + 1 });
+  syncQuickAddCatalogSafe();
 }
 
 /**
@@ -274,6 +303,7 @@ export async function adoptCloudVault(
     deviceId
   );
   revision = newRevision;
+  syncQuickAddCatalogSafe();
   return newRevision;
 }
 
@@ -295,6 +325,7 @@ export async function applySyncedDataset(
     deviceId
   );
   revision = newRevision;
+  syncQuickAddCatalogSafe();
   return newRevision;
 }
 
@@ -322,6 +353,7 @@ export function persistNow(): Promise<void> {
   const data = dataset;
   saveChain = saveChain.then(async () => {
     revision = await saveBundle(getAdapter(), current, data, deviceId);
+    syncQuickAddCatalogSafe();
   });
   return saveChain;
 }

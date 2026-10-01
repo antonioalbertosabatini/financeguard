@@ -371,6 +371,20 @@ export const enMessages: {
       "Delete this stock? Purchases disappear and the amount returns to the source account.",
     stocksEditAria: "Edit stock {name}",
     stocksDeleteAria: "Delete stock {name}",
+    summary: {
+      title: "Invested capital",
+      totalInvested: "Total invested",
+      ofWhichYear: "of which in {year}",
+      indexes: "Indexes",
+      stocks: "Stocks",
+      instruments: "Instruments",
+      whereTitle: "Where it is invested",
+      whenTitle: "When it was invested",
+      period: "Invested in period",
+      cumulative: "Cumulative total",
+      others: "Others",
+      footnote: "Capital paid in, excluding market changes.",
+    },
   },
   reports: {
     title: "Reports",
@@ -508,6 +522,15 @@ export const enMessages: {
     securityDescription:
       "Data is encrypted at rest. Lock the app to require your password again and release the cloud session on this device.",
     lockApp: "Lock app",
+    quickAddTitle: "Quick add from home screen",
+    quickAddDescription:
+      "Show an Android widget to add a transaction. The transaction stays in a queue encrypted with your phone unlock (biometrics or PIN) and is written to the vault the next time you unlock the app. The master password is never stored.",
+    quickAddEnabled: "Quick add enabled. Add the widget from the home screen.",
+    quickAddDisabled: "Quick add disabled",
+    quickAddEnableError: "Could not enable quick add",
+    quickAddNeedBiometrics:
+      "Set a PIN, fingerprint, or face unlock on the phone to use quick add.",
+    quickAddAuthCanceled: "Authentication canceled",
     oldPassword: "Old password",
     newPassword: "New password",
     confirmNewPassword: "Confirm new password",
@@ -540,6 +563,12 @@ export const enMessages: {
     syncWarningToggle: "Warn me if cloud is not synced",
     syncWarningDescription:
       "Show a red banner on the dashboard when cloud sync is inactive or failed.",
+  },
+  quickAdd: {
+    importedOne: "1 transaction added from the widget",
+    imported: "{count} transactions added from the widget",
+    skipped:
+      "{count} widget transactions skipped (invalid account or category)",
   },
   settings: {
     title: "Settings",

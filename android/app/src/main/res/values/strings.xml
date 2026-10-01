@@ -4,4 +4,27 @@
     <string name="title_activity_main">FinanceGuard</string>
     <string name="package_name">app.financeguard</string>
     <string name="custom_url_scheme">app.financeguard</string>
+
+    <string name="quick_add_widget_name">Aggiungi transazione</string>
+    <string name="quick_add_widget_description">Aggiungi una transazione dalla home</string>
+    <string name="quick_add_widget_label">Aggiungi</string>
+    <string name="quick_add_title">Nuova transazione</string>
+    <string name="quick_add_auth_title">Sblocca per aggiungere</string>
+    <string name="quick_add_auth_subtitle">Conferma con biometria o PIN del telefono. La password del vault non viene usata.</string>
+    <string name="quick_add_type_income">Entrata</string>
+    <string name="quick_add_type_expense">Uscita</string>
+    <string name="quick_add_amount">Importo</string>
+    <string name="quick_add_category">Categoria</string>
+    <string name="quick_add_account">Conto</string>
+    <string name="quick_add_save">Salva</string>
+    <string name="quick_add_cancel">Annulla</string>
+    <string name="quick_add_saved">Transazione in coda: verrà scritta nel vault al prossimo sblocco</string>
+    <string name="quick_add_disabled_title">Aggiunta rapida disattivata</string>
+    <string name="quick_add_disabled_body">Attivala in FinanceGuard: Profilo → Sicurezza.</string>
+    <string name="quick_add_empty_title">Dati mancanti</string>
+    <string name="quick_add_empty_body">Apri FinanceGuard, sblocca il vault e crea almeno un conto e una categoria.</string>
+    <string name="quick_add_open_app">Apri FinanceGuard</string>
+    <string name="quick_add_auth_failed">Autenticazione non riuscita</string>
+    <string name="quick_add_invalid_amount">Inserisci un importo maggiore di zero</string>
+    <string name="quick_add_error">Impossibile salvare la transazione</string>
 </resources>

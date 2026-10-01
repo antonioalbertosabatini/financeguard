@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { InvestmentSummary } from "@/components/plans/investment-summary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -69,6 +70,7 @@ export type PlanListItem = AccumulationPlan & {
   lifetimeBalance: number;
   yearBalance: number;
   posted: AccumulationContribution[];
+  lifetimePosted: AccumulationContribution[];
 };
 
 export type StockListItem = StockHolding & {
@@ -77,6 +79,7 @@ export type StockListItem = StockHolding & {
   averagePriceCents: number;
   yearInvested: number;
   posted: AccumulationContribution[];
+  lifetimePosted: AccumulationContribution[];
 };
 
 export function PlansView({
@@ -220,7 +223,6 @@ export function PlansView({
       });
       toast.success(t("plans.oneTimeAdded"));
       setOneTimeAmountEuro("");
-      setOneTimeDate(todayISO());
     } catch (err) {
       toast.error(formatErrorMessage(language, err));
     }
@@ -278,7 +280,6 @@ export function PlansView({
       toast.success(t("plans.stocksPurchaseAdded"));
       setPurchaseAmountEuro("");
       setPurchaseQuantity("");
-      setPurchaseDate(todayISO());
     } catch (err) {
       toast.error(formatErrorMessage(language, err));
     }
@@ -335,6 +336,14 @@ export function PlansView({
         </Card>
       ) : (
         <>
+          <InvestmentSummary
+            items={items}
+            holdings={holdings}
+            year={year}
+            currency={currency}
+            locale={locale}
+          />
+
           <section className="space-y-4">
             <SectionHeader
               title={t("plans.indexesSection")}

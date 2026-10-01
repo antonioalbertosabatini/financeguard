@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="quick_add_widget_name">Add transaction</string>
+    <string name="quick_add_widget_description">Add a transaction from the home screen</string>
+    <string name="quick_add_widget_label">Add</string>
+    <string name="quick_add_title">New transaction</string>
+    <string name="quick_add_auth_title">Unlock to add</string>
+    <string name="quick_add_auth_subtitle">Confirm with biometrics or your device PIN. The vault password is not used.</string>
+    <string name="quick_add_type_income">Income</string>
+    <string name="quick_add_type_expense">Expense</string>
+    <string name="quick_add_amount">Amount</string>
+    <string name="quick_add_category">Category</string>
+    <string name="quick_add_account">Account</string>
+    <string name="quick_add_save">Save</string>
+    <string name="quick_add_cancel">Cancel</string>
+    <string name="quick_add_saved">Transaction queued: it will be written to the vault on next unlock</string>
+    <string name="quick_add_disabled_title">Quick add is off</string>
+    <string name="quick_add_disabled_body">Enable it in FinanceGuard: Profile → Security.</string>
+    <string name="quick_add_empty_title">Missing data</string>
+    <string name="quick_add_empty_body">Open FinanceGuard, unlock the vault, and create at least one account and category.</string>
+    <string name="quick_add_open_app">Open FinanceGuard</string>
+    <string name="quick_add_auth_failed">Authentication failed</string>
+    <string name="quick_add_invalid_amount">Enter an amount greater than zero</string>
+    <string name="quick_add_error">Could not save the transaction</string>
+</resources>

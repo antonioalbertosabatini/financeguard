@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { KeyRound, Lock } from "lucide-react";
+import { KeyRound, Lock, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,8 +14,86 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { changePassword, lockApp } from "@/lib/actions/auth";
+import {
+  disableQuickAdd,
+  enableQuickAdd,
+  isQuickAddAvailable,
+  isQuickAddEnabled,
+} from "@/lib/native/quick-add";
 import { useI18n } from "@/providers/i18n-provider";
+import type { MessageKey } from "@/lib/i18n/types";
+
+function quickAddErrorKey(err: unknown): MessageKey {
+  const code =
+    err && typeof err === "object" && "code" in err
+      ? String((err as { code: unknown }).code)
+      : "";
+  if (code === "unavailable") return "profile.quickAddNeedBiometrics";
+  if (code === "canceled") return "profile.quickAddAuthCanceled";
+  return "profile.quickAddEnableError";
+}
+
+function QuickAddSection() {
+  const { t } = useI18n();
+  const [available, setAvailable] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const ok = await isQuickAddAvailable();
+      setAvailable(ok);
+      if (ok) setEnabled(await isQuickAddEnabled());
+    })();
+  }, []);
+
+  if (!available) return null;
+
+  async function handleChange(next: boolean) {
+    setBusy(true);
+    try {
+      if (next) await enableQuickAdd();
+      else await disableQuickAdd();
+      setEnabled(next);
+      toast.success(
+        next ? t("profile.quickAddEnabled") : t("profile.quickAddDisabled")
+      );
+    } catch (err) {
+      const key = quickAddErrorKey(err);
+      if (key !== "profile.quickAddAuthCanceled") {
+        toast.error(t(key));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Smartphone className="size-4" />
+          {t("profile.quickAddTitle")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {t("profile.quickAddDescription")}
+          </p>
+          <Switch
+            id="quick-add"
+            checked={enabled}
+            disabled={busy}
+            onCheckedChange={(checked) => void handleChange(checked)}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function SecuritySection() {
   const { t } = useI18n();
@@ -86,6 +164,8 @@ export function SecuritySection() {
           </Button>
         </CardContent>
       </Card>
+
+      <QuickAddSection />
 
       <Sheet open={passwordOpen} onOpenChange={setPasswordOpen}>
         <SheetContent>

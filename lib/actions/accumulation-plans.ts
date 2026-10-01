@@ -82,14 +82,14 @@ export async function getAccumulationPlansPageData(year: number) {
 
   const items = plans.map((plan) => {
     const posted = postedAsOf(contributionsForYear([plan], year), asOfISO);
+    const lifetimePosted = lifetimePostedContributions(plan, asOfISO);
 
     return {
       ...plan,
-      lifetimeBalance: sumAccumulation(
-        lifetimePostedContributions(plan, asOfISO)
-      ),
+      lifetimeBalance: sumAccumulation(lifetimePosted),
       yearBalance: sumAccumulation(posted),
       posted,
+      lifetimePosted,
     };
   });
 

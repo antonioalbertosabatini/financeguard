@@ -1,7 +1,6 @@
 "use client";
 
 import { AppShellLayout } from "@/components/layout/app-shell-layout";
-import { Toaster } from "@/components/ui/sonner";
 import { AmountVisibilityProvider } from "@/providers/amount-visibility-provider";
 import { CloudSyncProvider } from "@/providers/cloud-sync-provider";
 import { SidebarProvider } from "@/providers/sidebar-provider";
@@ -22,7 +21,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <AppShellLayout>{children}</AppShellLayout>
           </CloudSyncProvider>
         </SidebarProvider>
-        <Toaster richColors closeButton />
       </AmountVisibilityProvider>
     </YearProvider>
   );

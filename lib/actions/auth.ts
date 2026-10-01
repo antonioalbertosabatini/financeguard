@@ -14,6 +14,9 @@ import {
 import { releaseSessionLock } from "@/lib/sync/session-lock";
 
 export type AuthResult = { error: string } | undefined;
+export type UnlockResult =
+  | { error: string }
+  | { imported: number; skipped: number };
 
 export async function setupPassword(
   password: string,
@@ -22,8 +25,8 @@ export async function setupPassword(
   return (await storeSetupPassword(password, confirm)) ?? undefined;
 }
 
-export async function unlockApp(password: string): Promise<AuthResult> {
-  return (await storeUnlockApp(password)) ?? undefined;
+export async function unlockApp(password: string): Promise<UnlockResult> {
+  return storeUnlockApp(password);
 }
 
 export async function changePassword(

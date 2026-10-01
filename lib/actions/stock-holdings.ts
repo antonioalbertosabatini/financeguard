@@ -22,6 +22,7 @@ import {
 } from "@/lib/utils/accumulation";
 import {
   holdingTotals,
+  lifetimePostedPurchases,
   purchasesForYear,
 } from "@/lib/utils/stocks";
 
@@ -87,6 +88,7 @@ export async function getStockHoldingsPageData(year: number) {
       averagePriceCents: lifetime.averagePriceCents,
       yearInvested: yearTotals.invested,
       posted,
+      lifetimePosted: lifetimePostedPurchases(holding, asOfISO),
     };
   });
 

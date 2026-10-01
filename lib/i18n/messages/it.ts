@@ -361,6 +361,20 @@ export const itMessages = {
       "Eliminare questa azione? Gli acquisti spariscono e l'importo torna sul conto di prelievo.",
     stocksEditAria: "Modifica azione {name}",
     stocksDeleteAria: "Elimina azione {name}",
+    summary: {
+      title: "Patrimonio investito",
+      totalInvested: "Totale investito",
+      ofWhichYear: "di cui nel {year}",
+      indexes: "Indici",
+      stocks: "Azioni",
+      instruments: "Strumenti",
+      whereTitle: "Dove è investito",
+      whenTitle: "Quando è stato investito",
+      period: "Versato nel periodo",
+      cumulative: "Totale cumulato",
+      others: "Altri",
+      footnote: "Capitale versato, senza variazioni di mercato.",
+    },
   },
   reports: {
     title: "Report",
@@ -498,6 +512,15 @@ export const itMessages = {
     securityDescription:
       "I dati sono cifrati a riposo. Blocca l'app per richiedere di nuovo la password e rilasciare la sessione cloud su questo dispositivo.",
     lockApp: "Blocca app",
+    quickAddTitle: "Aggiunta rapida dalla home",
+    quickAddDescription:
+      "Mostra un widget Android per aggiungere una transazione. La transazione resta in una coda cifrata con lo sblocco del telefono (biometria o PIN) e viene scritta nel vault al prossimo sblocco dell'app. La master password non viene salvata.",
+    quickAddEnabled: "Aggiunta rapida attivata. Aggiungi il widget dalla home.",
+    quickAddDisabled: "Aggiunta rapida disattivata",
+    quickAddEnableError: "Impossibile attivare l'aggiunta rapida",
+    quickAddNeedBiometrics:
+      "Imposta un PIN, un'impronta o il volto sul telefono per usare l'aggiunta rapida.",
+    quickAddAuthCanceled: "Autenticazione annullata",
     oldPassword: "Vecchia password",
     newPassword: "Nuova password",
     confirmNewPassword: "Conferma nuova password",
@@ -530,6 +553,12 @@ export const itMessages = {
     syncWarningToggle: "Avvisami se il cloud non è sincronizzato",
     syncWarningDescription:
       "Mostra un banner rosso nella dashboard quando la sincronizzazione cloud non è attiva o è fallita.",
+  },
+  quickAdd: {
+    importedOne: "1 transazione aggiunta dal widget",
+    imported: "{count} transazioni aggiunte dal widget",
+    skipped:
+      "{count} transazioni del widget ignorate (conto o categoria non validi)",
   },
   settings: {
     title: "Impostazioni",

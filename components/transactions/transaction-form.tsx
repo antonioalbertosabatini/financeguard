@@ -226,12 +226,13 @@ export function TransactionForm({
       } else {
         await createTransaction(payload);
         toast.success(t("transactions.saved"));
+        // Keep date and account so back-dated entries can be added in a row.
         form.reset({
-          date: todayISO(),
+          date: values.date,
           amountEuro: "",
           type: "expense",
           categoryId: undefined,
-          accountId: accounts[0]?.id ?? "",
+          accountId: values.accountId,
           notes: "",
           tags: [],
           isRecurring: false,

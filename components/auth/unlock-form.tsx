@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,18 @@ export function UnlockForm() {
     setError(null);
     startTransition(async () => {
       const result = await unlockApp(password);
-      if (result?.error) setError(result.error);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      if (result.imported === 1) {
+        toast.success(t("quickAdd.importedOne"));
+      } else if (result.imported > 1) {
+        toast.success(t("quickAdd.imported", { count: result.imported }));
+      }
+      if (result.skipped > 0) {
+        toast.warning(t("quickAdd.skipped", { count: result.skipped }));
+      }
     });
   }
 

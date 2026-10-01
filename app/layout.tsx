@@ -3,6 +3,7 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { StoreBootstrap } from "@/components/providers/store-bootstrap";
 import { I18nProvider } from "@/providers/i18n-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
         <I18nProvider>
           <StoreBootstrap />
           {children}
+          <Toaster richColors closeButton />
         </I18nProvider>
       </body>
     </html>
