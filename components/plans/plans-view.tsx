@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  ChevronDown,
   CirclePlus,
+  Info,
   Landmark,
   Pencil,
   Plus,
@@ -15,13 +15,9 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { InvestmentSummary } from "@/components/plans/investment-summary";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -55,7 +51,10 @@ import {
 import type { Account } from "@/lib/schemas/account";
 import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { StockHolding, StockPurchase } from "@/lib/schemas/stock-holding";
-import type { AccumulationContribution } from "@/lib/utils/accumulation";
+import {
+  sumAccumulation,
+  type AccumulationContribution,
+} from "@/lib/utils/accumulation";
 import { formatErrorMessage } from "@/lib/i18n/translate";
 import {
   formatQuantity,
@@ -65,6 +64,8 @@ import {
 import { formatDate, todayISO } from "@/lib/utils/dates";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+
+const RECENT_LIMIT = 10;
 
 export type PlanListItem = AccumulationPlan & {
   lifetimeBalance: number;
@@ -101,6 +102,7 @@ export function PlansView({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlanListItem | null>(null);
   const [addingOneTime, setAddingOneTime] = useState<PlanListItem | null>(null);
+  const [historyPlanId, setHistoryPlanId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [oneTimeAmountEuro, setOneTimeAmountEuro] = useState("");
   const [oneTimeAccountId, setOneTimeAccountId] = useState("");
@@ -111,6 +113,7 @@ export function PlansView({
   const [addingPurchase, setAddingPurchase] = useState<StockListItem | null>(
     null
   );
+  const [historyStockId, setHistoryStockId] = useState<string | null>(null);
   const [stockName, setStockName] = useState("");
   const [purchaseAmountEuro, setPurchaseAmountEuro] = useState("");
   const [purchaseQuantity, setPurchaseQuantity] = useState("");
@@ -308,14 +311,23 @@ export function PlansView({
   const addingLive = addingOneTime
     ? items.find((item) => item.id === addingOneTime.id)
     : undefined;
-  const oneTimeHistory = [...(addingLive?.oneTimeContributions ?? [])].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
-  );
+  const oneTimeHistory = [...(addingLive?.oneTimeContributions ?? [])]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .slice(0, RECENT_LIMIT);
   const addingPurchaseLive = addingPurchase
     ? holdings.find((item) => item.id === addingPurchase.id)
     : undefined;
-  const purchaseHistory = [...(addingPurchaseLive?.purchases ?? [])].sort(
-    (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+  const purchaseHistory = [...(addingPurchaseLive?.purchases ?? [])]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .slice(0, RECENT_LIMIT);
+  const historyPlan = historyPlanId
+    ? items.find((item) => item.id === historyPlanId)
+    : undefined;
+  const historyStock = historyStockId
+    ? holdings.find((item) => item.id === historyStockId)
+    : undefined;
+  const historyStockPurchaseById = Object.fromEntries(
+    (historyStock?.purchases ?? []).map((purchase) => [purchase.id, purchase])
   );
 
   return (
@@ -367,7 +379,7 @@ export function PlansView({
                     locale={locale}
                     onEdit={openEdit}
                     onAddOneTime={openOneTime}
-                    onRemoveOneTime={handleRemoveOneTime}
+                    onShowHistory={(plan) => setHistoryPlanId(plan.id)}
                     onDelete={handleDelete}
                   />
                 ))}
@@ -398,7 +410,7 @@ export function PlansView({
                     locale={locale}
                     onEdit={openEditStock}
                     onAddPurchase={openPurchase}
-                    onRemovePurchase={handleRemovePurchase}
+                    onShowHistory={(stock) => setHistoryStockId(stock.id)}
                     onDelete={handleDeleteStock}
                   />
                 ))}
@@ -448,51 +460,56 @@ export function PlansView({
       >
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>{t("plans.oneTime")}</SheetTitle>
+            <SheetTitleWithName
+              title={t("plans.oneTime")}
+              name={addingOneTime?.name}
+            />
           </SheetHeader>
           <form
             onSubmit={handleAddOneTime}
-            className="flex flex-1 flex-col gap-4 px-4"
+            className="flex min-h-0 flex-1 flex-col gap-4"
           >
-            <div className="space-y-2">
-              <Label htmlFor="plan-one-time-amount">{t("plans.amount")}</Label>
-              <Input
-                id="plan-one-time-amount"
-                inputMode="decimal"
-                value={oneTimeAmountEuro}
-                onChange={(e) => setOneTimeAmountEuro(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <AccountSelect
-              value={oneTimeAccountId}
-              onChange={setOneTimeAccountId}
-              accounts={accounts}
-            />
-            <div className="space-y-2">
-              <Label htmlFor="plan-one-time-date">{t("common.date")}</Label>
-              <Input
-                id="plan-one-time-date"
-                type="date"
-                value={oneTimeDate}
-                onChange={(e) => setOneTimeDate(e.target.value)}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("plans.oneTimeHint")}
-            </p>
-            {oneTimeHistory.length > 0 && addingOneTime ? (
-              <OneTimeHistoryList
-                planId={addingOneTime.id}
-                extras={oneTimeHistory}
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+              <div className="space-y-2">
+                <Label htmlFor="plan-one-time-amount">{t("plans.amount")}</Label>
+                <Input
+                  id="plan-one-time-amount"
+                  inputMode="decimal"
+                  value={oneTimeAmountEuro}
+                  onChange={(e) => setOneTimeAmountEuro(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
+              <AccountSelect
+                value={oneTimeAccountId}
+                onChange={setOneTimeAccountId}
                 accounts={accounts}
-                currency={currency}
-                locale={locale}
-                language={language}
-                onRemove={handleRemoveOneTime}
               />
-            ) : null}
-            <SheetFooter>
+              <div className="space-y-2">
+                <Label htmlFor="plan-one-time-date">{t("common.date")}</Label>
+                <Input
+                  id="plan-one-time-date"
+                  type="date"
+                  value={oneTimeDate}
+                  onChange={(e) => setOneTimeDate(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("plans.oneTimeHint")}
+              </p>
+              {oneTimeHistory.length > 0 && addingOneTime ? (
+                <OneTimeHistoryList
+                  planId={addingOneTime.id}
+                  extras={oneTimeHistory}
+                  accounts={accounts}
+                  currency={currency}
+                  locale={locale}
+                  language={language}
+                  onRemove={handleRemoveOneTime}
+                />
+              ) : null}
+            </div>
+            <SheetFooter className="shrink-0 px-4">
               <Button type="submit" disabled={!canSubmitOneTime}>
                 {t("common.save")}
               </Button>
@@ -544,63 +561,68 @@ export function PlansView({
       >
         <SheetContent className="sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>{t("plans.stocksPurchase")}</SheetTitle>
+            <SheetTitleWithName
+              title={t("plans.stocksPurchase")}
+              name={addingPurchase?.name}
+            />
           </SheetHeader>
           <form
             onSubmit={handleAddPurchase}
-            className="flex flex-1 flex-col gap-4 px-4"
+            className="flex min-h-0 flex-1 flex-col gap-4"
           >
-            <div className="space-y-2">
-              <Label htmlFor="stock-purchase-amount">{t("plans.amount")}</Label>
-              <Input
-                id="stock-purchase-amount"
-                inputMode="decimal"
-                value={purchaseAmountEuro}
-                onChange={(e) => setPurchaseAmountEuro(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stock-purchase-qty">
-                {t("plans.stocksQuantity")}
-              </Label>
-              <Input
-                id="stock-purchase-qty"
-                inputMode="decimal"
-                value={purchaseQuantity}
-                onChange={(e) => setPurchaseQuantity(e.target.value)}
-                placeholder={t("plans.stocksQuantityPlaceholder")}
-              />
-            </div>
-            <AccountSelect
-              value={purchaseAccountId}
-              onChange={setPurchaseAccountId}
-              accounts={accounts}
-            />
-            <div className="space-y-2">
-              <Label htmlFor="stock-purchase-date">{t("common.date")}</Label>
-              <Input
-                id="stock-purchase-date"
-                type="date"
-                value={purchaseDate}
-                onChange={(e) => setPurchaseDate(e.target.value)}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("plans.stocksPurchaseHint")}
-            </p>
-            {purchaseHistory.length > 0 && addingPurchase ? (
-              <PurchaseHistoryList
-                holdingId={addingPurchase.id}
-                purchases={purchaseHistory}
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4">
+              <div className="space-y-2">
+                <Label htmlFor="stock-purchase-amount">{t("plans.amount")}</Label>
+                <Input
+                  id="stock-purchase-amount"
+                  inputMode="decimal"
+                  value={purchaseAmountEuro}
+                  onChange={(e) => setPurchaseAmountEuro(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stock-purchase-qty">
+                  {t("plans.stocksQuantity")}
+                </Label>
+                <Input
+                  id="stock-purchase-qty"
+                  inputMode="decimal"
+                  value={purchaseQuantity}
+                  onChange={(e) => setPurchaseQuantity(e.target.value)}
+                  placeholder={t("plans.stocksQuantityPlaceholder")}
+                />
+              </div>
+              <AccountSelect
+                value={purchaseAccountId}
+                onChange={setPurchaseAccountId}
                 accounts={accounts}
-                currency={currency}
-                locale={locale}
-                language={language}
-                onRemove={handleRemovePurchase}
               />
-            ) : null}
-            <SheetFooter>
+              <div className="space-y-2">
+                <Label htmlFor="stock-purchase-date">{t("common.date")}</Label>
+                <Input
+                  id="stock-purchase-date"
+                  type="date"
+                  value={purchaseDate}
+                  onChange={(e) => setPurchaseDate(e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("plans.stocksPurchaseHint")}
+              </p>
+              {purchaseHistory.length > 0 && addingPurchase ? (
+                <PurchaseHistoryList
+                  holdingId={addingPurchase.id}
+                  purchases={purchaseHistory}
+                  accounts={accounts}
+                  currency={currency}
+                  locale={locale}
+                  language={language}
+                  onRemove={handleRemovePurchase}
+                />
+              ) : null}
+            </div>
+            <SheetFooter className="shrink-0 px-4">
               <Button type="submit" disabled={!canSubmitPurchase}>
                 {t("common.save")}
               </Button>
@@ -608,7 +630,63 @@ export function PlansView({
           </form>
         </SheetContent>
       </Sheet>
+
+      <MonthlyHistorySheet
+        open={historyPlanId != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setHistoryPlanId(null);
+        }}
+        title={t("plans.historyTitle")}
+        name={historyPlan?.name}
+        items={historyPlan?.lifetimePosted ?? []}
+        currency={currency}
+        locale={locale}
+        language={language}
+        emptyLabel={t("plans.noneYet")}
+        removeAriaKey="plans.removeOneTimeAria"
+        onRemove={(contributionId) =>
+          historyPlanId && handleRemoveOneTime(historyPlanId, contributionId)
+        }
+      />
+
+      <MonthlyHistorySheet
+        open={historyStockId != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setHistoryStockId(null);
+        }}
+        title={t("plans.stocksHistoryTitle")}
+        name={historyStock?.name}
+        items={historyStock?.lifetimePosted ?? []}
+        currency={currency}
+        locale={locale}
+        language={language}
+        emptyLabel={t("plans.stocksNoneYet")}
+        removeAriaKey="plans.stocksRemovePurchaseAria"
+        quantityOf={(id) => historyStockPurchaseById[id]?.quantity}
+        onRemove={(purchaseId) =>
+          historyStockId && handleRemovePurchase(historyStockId, purchaseId)
+        }
+      />
     </div>
+  );
+}
+
+function SheetTitleWithName({
+  title,
+  name,
+}: {
+  title: string;
+  name?: string;
+}) {
+  return (
+    <SheetTitle className="flex min-w-0 items-center gap-2">
+      <span className="shrink-0">{title}</span>
+      {name ? (
+        <Badge variant="secondary" className="min-w-0 truncate text-sm">
+          {name}
+        </Badge>
+      ) : null}
+    </SheetTitle>
   );
 }
 
@@ -692,7 +770,7 @@ function PlanCard({
   locale,
   onEdit,
   onAddOneTime,
-  onRemoveOneTime,
+  onShowHistory,
   onDelete,
 }: {
   item: PlanListItem;
@@ -701,10 +779,10 @@ function PlanCard({
   locale: string;
   onEdit: (item: PlanListItem) => void;
   onAddOneTime: (item: PlanListItem) => void;
-  onRemoveOneTime: (planId: string, contributionId: string) => void;
+  onShowHistory: (item: PlanListItem) => void;
   onDelete: (id: string) => void;
 }) {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const formatAmount = useFormatCents();
 
   return (
@@ -750,14 +828,11 @@ function PlanCard({
           <CirclePlus className="size-3.5" />
           {t("plans.oneTime")}
         </Button>
-        <ContributionList
+        <HistoryTrigger
           title={t("plans.posted")}
-          items={item.posted}
-          currency={currency}
-          locale={locale}
-          language={language}
-          emptyLabel={t("plans.noneThisYear")}
-          onRemove={(contributionId) => onRemoveOneTime(item.id, contributionId)}
+          count={item.lifetimePosted.length}
+          ariaLabel={t("plans.historyAria", { name: item.name })}
+          onClick={() => onShowHistory(item)}
         />
       </CardContent>
     </Card>
@@ -771,7 +846,7 @@ function StockCard({
   locale,
   onEdit,
   onAddPurchase,
-  onRemovePurchase,
+  onShowHistory,
   onDelete,
 }: {
   item: StockListItem;
@@ -780,14 +855,11 @@ function StockCard({
   locale: string;
   onEdit: (item: StockListItem) => void;
   onAddPurchase: (item: StockListItem) => void;
-  onRemovePurchase: (holdingId: string, purchaseId: string) => void;
+  onShowHistory: (item: StockListItem) => void;
   onDelete: (id: string) => void;
 }) {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const formatAmount = useFormatCents();
-  const purchaseById = Object.fromEntries(
-    (item.purchases ?? []).map((purchase) => [purchase.id, purchase])
-  );
 
   return (
     <Card>
@@ -838,15 +910,11 @@ function StockCard({
           <CirclePlus className="size-3.5" />
           {t("plans.stocksPurchase")}
         </Button>
-        <ContributionList
+        <HistoryTrigger
           title={t("plans.stocksPosted")}
-          items={item.posted}
-          currency={currency}
-          locale={locale}
-          language={language}
-          emptyLabel={t("plans.stocksNoneThisYear")}
-          quantityOf={(id) => purchaseById[id]?.quantity}
-          onRemove={(purchaseId) => onRemovePurchase(item.id, purchaseId)}
+          count={item.lifetimePosted.length}
+          ariaLabel={t("plans.stocksHistoryAria", { name: item.name })}
+          onClick={() => onShowHistory(item)}
         />
       </CardContent>
     </Card>
@@ -877,7 +945,7 @@ function OneTimeHistoryList({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{t("plans.oneTimeHistory")}</p>
+      <p className="text-sm font-medium">{t("plans.oneTimeRecent")}</p>
       <ul className="divide-y text-sm">
         {extras.map((extra) => (
           <li
@@ -935,7 +1003,7 @@ function PurchaseHistoryList({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">{t("plans.stocksPurchaseHistory")}</p>
+      <p className="text-sm font-medium">{t("plans.stocksPurchaseRecent")}</p>
       <ul className="divide-y text-sm">
         {purchases.map((purchase) => (
           <li
@@ -970,76 +1038,158 @@ function PurchaseHistoryList({
   );
 }
 
-function ContributionList({
+function HistoryTrigger({
   title,
+  count,
+  ariaLabel,
+  onClick,
+}: {
+  title: string;
+  count: number;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex w-full items-center justify-between py-1 text-sm font-medium">
+      <span>
+        {title} ({count})
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
+        <Info className="size-4 text-muted-foreground" />
+      </Button>
+    </div>
+  );
+}
+
+function groupByMonth(items: AccumulationContribution[]) {
+  const sorted = [...items].sort(
+    (a, b) =>
+      b.date.localeCompare(a.date) ||
+      b.occurrenceId.localeCompare(a.occurrenceId)
+  );
+  const groups: { month: string; items: AccumulationContribution[] }[] = [];
+  for (const item of sorted) {
+    const month = item.date.slice(0, 7);
+    const last = groups[groups.length - 1];
+    if (last?.month === month) last.items.push(item);
+    else groups.push({ month, items: [item] });
+  }
+  return groups;
+}
+
+function MonthlyHistorySheet({
+  open,
+  onOpenChange,
+  title,
+  name,
   items,
   currency,
   locale,
   language,
   emptyLabel,
+  removeAriaKey,
   quantityOf,
   onRemove,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   title: string;
+  name?: string;
   items: AccumulationContribution[];
   currency: string;
   locale: string;
   language: "it" | "en";
   emptyLabel: string;
+  removeAriaKey: "plans.removeOneTimeAria" | "plans.stocksRemovePurchaseAria";
   quantityOf?: (id: string) => number | undefined;
-  onRemove: (contributionId: string) => void;
+  onRemove: (occurrenceId: string) => void;
 }) {
   const { t } = useI18n();
   const formatAmount = useFormatCents();
+  const groups = groupByMonth(items);
 
   return (
-    <Collapsible>
-      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg py-1 text-sm font-medium hover:text-foreground">
-        <span>
-          {title} ({items.length})
-        </span>
-        <ChevronDown className="size-4 text-muted-foreground" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        {items.length === 0 ? (
-          <p className="py-2 text-xs text-muted-foreground">{emptyLabel}</p>
-        ) : (
-          <ul className="divide-y text-sm">
-            {items.map((item) => {
-              const quantity = quantityOf?.(item.occurrenceId);
-              return (
-                <li
-                  key={item.occurrenceId}
-                  className="flex items-center justify-between gap-2 py-1.5"
-                >
-                  <span className="text-muted-foreground">
-                    {formatDate(item.date, "dd/MM/yyyy", language)}
-                    {quantity != null
-                      ? ` · ${formatQuantity(quantity, locale)}`
-                      : null}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="tabular-nums">
-                      {formatAmount(item.amount, currency, locale)}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={t("plans.removeOneTimeAria", {
-                        date: formatDate(item.date, "dd/MM/yyyy", language),
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitleWithName title={title} name={name} />
+        </SheetHeader>
+        <div className="-mr-3 min-h-0 flex-1 overflow-y-auto pr-3">
+          {groups.length === 0 ? (
+            <p className="py-2 text-sm text-muted-foreground">{emptyLabel}</p>
+          ) : (
+            <div className="space-y-4">
+              {groups.map((group) => {
+                const monthLabel = formatDate(
+                  `${group.month}-01`,
+                  "MMMM yyyy",
+                  language
+                );
+                return (
+                  <section key={group.month}>
+                    <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-popover py-1.5 text-sm font-medium">
+                      <span>
+                        {monthLabel.charAt(0).toUpperCase() +
+                          monthLabel.slice(1)}
+                      </span>
+                      <span className="tabular-nums">
+                        {formatAmount(
+                          sumAccumulation(group.items),
+                          currency,
+                          locale
+                        )}
+                      </span>
+                    </div>
+                    <ul className="divide-y text-sm">
+                      {group.items.map((item) => {
+                        const quantity = quantityOf?.(item.occurrenceId);
+                        const date = formatDate(
+                          item.date,
+                          "dd/MM/yyyy",
+                          language
+                        );
+                        return (
+                          <li
+                            key={item.occurrenceId}
+                            className="flex items-center justify-between gap-2 py-1.5"
+                          >
+                            <span className="text-muted-foreground">
+                              {date}
+                              {quantity != null
+                                ? ` · ${formatQuantity(quantity, locale)}`
+                                : null}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="tabular-nums">
+                                {formatAmount(item.amount, currency, locale)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t(removeAriaKey, { date })}
+                                onClick={() => onRemove(item.occurrenceId)}
+                              >
+                                <X className="size-3.5" />
+                              </Button>
+                            </span>
+                          </li>
+                        );
                       })}
-                      onClick={() => onRemove(item.occurrenceId)}
-                    >
-                      <X className="size-3.5" />
-                    </Button>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

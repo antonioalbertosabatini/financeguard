@@ -313,7 +313,7 @@ export const itMessages = {
     oneTime: "Versamento",
     oneTimeHint:
       "Registra uno spostamento di denaro verso questo indice. Puoi annullarlo se è un errore.",
-    oneTimeHistory: "Versamenti",
+    oneTimeRecent: "Ultimi versamenti",
     oneTimeAdded: "Versamento aggiunto",
     oneTimeRemoved: "Versamento annullato",
     oneTimeRemoveConfirm:
@@ -323,7 +323,9 @@ export const itMessages = {
     accumulated: "Accumulato",
     accumulatedYear: "Nell'anno {year}",
     posted: "Versamenti",
-    noneThisYear: "Nessun versamento in questo anno.",
+    noneYet: "Nessun versamento registrato.",
+    historyTitle: "Storico versamenti",
+    historyAria: "Storico versamenti di {name}",
     created: "Indice creato",
     updated: "Indice aggiornato",
     deleted: "Indice eliminato",
@@ -342,7 +344,7 @@ export const itMessages = {
     stocksPurchase: "Acquisto",
     stocksPurchaseHint:
       "Indica quanto hai speso e quante azioni hai comprato. Puoi annullare l'acquisto se è un errore.",
-    stocksPurchaseHistory: "Acquisti",
+    stocksPurchaseRecent: "Ultimi acquisti",
     stocksPurchaseAdded: "Acquisto aggiunto",
     stocksPurchaseRemoved: "Acquisto annullato",
     stocksPurchaseRemoveConfirm:
@@ -353,7 +355,9 @@ export const itMessages = {
     stocksShares: "Quantità",
     stocksAveragePrice: "Prezzo medio",
     stocksPosted: "Acquisti",
-    stocksNoneThisYear: "Nessun acquisto in questo anno.",
+    stocksNoneYet: "Nessun acquisto registrato.",
+    stocksHistoryTitle: "Storico acquisti",
+    stocksHistoryAria: "Storico acquisti di {name}",
     stocksCreated: "Azione creata",
     stocksUpdated: "Azione aggiornata",
     stocksDeleted: "Azione eliminata",

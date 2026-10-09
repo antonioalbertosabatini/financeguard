@@ -323,7 +323,7 @@ export const enMessages: {
     oneTime: "Contribution",
     oneTimeHint:
       "Record a money transfer into this index. You can undo it if it was a mistake.",
-    oneTimeHistory: "Contributions",
+    oneTimeRecent: "Recent contributions",
     oneTimeAdded: "Contribution added",
     oneTimeRemoved: "Contribution undone",
     oneTimeRemoveConfirm:
@@ -333,7 +333,9 @@ export const enMessages: {
     accumulated: "Invested",
     accumulatedYear: "In {year}",
     posted: "Contributions",
-    noneThisYear: "No contributions in this year.",
+    noneYet: "No contributions recorded.",
+    historyTitle: "Contribution history",
+    historyAria: "Contribution history for {name}",
     created: "Index created",
     updated: "Index updated",
     deleted: "Index deleted",
@@ -352,7 +354,7 @@ export const enMessages: {
     stocksPurchase: "Purchase",
     stocksPurchaseHint:
       "Enter how much you spent and how many shares you bought. You can undo the purchase if it was a mistake.",
-    stocksPurchaseHistory: "Purchases",
+    stocksPurchaseRecent: "Recent purchases",
     stocksPurchaseAdded: "Purchase added",
     stocksPurchaseRemoved: "Purchase undone",
     stocksPurchaseRemoveConfirm:
@@ -363,7 +365,9 @@ export const enMessages: {
     stocksShares: "Quantity",
     stocksAveragePrice: "Average price",
     stocksPosted: "Purchases",
-    stocksNoneThisYear: "No purchases in this year.",
+    stocksNoneYet: "No purchases recorded.",
+    stocksHistoryTitle: "Purchase history",
+    stocksHistoryAria: "Purchase history for {name}",
     stocksCreated: "Stock created",
     stocksUpdated: "Stock updated",
     stocksDeleted: "Stock deleted",
