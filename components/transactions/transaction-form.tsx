@@ -6,37 +6,13 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
-import {
-  ArrowLeftRight,
-  Calendar,
-  CirclePlus,
-  Euro,
-  FileText,
-  Receipt,
-  Repeat,
-  Tag,
-  Tags,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
-import { AccountIcon } from "@/components/accounts/account-icon";
+import { Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { AccountPicker, CategoryPicker, TypeToggle } from "@/components/transactions/form-pickers";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { CategorySelectItem } from "@/components/categories/category-select-item";
 import { TagInput } from "@/components/tags/tag-input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTransaction, updateTransaction } from "@/lib/actions/transactions";
 import { TRANSACTION_FORM_TYPES } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
@@ -48,11 +24,6 @@ import { todayISO } from "@/lib/utils/dates";
 import { toCents } from "@/lib/utils/money";
 import { dedupeTags } from "@/lib/utils/tags";
 import { cn } from "@/lib/utils";
-
-const TYPE_ICONS: Record<(typeof TRANSACTION_FORM_TYPES)[number], LucideIcon> = {
-  income: TrendingUp,
-  expense: TrendingDown,
-};
 
 type FormValues = {
   date: string;
@@ -78,38 +49,6 @@ type TransactionFormProps = {
   confirmLabel?: string;
   compact?: boolean;
 };
-
-function FieldLabel({
-  htmlFor,
-  icon: Icon,
-  children,
-}: {
-  htmlFor?: string;
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <Label htmlFor={htmlFor} className="flex items-center gap-1.5">
-      <Icon className="size-3.5 text-muted-foreground" />
-      {children}
-    </Label>
-  );
-}
-
-function SectionTitle({
-  icon: Icon,
-  children,
-}: {
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-      <Icon className="size-4" />
-      {children}
-    </h3>
-  );
-}
 
 export function TransactionForm({
   accounts,
@@ -178,12 +117,13 @@ export function TransactionForm({
     },
   });
 
+  const idSuffix = transaction?.id ?? "new";
   const watchType = form.watch("type");
   const watchRecurring = form.watch("isRecurring");
 
   if (isLegacyTransfer) {
     return (
-      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
         {t("transactions.transferManagedInAccounts")}{" "}
         <Link href={`/accounts?year=${year}`} className="font-medium text-primary underline">
           {t("nav.accounts")}
@@ -247,223 +187,174 @@ export function TransactionForm({
   }
 
   const formBody = (
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Type segmented control */}
-            <div className="space-y-2 md:col-span-2">
-              <FieldLabel icon={ArrowLeftRight}>{t("common.type")}</FieldLabel>
-              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-muted p-1">
-                {TRANSACTION_FORM_TYPES.map((txType) => {
-                  const Icon = TYPE_ICONS[txType];
-                  const active = watchType === txType;
-                  const activeTone =
-                    txType === "income" ? "text-success" : "text-danger";
-                  return (
-                    <button
-                      key={txType}
-                      type="button"
-                      onClick={() => {
-                        form.setValue("type", txType);
-                        form.setValue("categoryId", undefined);
-                      }}
-                      aria-pressed={active}
-                      className={cn(
-                        "flex h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-all md:h-9",
-                        active
-                          ? `bg-card shadow-sm ring-1 ring-foreground/10 ${activeTone}`
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Icon className="size-4" />
-                      <span className="hidden sm:inline">
-                        {t(`labels.transactionType.${txType}`)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      <TypeToggle
+        value={watchType}
+        idPrefix={transaction?.id ?? "new"}
+        onChange={(type) => {
+          form.setValue("type", type);
+          form.setValue("categoryId", undefined);
+        }}
+      />
 
-            <div className="space-y-2 md:col-span-2">
-              <FieldLabel htmlFor="amount" icon={Euro}>
-                {t("transactions.form.amountEuro")}
-              </FieldLabel>
-              <Input
-                id="amount"
-                inputMode="decimal"
-                placeholder={t("transactions.form.amountPlaceholder")}
-                className="h-14 text-2xl font-semibold tabular-nums md:h-14"
-                {...form.register("amountEuro")}
-              />
-              {form.formState.errors.amountEuro && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.amountEuro.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="date" icon={Calendar}>{t("common.date")}</FieldLabel>
-              <Input id="date" type="date" {...form.register("date")} />
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel icon={Tags}>{t("common.category")}</FieldLabel>
-              {filteredCategories.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-                  {t("transactions.form.noCategoryForType")}{" "}
-                  <Link href="/categories" className="font-medium text-primary underline">
-                    {t("transactions.form.addCategoryLink")}
-                  </Link>
-                </div>
-              ) : (
-                <>
-                  <Select
-                    value={form.watch("categoryId") ?? ""}
-                    onValueChange={(v) => form.setValue("categoryId", v)}
-                  >
-                    <SelectTrigger className="w-full" aria-invalid={!!form.formState.errors.categoryId}>
-                      <SelectValue placeholder={t("transactions.form.selectCategory")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredCategories.map((c) => (
-                        <CategorySelectItem key={c.id} category={c} />
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.categoryId && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.categoryId.message}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel icon={Wallet}>{t("common.account")}</FieldLabel>
-              <Select
-                value={form.watch("accountId")}
-                onValueChange={(v) => form.setValue("accountId", v)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("transactions.form.selectAccount")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      <span className="flex items-center gap-2">
-                        <AccountIcon
-                          name={a.icon}
-                          className="size-3.5 text-muted-foreground"
-                        />
-                        {a.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FieldLabel htmlFor="notes" icon={FileText}>{t("common.notes")}</FieldLabel>
-              <Textarea id="notes" rows={3} {...form.register("notes")} />
-            </div>
-            <div className="space-y-2">
-              <FieldLabel htmlFor="tags" icon={Tag}>{t("common.tags")}</FieldLabel>
-              <Controller
-                name="tags"
-                control={form.control}
-                render={({ field }) => (
-                  <TagInput
-                    id="tags"
-                    value={field.value}
-                    onChange={field.onChange}
-                    suggestions={availableTags}
-                    placeholder={t("transactions.form.tagsPlaceholder")}
-                  />
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-xl border bg-muted/30 p-4 space-y-4">
-            <SectionTitle icon={Repeat}>{t("transactions.form.recurrence")}</SectionTitle>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="recurring"
-                checked={watchRecurring}
-                onCheckedChange={(checked) => {
-                  const isRecurring = checked === true;
-                  form.setValue("isRecurring", isRecurring);
-                  if (isRecurring && !form.getValues("recurrenceStart")) {
-                    form.setValue("recurrenceStart", form.getValues("date"));
-                  }
-                }}
-              />
-              <Label htmlFor="recurring">{t("transactions.form.recurringMonthly")}</Label>
-            </div>
-
-            {watchRecurring && (
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="recurrenceStart" icon={Calendar}>
-                      {t("transactions.form.recurrenceStart")}
-                    </FieldLabel>
-                    <Input
-                      id="recurrenceStart"
-                      type="date"
-                      {...form.register("recurrenceStart")}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <FieldLabel htmlFor="recurrenceEnd" icon={Calendar}>
-                      {t("transactions.form.recurrenceEnd")}
-                    </FieldLabel>
-                    <Input
-                      id="recurrenceEnd"
-                      type="date"
-                      {...form.register("recurrenceEnd")}
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("transactions.form.recurrenceNoEndHint")}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {onCancel ? (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:flex-1"
-                onClick={onCancel}
-                disabled={form.formState.isSubmitting}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="submit"
-                className="w-full sm:flex-1"
-                disabled={form.formState.isSubmitting}
-              >
-                {confirmLabel ?? (isEdit ? t("transactions.form.update") : t("transactions.form.save"))}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="submit"
-              className="w-full md:w-auto"
-              disabled={form.formState.isSubmitting}
-            >
-              {isEdit ? t("transactions.form.update") : t("transactions.form.save")}
-            </Button>
+      {/* Amount: the hero of the form */}
+      <div className="text-center">
+        <Label htmlFor={`amount-${idSuffix}`} className="sr-only">
+          {t("transactions.form.amountEuro")}
+        </Label>
+        <div
+          className={cn(
+            "mx-auto flex max-w-xs items-baseline justify-center gap-1 border-b-2 pb-1 transition-colors focus-within:border-primary",
+            form.formState.errors.amountEuro ? "border-destructive" : "border-border"
           )}
-        </form>
+        >
+          <span className="text-2xl font-semibold text-muted-foreground" aria-hidden="true">
+            €
+          </span>
+          <input
+            id={`amount-${idSuffix}`}
+            inputMode="decimal"
+            autoComplete="off"
+            autoFocus={!isEdit && !compact}
+            placeholder={t("transactions.form.amountPlaceholder")}
+            aria-invalid={!!form.formState.errors.amountEuro}
+            className="w-full min-w-0 bg-transparent text-center text-[2.5rem] leading-tight font-bold tracking-[-0.03em] tabular-nums outline-none placeholder:text-muted-foreground/50"
+            {...form.register("amountEuro")}
+          />
+        </div>
+        {form.formState.errors.amountEuro && (
+          <p role="alert" className="mt-1.5 text-xs text-destructive">
+            {form.formState.errors.amountEuro.message}
+          </p>
+        )}
+      </div>
+
+      {/* Category */}
+      <div className="space-y-2">
+        <p id={`category-label-${idSuffix}`} className="text-sm font-semibold">
+          {t("common.category")}
+        </p>
+        {filteredCategories.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+            {t("transactions.form.noCategoryForType")}{" "}
+            <Link href="/categories" className="font-semibold text-primary underline">
+              {t("transactions.form.addCategoryLink")}
+            </Link>
+          </div>
+        ) : (
+          <CategoryPicker
+            categories={filteredCategories}
+            value={form.watch("categoryId")}
+            onChange={(id) => form.setValue("categoryId", id, { shouldValidate: form.formState.isSubmitted })}
+            invalid={!!form.formState.errors.categoryId}
+            labelledBy={`category-label-${idSuffix}`}
+          />
+        )}
+        {form.formState.errors.categoryId && (
+          <p role="alert" className="text-xs text-destructive">
+            {form.formState.errors.categoryId.message}
+          </p>
+        )}
+      </div>
+
+      {/* Account */}
+      <div className="space-y-2">
+        <p id={`account-label-${idSuffix}`} className="text-sm font-semibold">
+          {t("common.account")}
+        </p>
+        <AccountPicker
+          accounts={accounts}
+          value={form.watch("accountId")}
+          onChange={(id) => form.setValue("accountId", id)}
+          labelledBy={`account-label-${idSuffix}`}
+        />
+      </div>
+
+      {/* Details */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor={`notes-${idSuffix}`}>{t("common.notes")}</Label>
+          <Input
+            id={`notes-${idSuffix}`}
+            placeholder={t("transactions.form.notesPlaceholder")}
+            {...form.register("notes")}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`date-${idSuffix}`}>{t("common.date")}</Label>
+          <Input id={`date-${idSuffix}`} type="date" {...form.register("date")} />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor={`tags-${idSuffix}`}>{t("common.tags")}</Label>
+          <Controller
+            name="tags"
+            control={form.control}
+            render={({ field }) => (
+              <TagInput
+                id={`tags-${idSuffix}`}
+                value={field.value}
+                onChange={field.onChange}
+                suggestions={availableTags}
+                placeholder={t("transactions.form.tagsPlaceholder")}
+              />
+            )}
+          />
+        </div>
+      </div>
+
+      {/* Recurrence */}
+      <div className="rounded-xl border border-border">
+        <label
+          htmlFor={`recurring-${idSuffix}`}
+          className="flex cursor-pointer items-center gap-3 px-4 py-3"
+        >
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground" aria-hidden="true">
+            <Repeat className="size-4" />
+          </span>
+          <span className="flex-1 text-sm font-semibold">{t("transactions.form.recurringMonthly")}</span>
+          <Switch
+            id={`recurring-${idSuffix}`}
+            checked={watchRecurring}
+            onCheckedChange={(checked) => {
+              form.setValue("isRecurring", checked);
+              if (checked && !form.getValues("recurrenceStart")) {
+                form.setValue("recurrenceStart", form.getValues("date"));
+              }
+            }}
+          />
+        </label>
+        {watchRecurring && (
+          <div className="animate-rise space-y-3 border-t border-border px-4 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`recurrenceStart-${idSuffix}`}>{t("transactions.form.recurrenceStart")}</Label>
+                <Input id={`recurrenceStart-${idSuffix}`} type="date" {...form.register("recurrenceStart")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`recurrenceEnd-${idSuffix}`}>{t("transactions.form.recurrenceEnd")}</Label>
+                <Input id={`recurrenceEnd-${idSuffix}`} type="date" {...form.register("recurrenceEnd")} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("transactions.form.recurrenceNoEndHint")}</p>
+          </div>
+        )}
+      </div>
+
+      {onCancel ? (
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button type="button" variant="outline" size="lg" onClick={onCancel} disabled={form.formState.isSubmitting}>
+            {t("common.cancel")}
+          </Button>
+          <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+            {confirmLabel ?? (isEdit ? t("transactions.form.update") : t("transactions.form.save"))}
+          </Button>
+        </div>
+      ) : (
+        <Button type="submit" size="lg" className="w-full" disabled={form.formState.isSubmitting}>
+          {isEdit ? t("transactions.form.update") : t("transactions.form.save")}
+        </Button>
+      )}
+    </form>
   );
 
   if (compact) {
@@ -471,22 +362,8 @@ export function TransactionForm({
   }
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            {isEdit ? (
-              <Receipt className="size-5" />
-            ) : (
-              <CirclePlus className="size-5" />
-            )}
-          </div>
-          <CardTitle className="text-lg">
-            {isEdit ? t("transactions.editTitle") : t("transactions.form.newTitle")}
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>{formBody}</CardContent>
-    </Card>
+    <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-7">
+      {formBody}
+    </div>
   );
 }

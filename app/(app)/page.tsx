@@ -16,16 +16,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardView
-      totalBalance={data.totalBalance}
-      availableBalance={data.availableBalance}
-      inAccumulation={data.inAccumulation}
-      inStocks={data.inStocks}
-      monthlyIncome={data.monthlyIncome}
-      monthlyExpense={data.monthlyExpense}
+      data={data}
+      year={year}
       currency={data.settings.defaultCurrency}
       locale={data.settings.locale}
-      expensesByCategory={data.expensesByCategory}
-      monthlyTrend={data.monthlyTrend}
     />
   );
 }

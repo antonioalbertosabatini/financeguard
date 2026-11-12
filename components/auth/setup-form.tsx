@@ -25,7 +25,7 @@ const STRENGTH_KEYS = [
 const STRENGTH_COLORS = [
   "bg-destructive",
   "bg-destructive",
-  "bg-amber-500",
+  "bg-warning",
   "bg-success",
   "bg-success",
 ];

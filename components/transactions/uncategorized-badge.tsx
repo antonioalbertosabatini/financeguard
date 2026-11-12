@@ -14,9 +14,9 @@ export function UncategorizedBadge({ className }: { className?: string }) {
   const { t } = useI18n();
   return (
     <Badge
-      variant="outline"
+      variant="warning"
       className={cn(
-        "shrink-0 border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400",
+        "h-5 shrink-0 px-2 text-[0.6875rem]",
         className
       )}
     >

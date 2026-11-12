@@ -48,6 +48,42 @@ import { useI18n } from "@/providers/i18n-provider";
 
 type Step = "bank" | "file" | "preview";
 
+const STEPS: Step[] = ["bank", "file", "preview"];
+
+/** "1 Banca — 2 File — 3 Anteprima" progress indicator. */
+function ImportStepper({ current }: { current: Step }) {
+  const { t } = useI18n();
+  const currentIndex = STEPS.indexOf(current);
+  return (
+    <ol className="mb-2 flex items-center gap-2 text-xs font-semibold" aria-label={t("import.title")}>
+      {STEPS.map((step, index) => {
+        const done = index < currentIndex;
+        const active = index === currentIndex;
+        return (
+          <li key={step} className="flex items-center gap-2" aria-current={active ? "step" : undefined}>
+            {index > 0 && <span className={cn("h-px w-5", done || active ? "bg-primary" : "bg-border")} aria-hidden="true" />}
+            <span
+              className={cn(
+                "flex size-6 items-center justify-center rounded-full tabular-nums transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : done
+                    ? "bg-primary-soft text-primary-soft-foreground"
+                    : "bg-surface-2 text-muted-foreground"
+              )}
+            >
+              {index + 1}
+            </span>
+            <span className={active ? "text-foreground" : "text-muted-foreground"}>
+              {t(`import.steps.${step}`)}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 type ImportContext = {
   accounts: Account[];
   plans: AccumulationPlan[];
@@ -255,6 +291,8 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
     return (
       <>
         <SheetHeader>
+        <ImportStepper current={step} />
+          <ImportStepper current={step} />
           <SheetTitle>{t("import.title")}</SheetTitle>
           <SheetDescription>{t("import.chooseBank")}</SheetDescription>
         </SheetHeader>
@@ -265,13 +303,13 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
               type="button"
               onClick={() => chooseBank(bank.id)}
               disabled={!context}
-              className="flex items-center gap-3 rounded-xl border p-4 text-left transition-colors hover:bg-muted disabled:opacity-50"
+              className="pressable flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left hover:bg-surface-2 disabled:opacity-50"
             >
-              <span className="flex size-10 items-center justify-center rounded-lg bg-muted">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
                 <Landmark className="size-5" />
               </span>
               <span>
-                <span className="block font-medium">{bank.label}</span>
+                <span className="block font-semibold">{bank.label}</span>
                 <span className="block text-xs text-muted-foreground">
                   {bank.accept.join(", ")}
                 </span>
@@ -288,6 +326,8 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
     return (
       <>
         <SheetHeader>
+        <ImportStepper current={step} />
+          <ImportStepper current={step} />
           <SheetTitle>{t("import.titleBank", { bank: importer?.label ?? "" })}</SheetTitle>
           <SheetDescription>{t("import.fileHint", { bank: importer?.label ?? "" })}</SheetDescription>
         </SheetHeader>
@@ -400,6 +440,7 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
   return (
     <>
       <SheetHeader>
+        <ImportStepper current={step} />
         <SheetTitle>{t("import.previewTitle")}</SheetTitle>
         <SheetDescription>
           {t("import.previewSummary", {
@@ -414,7 +455,7 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
         {(preview?.rows.length ?? 0) === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">{t("import.previewEmpty")}</p>
         ) : (
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y divide-border rounded-xl border border-border">
             {preview?.rows.map((item) => {
               const row = item.row;
               const disabled = !isSelectable(item);
@@ -465,27 +506,27 @@ function ImportWizard({ onClose, locale }: { onClose: () => void; locale: string
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {item.status === "duplicate" && (
-                        <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                        <Badge variant="secondary" className="h-5 px-2 text-[0.6875rem]">
                           {t("import.status.duplicate")}
                         </Badge>
                       )}
                       {item.status === "warning" && (
                         <Badge
-                          variant="outline"
-                          className="border-amber-500/40 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400"
+                          variant="warning"
+                          className="h-5 px-2 text-[0.6875rem]"
                         >
                           {t("import.status.unknownType", { type: row.sourceType })}
                         </Badge>
                       )}
                       {row.kind === "skipped" && (
-                        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                        <Badge variant="outline" className="h-5 px-2 text-[0.6875rem]">
                           {t(`import.skipReason.${row.reason}`)}
                         </Badge>
                       )}
                       {currencyMismatch && (
                         <Badge
-                          variant="outline"
-                          className="border-amber-500/40 px-1.5 py-0 text-[10px] text-amber-700 dark:text-amber-400"
+                          variant="warning"
+                          className="h-5 px-2 text-[0.6875rem]"
                         >
                           {t("import.status.currency", { currency: row.currency })}
                         </Badge>

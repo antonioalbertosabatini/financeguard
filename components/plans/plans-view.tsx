@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState as CommonEmptyState } from "@/components/common/empty-state";
+import { SectionHeader as CommonSectionHeader } from "@/components/common/section-header";
 import { InvestmentSummary } from "@/components/plans/investment-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -726,38 +728,21 @@ function SectionHeader({
   onAction: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      <Button onClick={onAction}>
-        <Plus className="size-4" />
-        {actionLabel}
-      </Button>
-    </div>
+    <CommonSectionHeader
+      title={title}
+      className="pb-0"
+      action={
+        <Button onClick={onAction}>
+          <Plus />
+          {actionLabel}
+        </Button>
+      }
+    />
   );
 }
 
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Landmark;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card className="border-dashed">
-      <CardContent className="py-12 text-center">
-        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-6 text-muted-foreground" />
-        </div>
-        <h3 className="font-medium">{title}</h3>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          {description}
-        </p>
-      </CardContent>
-    </Card>
-  );
+function EmptyState(props: { icon: typeof Landmark; title: string; description: string }) {
+  return <CommonEmptyState {...props} />;
 }
 
 function AccountSelect({

@@ -57,7 +57,7 @@ export function CloudSyncAlert() {
     <div className="mb-6">
       <div
         role="alert"
-        className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+        className="flex items-start gap-3 rounded-xl bg-danger-soft p-4 text-sm text-danger"
       >
         <ShieldAlert className="mt-0.5 size-4 shrink-0" />
         <p className="flex-1 leading-relaxed">

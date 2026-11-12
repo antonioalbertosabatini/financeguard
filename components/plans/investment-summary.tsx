@@ -208,6 +208,7 @@ export function InvestmentSummary({
                     innerRadius={isMobile ? 52 : 58}
                     outerRadius={isMobile ? 84 : 92}
                     paddingAngle={2}
+                    cornerRadius={6}
                   >
                     {slices.map((slice) => (
                       <Cell key={slice.id} fill={slice.color} stroke="none" />
