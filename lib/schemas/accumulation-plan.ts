@@ -7,10 +7,24 @@ const oneTimeContributionSchema = z.object({
   date: dateStringSchema,
   amount: z.number().int().positive(),
   sourceAccountId: z.string().min(1),
+  /** Id della riga importata da file (es. "tr:<uuid>"), per evitare duplicati. */
+  externalId: z.string().min(1).optional(),
 });
+
+export const ISIN_REGEX = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
+
+/** ISIN opzionale: stringa vuota -> undefined, normalizzato in maiuscolo. */
+const isinSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.toUpperCase())
+  .pipe(z.union([z.literal(""), z.string().regex(ISIN_REGEX)]))
+  .transform((value) => (value === "" ? undefined : value))
+  .optional();
 
 const accumulationPlanFieldsSchema = z.object({
   name: z.string().min(1),
+  isin: isinSchema,
   oneTimeContributions: z.array(oneTimeContributionSchema).default([]),
 });
 

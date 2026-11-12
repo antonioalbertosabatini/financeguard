@@ -4,8 +4,10 @@ import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  ArrowLeftRight,
   ChevronDown,
   Copy,
+  FileUp,
   Filter,
   Pencil,
   Plus,
@@ -48,7 +50,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ConvertToTransferDialog } from "@/components/transactions/convert-to-transfer-dialog";
 import { FilterMultiSelect } from "@/components/transactions/filter-multi-select";
+import { ImportDialog } from "@/components/transactions/import-dialog";
+import {
+  isUncategorized,
+  UncategorizedBadge,
+} from "@/components/transactions/uncategorized-badge";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { TransactionDetailView } from "@/components/transactions/transaction-detail-view";
 import { TagBadges } from "@/components/tags/tag-badges";
@@ -56,7 +64,11 @@ import {
   copyRecurringFromPreviousYear,
   deleteTransaction,
 } from "@/lib/actions/transactions";
-import { TRANSACTION_FILTER_TYPES } from "@/lib/constants";
+import {
+  TRANSACTION_FILTER_TYPES,
+  UNCATEGORIZED_CATEGORY_COLOR,
+  UNCATEGORIZED_CATEGORY_ID,
+} from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { ExpandedTransaction, Transaction } from "@/lib/schemas/transaction";
@@ -83,6 +95,7 @@ import {
   collectTagsFromTransactions,
   mergeTagLists,
 } from "@/lib/utils/tags";
+import { isConvertibleToTransfer } from "@/lib/utils/transfer-conversion";
 import { cn } from "@/lib/utils";
 
 type ListRow =
@@ -170,6 +183,8 @@ export function TransactionsView({
   const [amountMaxEuro, setAmountMaxEuro] = useState("");
   const [sheetState, setSheetState] = useState<TransactionSheetState | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
+  const [converting, setConverting] = useState<Transaction | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [monthlyOpen, setMonthlyOpen] = useState(false);
 
@@ -193,6 +208,17 @@ export function TransactionsView({
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories]
   );
+
+  const uncategorizedCount = useMemo(
+    () => transactions.filter(isUncategorized).length,
+    [transactions]
+  );
+  const showingUncategorizedOnly =
+    categoryIds.length === 1 && categoryIds[0] === UNCATEGORIZED_CATEGORY_ID;
+
+  /** Il tasto "Converti in trasferimento" vale per entrate/uscite singole. */
+  const canConvert = (tx: Transaction) =>
+    accounts.length > 1 && isConvertibleToTransfer(tx);
 
   const filterState = useMemo((): UiTransactionFilters => {
     return {
@@ -362,17 +388,29 @@ export function TransactionsView({
       <div className="space-y-1.5 sm:col-span-2">
         <Label className="text-xs text-muted-foreground">{t("common.category")}</Label>
         <FilterMultiSelect
-          options={categories.map((c) => ({
-            value: c.id,
-            label: c.name,
-            icon: (
-              <CategoryIcon
-                name={c.icon}
-                color={c.color}
-                className="size-3.5 shrink-0"
-              />
-            ),
-          }))}
+          options={[
+            {
+              value: UNCATEGORIZED_CATEGORY_ID,
+              label: t("transactions.uncategorized"),
+              icon: (
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: UNCATEGORIZED_CATEGORY_COLOR }}
+                />
+              ),
+            },
+            ...categories.map((c) => ({
+              value: c.id,
+              label: c.name,
+              icon: (
+                <CategoryIcon
+                  name={c.icon}
+                  color={c.color}
+                  className="size-3.5 shrink-0"
+                />
+              ),
+            })),
+          ]}
           selected={categoryIds}
           onChange={setCategoryIds}
           placeholder={t("transactions.filterSelectCategories")}
@@ -512,7 +550,10 @@ export function TransactionsView({
           onClick={() => setCategoryIds((prev) => prev.filter((x) => x !== id))}
         >
           {t("transactions.filterChipCategory", {
-            name: categoryMap[id]?.name ?? id,
+            name:
+              id === UNCATEGORIZED_CATEGORY_ID
+                ? t("transactions.uncategorized")
+                : categoryMap[id]?.name ?? id,
           })}
           <X className="size-3" />
         </Badge>
@@ -620,6 +661,11 @@ export function TransactionsView({
         description={t("transactions.description", { year })}
         actions={
           <>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileUp className="size-4" />
+              <span className="hidden sm:inline">{t("import.button")}</span>
+              <span className="sm:hidden">{t("import.buttonShort")}</span>
+            </Button>
             <Button variant="outline" className="hidden sm:inline-flex" asChild>
               <Link href="/add">
                 <Plus className="size-4" />
@@ -654,6 +700,22 @@ export function TransactionsView({
             </span>
           )}
         </Button>
+        {uncategorizedCount > 0 && (
+          <Button
+            variant={showingUncategorizedOnly ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1.5 text-amber-700 dark:text-amber-400"
+            onClick={() =>
+              setCategoryIds(showingUncategorizedOnly ? [] : [UNCATEGORIZED_CATEGORY_ID])
+            }
+          >
+            <span
+              className="size-2 rounded-full"
+              style={{ backgroundColor: UNCATEGORIZED_CATEGORY_COLOR }}
+            />
+            {t("transactions.uncategorizedCount", { count: uncategorizedCount })}
+          </Button>
+        )}
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
             {t("common.reset")}
@@ -836,8 +898,10 @@ export function TransactionsView({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="truncate font-medium">
-                              {category?.name ?? t(`labels.transactionType.${tx.type}`)}
+                              {category?.name ??
+                                (tx.notes || t(`labels.transactionType.${tx.type}`))}
                             </span>
+                            {isUncategorized(tx) && <UncategorizedBadge />}
                             {row.kind === "rule" && tx.isRecurring && (
                               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
                                 {t("transactions.recurring", {
@@ -919,7 +983,7 @@ export function TransactionsView({
                   <TableHead className="text-right">{t("common.amount")}</TableHead>
                   <TableHead>{t("common.tags")}</TableHead>
                   <TableHead>{t("common.notes")}</TableHead>
-                  <TableHead className="w-[100px]" />
+                  <TableHead className="w-[120px]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -974,6 +1038,8 @@ export function TransactionsView({
                                 <CategoryIcon name={category.icon} color={category.color} className="size-3.5" />
                                 <span className="truncate">{category.name}</span>
                               </span>
+                            ) : isUncategorized(tx) ? (
+                              <UncategorizedBadge />
                             ) : (
                               t("common.none")
                             )}
@@ -1005,6 +1071,17 @@ export function TransactionsView({
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
+                              {row.kind === "rule" && canConvert(source) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  title={t("transactions.convertToTransfer.button")}
+                                  aria-label={t("transactions.convertToTransfer.button")}
+                                  onClick={() => setConverting(source)}
+                                >
+                                  <ArrowLeftRight className="size-3.5" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -1089,8 +1166,19 @@ export function TransactionsView({
           </div>
           {sheetState?.mode === "view" && (
             <SheetFooter>
+              {sheetState.listContext?.kind !== "occurrence" &&
+                canConvert(sheetState.transaction) && (
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setConverting(sheetState.transaction)}
+                  >
+                    <ArrowLeftRight className="size-4" />
+                    {t("transactions.convertToTransfer.button")}
+                  </Button>
+                )}
               <Button
-                className="w-full"
+                className="w-full sm:flex-1"
                 onClick={() => setSheetState((s) => s && { ...s, mode: "edit" })}
               >
                 {t("common.edit")}
@@ -1099,6 +1187,18 @@ export function TransactionsView({
           )}
         </SheetContent>
       </Sheet>
+
+      <ConvertToTransferDialog
+        transaction={converting}
+        year={year}
+        accounts={accounts}
+        currency={currency}
+        locale={locale}
+        onOpenChange={(open) => !open && setConverting(null)}
+        onConverted={() => setSheetState(null)}
+      />
+
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} locale={locale} />
 
       {/* Delete confirmation */}
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>

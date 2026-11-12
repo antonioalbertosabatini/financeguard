@@ -72,7 +72,13 @@ export async function updateTransaction(
   if (index === -1) throw new AppError("errors.transactionNotFound");
 
   const previous = list[index];
-  const updated = sanitizeTransaction({ ...input, id });
+  // L'externalId (transazioni importate) non passa dal form: va conservato,
+  // altrimenti un nuovo import ricreerebbe la transazione modificata.
+  const updated = sanitizeTransaction({
+    ...input,
+    externalId: input.externalId ?? previous.externalId,
+    id,
+  });
   trackTransactionUpsert(getDataset(), updated, getDeviceId(), previous);
   const newYear = getYearFromDate(updated.date);
 

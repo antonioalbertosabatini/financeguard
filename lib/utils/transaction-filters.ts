@@ -1,3 +1,4 @@
+import { UNCATEGORIZED_CATEGORY_ID } from "@/lib/constants";
 import type { TransactionFilters } from "@/lib/schemas/transaction";
 import { normalizeTag } from "@/lib/utils/tags";
 
@@ -63,7 +64,7 @@ export function matchesUiFilters(
 
   if (
     filters.categoryIds.length > 0 &&
-    (tx.categoryId === null || !filters.categoryIds.includes(tx.categoryId))
+    !filters.categoryIds.includes(tx.categoryId ?? UNCATEGORIZED_CATEGORY_ID)
   ) {
     return false;
   }

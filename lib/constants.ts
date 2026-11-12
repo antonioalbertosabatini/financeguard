@@ -29,6 +29,10 @@ export const ACCUMULATION_CATEGORY_ID = "cat_accumulation";
 export const ACCUMULATION_CATEGORY_COLOR = "#0F766E";
 
 export const STOCK_CATEGORY_ID = "cat_stocks";
+
+/** Categoria di sistema per le transazioni senza categoria (es. importate da file). */
+export const UNCATEGORIZED_CATEGORY_ID = "cat_uncategorized";
+export const UNCATEGORIZED_CATEGORY_COLOR = "#9CA3AF";
 export const STOCK_CATEGORY_COLOR = "#4338CA";
 
 export const ACCOUNT_TYPES = [

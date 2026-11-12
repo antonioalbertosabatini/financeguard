@@ -1,3 +1,4 @@
+import { UNCATEGORIZED_CATEGORY_ID } from "@/lib/constants";
 import type { Account } from "@/lib/schemas/account";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
@@ -101,8 +102,9 @@ export function sumExpensesByCategory(
 ): Record<string, number> {
   const result: Record<string, number> = {};
   for (const tx of transactions) {
-    if (tx.type !== "expense" || !tx.categoryId) continue;
-    result[tx.categoryId] = (result[tx.categoryId] ?? 0) + tx.amount;
+    if (tx.type !== "expense") continue;
+    const categoryId = tx.categoryId ?? UNCATEGORIZED_CATEGORY_ID;
+    result[categoryId] = (result[categoryId] ?? 0) + tx.amount;
   }
   return result;
 }
@@ -156,8 +158,8 @@ export function sumExpensesByDayAndCategory(
   );
 
   for (const tx of transactions) {
-    if (tx.type !== "expense" || !tx.categoryId) continue;
-    const category = categoryMap[tx.categoryId];
+    if (tx.type !== "expense") continue;
+    const category = categoryMap[tx.categoryId ?? UNCATEGORIZED_CATEGORY_ID];
     if (!category) continue;
 
     const day = parseInt(tx.date.slice(8, 10), 10);

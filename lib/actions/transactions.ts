@@ -40,6 +40,7 @@ import {
   postedContributionsForYear,
   sumAccumulation,
   toSyntheticExpenses,
+  uncategorizedCategory,
   type AccumulationContribution,
 } from "@/lib/utils/accumulation";
 import {
@@ -66,6 +67,7 @@ function mapCategoryExpenses(
     ...categories,
     accumulationCategory(accumulationCategoryName()),
     stockCategory(stockCategoryName()),
+    uncategorizedCategory(uncategorizedCategoryName()),
   ];
   const categoryMap = Object.fromEntries(withSystem.map((c) => [c.id, c]));
   const items = Object.entries(amounts).map(([categoryId, amount]) => ({
@@ -79,6 +81,10 @@ function mapCategoryExpenses(
 
 function accumulationCategoryName() {
   return translate(getCurrentLanguage(), "plans.categoryName");
+}
+
+function uncategorizedCategoryName() {
+  return translate(getCurrentLanguage(), "transactions.uncategorized");
 }
 
 function stockCategoryName() {
@@ -297,6 +303,7 @@ export async function getMonthlyReport(year: number, month: number) {
     ...categories,
     accumulationCategory(accumulationCategoryName()),
     stockCategory(stockCategoryName()),
+    uncategorizedCategory(uncategorizedCategoryName()),
   ];
 
   return {

@@ -181,6 +181,28 @@ export const itMessages = {
     monthlyBreakdownHint: "Entrate e uscite per mese",
     transferManagedInAccounts:
       "I trasferimenti si gestiscono dalla sezione Conti.",
+    uncategorized: "Senza categoria",
+    uncategorizedBadge: "Da categorizzare",
+    uncategorizedCount: "{count} da categorizzare",
+    convertToTransfer: {
+      button: "Converti in trasferimento",
+      title: "Converti in trasferimento",
+      descriptionIncome:
+        "L'entrata di {amount} del {date} su {account} diventerà un trasferimento da un altro tuo conto e non sarà più contata come entrata.",
+      descriptionExpense:
+        "L'uscita di {amount} del {date} da {account} diventerà un trasferimento verso un altro tuo conto e non sarà più contata come spesa.",
+      fromAccount: "Conto di origine",
+      toAccount: "Conto di destinazione",
+      mirrorTitle: "Movimento speculare trovato",
+      mirrorHint:
+        "Sull'altro conto c'è già un movimento con lo stesso importo in date vicine: se è la stessa operazione, eliminalo per non contarla due volte.",
+      mirrorDelete: "Elimina anche il movimento del {date} ({amount})",
+      mirrorKeep: "Non eliminare nulla",
+      confirm: "Converti",
+      success: "Transazione convertita in trasferimento",
+      successWithMirror:
+        "Transazione convertita in trasferimento e movimento speculare eliminato",
+    },
     form: {
       newTitle: "Nuova transazione",
       amountRequired: "Importo obbligatorio",
@@ -217,6 +239,49 @@ export const itMessages = {
       missingExpense: "Mancano categorie di tipo uscita.",
       missingIncome: "Mancano categorie di tipo entrata.",
       addInCategories: "Aggiungi categorie in Categorie.",
+    },
+  },
+  import: {
+    button: "Importa da file",
+    buttonShort: "Importa",
+    title: "Importa da file",
+    titleBank: "Importa da {bank}",
+    chooseBank: "Scegli la banca da cui hai esportato il file.",
+    fileHint:
+      "Seleziona il file CSV esportato da {bank}, il conto su cui registrare i movimenti e il periodo da considerare.",
+    file: "File",
+    chooseFile: "Scegli file…",
+    fileSummary: "{rows} righe lette, dal {from} al {to}",
+    account: "Conto",
+    noAccounts: "Crea prima un conto.",
+    period: "Periodo",
+    presetThisMonth: "Mese corrente",
+    presetLastMonth: "Mese scorso",
+    presetAll: "Tutto il file",
+    showPreview: "Anteprima",
+    previewTitle: "Anteprima import",
+    previewSummary:
+      "{new} nuovi · {duplicate} già importati · {unsupported} non supportati · {outOfPeriod} fuori periodo",
+    previewEmpty: "Nessun movimento nel periodo selezionato.",
+    newPlan: "Nuovo piano: {name}",
+    confirm: "Importa {count}",
+    success:
+      "Import completato: {transactions} transazioni, {contributions} versamenti PAC, {plans} piani creati",
+    kind: {
+      income: "Entrata",
+      expense: "Uscita",
+      pacContribution: "Versamento PAC",
+      skipped: "Saltato",
+    },
+    status: {
+      duplicate: "Già importato",
+      unknownType: "Tipo {type} non riconosciuto: verifica",
+      currency: "Valuta {currency} diversa dal conto",
+    },
+    skipReason: {
+      unsupportedTrade: "Compravendita titoli non supportata",
+      invalidAmount: "Importo non valido",
+      invalidDate: "Data non valida",
     },
   },
   accounts: {
@@ -296,6 +361,9 @@ export const itMessages = {
       "Indici e azioni. I versamenti contano come uscite, ma restano nel patrimonio.",
     categoryName: "Piani di accumulo",
     stocksCategoryName: "Azioni",
+    isin: "ISIN",
+    isinHint: "Serve ad abbinare i versamenti importati da file.",
+    isinInvalid: "ISIN non valido (es. IE00B4L5Y983).",
     indexesSection: "Indici",
     stocksSection: "Azioni",
     new: "Nuovo indice",
@@ -648,6 +716,13 @@ export const itMessages = {
     selectExpenseCategory: "Seleziona una categoria di spesa valida",
   },
   errors: {
+    importUnreadableFile: "Impossibile leggere il file.",
+    importUnsupportedFile: "Formato file non supportato: usa CSV o Excel (.xlsx).",
+    importEmptyFile: "Il file è vuoto.",
+    importWrongFormat:
+      "Il file non sembra un export di {bank}: mancano le colonne {columns}.",
+    transactionNotConvertible:
+      "Solo entrate e uscite non ricorrenti possono diventare trasferimenti.",
     passwordMismatch: "Le password non coincidono.",
     wrongPassword: "Password errata.",
     wrongOldPassword: "Vecchia password errata.",

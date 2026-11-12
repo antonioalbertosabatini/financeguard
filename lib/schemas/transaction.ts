@@ -26,6 +26,8 @@ const transactionFieldsSchema = z.object({
   isRecurring: z.boolean(),
   recurrenceStart: dateStringSchema.optional(),
   recurrenceEnd: dateStringSchema.optional(),
+  /** Id stabile della riga di origine (es. "tr:<uuid>") per le transazioni importate da file. */
+  externalId: z.string().min(1).optional(),
 });
 
 type TransactionFields = z.infer<typeof transactionFieldsSchema>;
@@ -33,9 +35,10 @@ type TransactionFields = z.infer<typeof transactionFieldsSchema>;
 function validateTransactionFields(
   data: TransactionFields,
   ctx: z.RefinementCtx,
-  t: SchemaTranslate
+  t: SchemaTranslate,
+  requireCategory: boolean
 ) {
-  if (data.type !== "transfer" && !data.categoryId) {
+  if (requireCategory && data.type !== "transfer" && !data.categoryId) {
     ctx.addIssue({
       code: "custom",
       message: t("validation.categoryRequired"),
@@ -74,13 +77,16 @@ function validateTransactionFields(
 }
 
 export function createTransactionSchemas(t: SchemaTranslate = defaultSchemaTranslate) {
+  // Inserimento/modifica manuale: la categoria e' obbligatoria per entrate e uscite.
   const transactionInputSchema = transactionFieldsSchema.superRefine((data, ctx) =>
-    validateTransactionFields(data, ctx, t)
+    validateTransactionFields(data, ctx, t, true)
   );
 
+  // Record salvato: puo' restare senza categoria (transazioni importate da file,
+  // che l'utente categorizza in seguito).
   const transactionSchema = transactionFieldsSchema
     .extend({ id: z.string() })
-    .superRefine((data, ctx) => validateTransactionFields(data, ctx, t));
+    .superRefine((data, ctx) => validateTransactionFields(data, ctx, t, false));
 
   const transactionsFileSchema = z.object({
     transactions: z.array(transactionSchema),

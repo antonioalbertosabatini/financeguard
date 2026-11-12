@@ -6,11 +6,19 @@
  */
 import { commit, getDataset, getDeviceId } from "@/lib/storage/data-store";
 import { AppError } from "@/lib/i18n/app-error";
-import { generateId, getYearFromDate } from "@/lib/db/index";
+import {
+  generateId,
+  getYearFromDate,
+  getYearTransactions,
+} from "@/lib/db/index";
 import {
   trackDelete,
   trackTransferUpsert,
 } from "@/lib/sync/sync-metadata";
+import {
+  isConvertibleToTransfer,
+  transferDirection,
+} from "@/lib/utils/transfer-conversion";
 import {
   accountTransferSchema,
   accountTransfersFileSchema,
@@ -80,6 +88,7 @@ export async function updateAccountTransfer(
   const updated = accountTransferSchema.parse({
     ...input,
     notes: input.notes ?? "",
+    externalIds: input.externalIds ?? previous.externalIds,
     id,
   });
   trackTransferUpsert(getDataset(), updated, getDeviceId(), previous);
@@ -105,4 +114,68 @@ export async function deleteAccountTransfer(
     year,
     getYearTransfers(year).filter((t) => t.id !== id)
   );
+}
+
+/**
+ * Converte un'entrata/uscita in trasferimento: crea il trasferimento (stessa
+ * data, importo e note) ed elimina la transazione e, se indicata, la sua
+ * speculare sull'altro conto. Tutto in un'unica mutazione del dataset.
+ */
+export async function convertTransactionToTransfer(params: {
+  transactionId: string;
+  year: number;
+  otherAccountId: string;
+  notes: string;
+  mirror?: { id: string; year: number };
+}): Promise<AccountTransfer> {
+  const dataset = getDataset();
+  const deviceId = getDeviceId();
+  const tx = getYearTransactions(params.year).find(
+    (item) => item.id === params.transactionId
+  );
+  if (!tx) throw new AppError("errors.transactionNotFound");
+  if (!isConvertibleToTransfer(tx)) {
+    throw new AppError("errors.transactionNotConvertible");
+  }
+
+  let mirror: (typeof tx) | undefined;
+  if (params.mirror) {
+    mirror = getYearTransactions(params.mirror.year).find(
+      (item) => item.id === params.mirror?.id
+    );
+    if (!mirror || mirror.accountId !== params.otherAccountId) {
+      throw new AppError("errors.transactionNotFound");
+    }
+  }
+
+  const externalIds = [tx.externalId, mirror?.externalId].filter(
+    (id): id is string => Boolean(id)
+  );
+  const transfer = accountTransferSchema.parse({
+    id: generateId("trf"),
+    date: tx.date,
+    amount: tx.amount,
+    ...transferDirection(tx, params.otherAccountId),
+    notes: params.notes,
+    ...(externalIds.length > 0 ? { externalIds } : {}),
+  });
+
+  trackTransferUpsert(dataset, transfer, deviceId);
+  const transferYear = getYearFromDate(transfer.date);
+  dataset.accountTransfersByYear[String(transferYear)] = [
+    ...getYearTransfers(transferYear),
+    transfer,
+  ];
+
+  const removals = [{ id: tx.id, year: params.year }];
+  if (mirror && params.mirror) removals.push(params.mirror);
+  for (const removal of removals) {
+    trackDelete(dataset, "transaction", removal.id, deviceId);
+    dataset.transactionsByYear[String(removal.year)] = getYearTransactions(
+      removal.year
+    ).filter((item) => item.id !== removal.id);
+  }
+
+  commit();
+  return transfer;
 }

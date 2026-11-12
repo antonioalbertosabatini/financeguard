@@ -24,6 +24,12 @@ export function createAccountTransferSchemas(
       fromAccountId: z.string().min(1),
       toAccountId: z.string().min(1),
       notes: z.string().optional().default(""),
+      /**
+       * Id delle righe importate da file da cui nasce il trasferimento (la
+       * transazione convertita ed eventualmente la sua speculare): evitano che
+       * un nuovo import le ricrei.
+       */
+      externalIds: z.array(z.string().min(1)).optional(),
     })
     .superRefine((data, ctx) => {
       if (data.fromAccountId === data.toAccountId) {

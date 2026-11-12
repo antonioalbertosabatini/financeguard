@@ -1,6 +1,8 @@
 import {
   ACCUMULATION_CATEGORY_COLOR,
   ACCUMULATION_CATEGORY_ID,
+  UNCATEGORIZED_CATEGORY_COLOR,
+  UNCATEGORIZED_CATEGORY_ID,
 } from "@/lib/constants";
 import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { ExpandedTransaction } from "@/lib/schemas/transaction";
@@ -138,6 +140,17 @@ export function toSyntheticExpenses(
     isOccurrence: true,
     sourceTransactionId: item.planId,
   }));
+}
+
+/** Categoria di sistema "Senza categoria" per report e filtri. */
+export function uncategorizedCategory(name: string) {
+  return {
+    id: UNCATEGORIZED_CATEGORY_ID,
+    name,
+    type: "expense" as const,
+    color: UNCATEGORIZED_CATEGORY_COLOR,
+    icon: "circle",
+  };
 }
 
 export function accumulationCategory(name: string) {

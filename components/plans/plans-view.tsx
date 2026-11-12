@@ -49,7 +49,7 @@ import {
   updateStockHolding,
 } from "@/lib/actions/stock-holdings";
 import type { Account } from "@/lib/schemas/account";
-import type { AccumulationPlan } from "@/lib/schemas/accumulation-plan";
+import { ISIN_REGEX, type AccumulationPlan } from "@/lib/schemas/accumulation-plan";
 import type { StockHolding, StockPurchase } from "@/lib/schemas/stock-holding";
 import {
   sumAccumulation,
@@ -104,6 +104,7 @@ export function PlansView({
   const [addingOneTime, setAddingOneTime] = useState<PlanListItem | null>(null);
   const [historyPlanId, setHistoryPlanId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [isin, setIsin] = useState("");
   const [oneTimeAmountEuro, setOneTimeAmountEuro] = useState("");
   const [oneTimeAccountId, setOneTimeAccountId] = useState("");
   const [oneTimeDate, setOneTimeDate] = useState(todayISO);
@@ -120,7 +121,9 @@ export function PlansView({
   const [purchaseAccountId, setPurchaseAccountId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(todayISO);
 
-  const canSubmit = !!name.trim();
+  const isinNormalized = isin.trim().toUpperCase();
+  const isinInvalid = isinNormalized !== "" && !ISIN_REGEX.test(isinNormalized);
+  const canSubmit = !!name.trim() && !isinInvalid;
   const canSubmitOneTime =
     addingOneTime != null &&
     toCents(oneTimeAmountEuro) > 0 &&
@@ -137,6 +140,7 @@ export function PlansView({
   function resetForm() {
     setEditing(null);
     setName("");
+    setIsin("");
   }
 
   function resetOneTimeForm() {
@@ -167,6 +171,7 @@ export function PlansView({
   function openEdit(item: PlanListItem) {
     setEditing(item);
     setName(item.name);
+    setIsin(item.isin ?? "");
     setOpen(true);
   }
 
@@ -199,7 +204,7 @@ export function PlansView({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
-    const payload = { name: name.trim() };
+    const payload = { name: name.trim(), isin: isinNormalized };
     try {
       if (editing) {
         await updateAccumulationPlan(editing.id, payload);
@@ -442,6 +447,25 @@ export function PlansView({
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("plans.namePlaceholder")}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-isin">
+                {t("plans.isin")}{" "}
+                <span className="font-normal text-muted-foreground">
+                  ({t("common.optional")})
+                </span>
+              </Label>
+              <Input
+                id="plan-isin"
+                value={isin}
+                onChange={(e) => setIsin(e.target.value)}
+                placeholder="IE00B4L5Y983"
+                autoCapitalize="characters"
+                aria-invalid={isinInvalid}
+              />
+              <p className={isinInvalid ? "text-xs text-danger" : "text-xs text-muted-foreground"}>
+                {isinInvalid ? t("plans.isinInvalid") : t("plans.isinHint")}
+              </p>
             </div>
             <SheetFooter>
               <Button type="submit" disabled={!canSubmit}>
@@ -788,7 +812,12 @@ function PlanCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
-        <CardTitle className="text-base">{item.name}</CardTitle>
+        <div className="min-w-0">
+          <CardTitle className="text-base">{item.name}</CardTitle>
+          {item.isin && (
+            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{item.isin}</p>
+          )}
+        </div>
         <div className="flex gap-1">
           <Button
             variant="ghost"

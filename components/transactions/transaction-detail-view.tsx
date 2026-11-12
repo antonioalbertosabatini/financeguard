@@ -17,6 +17,10 @@ import { CategoryIcon } from "@/components/categories/category-icon";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { TagBadges } from "@/components/tags/tag-badges";
+import {
+  isUncategorized,
+  UncategorizedBadge,
+} from "@/components/transactions/uncategorized-badge";
 import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import type { Transaction } from "@/lib/schemas/transaction";
@@ -149,6 +153,8 @@ export function TransactionDetailView({
               </span>
               {category.name}
             </span>
+          ) : isUncategorized(transaction) ? (
+            <UncategorizedBadge className="text-xs" />
           ) : (
             <DetailValue className="text-muted-foreground">{t("common.none")}</DetailValue>
           )}

@@ -43,6 +43,7 @@ function stripLegacyAccumulationPlan(
   return {
     id: plan.id,
     name: plan.name,
+    ...(plan.isin ? { isin: plan.isin } : {}),
     oneTimeContributions: plan.oneTimeContributions ?? [],
   };
 }

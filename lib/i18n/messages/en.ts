@@ -191,6 +191,28 @@ export const enMessages: {
     monthlyBreakdownHint: "Income and expenses by month",
     transferManagedInAccounts:
       "Transfers are managed in the Accounts section.",
+    uncategorized: "Uncategorized",
+    uncategorizedBadge: "To categorize",
+    uncategorizedCount: "{count} to categorize",
+    convertToTransfer: {
+      button: "Convert to transfer",
+      title: "Convert to transfer",
+      descriptionIncome:
+        "The {amount} income on {date} to {account} will become a transfer from another of your accounts and will no longer count as income.",
+      descriptionExpense:
+        "The {amount} expense on {date} from {account} will become a transfer to another of your accounts and will no longer count as an expense.",
+      fromAccount: "Source account",
+      toAccount: "Destination account",
+      mirrorTitle: "Matching movement found",
+      mirrorHint:
+        "The other account already has a movement with the same amount on a nearby date: if it is the same operation, delete it so it isn't counted twice.",
+      mirrorDelete: "Also delete the movement of {date} ({amount})",
+      mirrorKeep: "Don't delete anything",
+      confirm: "Convert",
+      success: "Transaction converted to transfer",
+      successWithMirror:
+        "Transaction converted to transfer and matching movement deleted",
+    },
     form: {
       newTitle: "New transaction",
       amountRequired: "Amount is required",
@@ -227,6 +249,49 @@ export const enMessages: {
       missingExpense: "Missing expense categories.",
       missingIncome: "Missing income categories.",
       addInCategories: "Add categories in Categories.",
+    },
+  },
+  import: {
+    button: "Import from file",
+    buttonShort: "Import",
+    title: "Import from file",
+    titleBank: "Import from {bank}",
+    chooseBank: "Choose the bank you exported the file from.",
+    fileHint:
+      "Select the CSV file exported from {bank}, the account to record the movements on and the period to include.",
+    file: "File",
+    chooseFile: "Choose file…",
+    fileSummary: "{rows} rows read, from {from} to {to}",
+    account: "Account",
+    noAccounts: "Create an account first.",
+    period: "Period",
+    presetThisMonth: "This month",
+    presetLastMonth: "Last month",
+    presetAll: "Whole file",
+    showPreview: "Preview",
+    previewTitle: "Import preview",
+    previewSummary:
+      "{new} new · {duplicate} already imported · {unsupported} unsupported · {outOfPeriod} out of period",
+    previewEmpty: "No movements in the selected period.",
+    newPlan: "New plan: {name}",
+    confirm: "Import {count}",
+    success:
+      "Import complete: {transactions} transactions, {contributions} plan contributions, {plans} plans created",
+    kind: {
+      income: "Income",
+      expense: "Expense",
+      pacContribution: "Plan contribution",
+      skipped: "Skipped",
+    },
+    status: {
+      duplicate: "Already imported",
+      unknownType: "Unknown type {type}: please check",
+      currency: "Currency {currency} differs from the account",
+    },
+    skipReason: {
+      unsupportedTrade: "Securities trade not supported",
+      invalidAmount: "Invalid amount",
+      invalidDate: "Invalid date",
     },
   },
   accounts: {
@@ -306,6 +371,9 @@ export const enMessages: {
       "Index funds and stocks. Contributions count as expenses, but they stay in your net worth.",
     categoryName: "Savings plans",
     stocksCategoryName: "Stocks",
+    isin: "ISIN",
+    isinHint: "Used to match contributions imported from file.",
+    isinInvalid: "Invalid ISIN (e.g. IE00B4L5Y983).",
     indexesSection: "Index funds",
     stocksSection: "Stocks",
     new: "New index",
@@ -656,6 +724,13 @@ export const enMessages: {
     selectExpenseCategory: "Select a valid expense category",
   },
   errors: {
+    importUnreadableFile: "Unable to read the file.",
+    importUnsupportedFile: "Unsupported file format: use CSV or Excel (.xlsx).",
+    importEmptyFile: "The file is empty.",
+    importWrongFormat:
+      "The file doesn't look like a {bank} export: missing columns {columns}.",
+    transactionNotConvertible:
+      "Only non-recurring income and expenses can become transfers.",
     passwordMismatch: "Passwords do not match.",
     wrongPassword: "Wrong password.",
     wrongOldPassword: "Old password is incorrect.",
