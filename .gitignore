@@ -53,3 +53,6 @@ next-env.d.ts
 android/.idea
 
 releases/*.dmg
+# Playwright
+/test-results/
+/playwright-report/

@@ -1,8 +1,10 @@
 "use client";
 
+import { CategoryBadgeIcon } from "@/components/common/category-badge-icon";
+
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -46,36 +48,34 @@ type CategoryCardProps = {
 };
 
 function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
+  const { t } = useI18n();
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between pt-6">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex size-10 items-center justify-center rounded-lg"
-            style={{ backgroundColor: `${category.color}20` }}
-          >
-            <CategoryIcon name={category.icon} color={category.color} />
-          </div>
-          <p className="font-medium">{category.name}</p>
-        </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => onEdit(category)}
-          >
-            <Pencil className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => onDelete(category.id)}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 pl-3.5 shadow-soft">
+      <CategoryBadgeIcon icon={category.icon} color={category.color} />
+      <h3 className="min-w-0 flex-1 truncate text-[0.9375rem] font-semibold">{category.name}</h3>
+      <div className="flex shrink-0 gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onEdit(category)}
+          aria-label={`${t("common.edit")}: ${category.name}`}
+          title={t("common.edit")}
+          className="text-muted-foreground"
+        >
+          <Pencil />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onDelete(category.id)}
+          aria-label={`${t("common.delete")}: ${category.name}`}
+          title={t("common.delete")}
+          className="text-muted-foreground hover:bg-danger-soft hover:text-danger"
+        >
+          <Trash2 />
+        </Button>
+      </div>
+    </div>
   );
 }
 

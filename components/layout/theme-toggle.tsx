@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/providers/i18n-provider";
 import { useTheme } from "@/providers/theme-provider";
+import { haptic } from "@/lib/native/haptics";
 
 /** Quick light/dark switch in the header (full choice incl. "System" lives in Settings). */
 export function ThemeToggle() {
@@ -17,7 +18,10 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(dark ? "light" : "dark")}
+      onClick={() => {
+        haptic("select");
+        setTheme(dark ? "light" : "dark");
+      }}
       aria-label={label}
       title={label}
       className="rounded-full text-muted-foreground hover:text-foreground"

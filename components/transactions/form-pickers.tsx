@@ -10,6 +10,7 @@ import type { Account } from "@/lib/schemas/account";
 import type { Category } from "@/lib/schemas/category";
 import { useI18n } from "@/providers/i18n-provider";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/native/haptics";
 
 type FormType = (typeof TRANSACTION_FORM_TYPES)[number];
 
@@ -37,7 +38,10 @@ export function TypeToggle({
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => onChange(type)}
+            onClick={() => {
+              haptic("select");
+              onChange(type);
+            }}
             className={cn(
               "relative flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active ? (type === "income" ? "text-success" : "text-danger") : "text-muted-foreground hover:text-foreground"
@@ -92,7 +96,10 @@ export function CategoryPicker({
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => onChange(c.id)}
+            onClick={() => {
+              haptic("select");
+              onChange(c.id);
+            }}
             className={cn(
               "pressable flex min-w-0 flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active ? "border-transparent ring-2 ring-primary" : "border-border bg-card hover:bg-surface-2"
@@ -142,7 +149,10 @@ export function AccountPicker({
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => onChange(a.id)}
+            onClick={() => {
+              haptic("select");
+              onChange(a.id);
+            }}
             className={cn(
               "pressable inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active

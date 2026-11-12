@@ -17,6 +17,20 @@ const config: CapacitorConfig = {
   appName: "FinanceGuard",
   webDir: "out",
   server: { androidScheme: "https" },
+  plugins: {
+    // Hidden from JS once the encrypted store is initialised (StoreBootstrap),
+    // so there is no flash between the splash and the first screen.
+    SplashScreen: {
+      launchAutoHide: false,
+      launchShowDuration: 3000,
+      backgroundColor: "#f9f9fc",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+    },
+    StatusBar: {
+      overlaysWebView: false,
+    },
+  },
 };
 
 export default config;

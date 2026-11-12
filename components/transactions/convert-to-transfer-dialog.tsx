@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { Button } from "@/components/ui/button";
 import {

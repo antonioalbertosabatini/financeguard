@@ -16,6 +16,7 @@ import { useNavConfig } from "@/hooks/use-nav-config";
 import { useYearHref } from "@/hooks/use-year-href";
 import { useI18n } from "@/providers/i18n-provider";
 import { transitions } from "@/lib/motion";
+import { haptic } from "@/lib/native/haptics";
 import { cn } from "@/lib/utils";
 
 const TAB_CLASS =
@@ -50,6 +51,7 @@ function NavTab({
   return (
     <Link
       href={href}
+      onClick={() => haptic("select")}
       aria-current={active ? "page" : undefined}
       className={cn(TAB_CLASS, active ? "text-primary" : "text-muted-foreground")}
     >
@@ -100,6 +102,7 @@ export function BottomNav() {
           <div className="flex justify-center">
             <Link
               href={withYear("/add")}
+              onClick={() => haptic("tap")}
               aria-label={t("nav.addTransaction")}
               className="pressable -mt-7 flex size-[3.375rem] items-center justify-center rounded-[1.25rem] bg-primary text-primary-foreground shadow-[0_10px_24px_-6px_color-mix(in_oklch,var(--primary)_60%,transparent)] ring-[5px] ring-background outline-none focus-visible:ring-ring"
             >
@@ -118,7 +121,10 @@ export function BottomNav() {
 
           <button
             type="button"
-            onClick={() => setMoreOpen(true)}
+            onClick={() => {
+              haptic("select");
+              setMoreOpen(true);
+            }}
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
             className={cn(TAB_CLASS, moreActive ? "text-primary" : "text-muted-foreground")}

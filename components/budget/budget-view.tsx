@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { CategorySelectItem } from "@/components/categories/category-select-item";

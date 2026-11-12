@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { getCurrentLanguage } from "@/lib/i18n/runtime";
 import { formatErrorMessage } from "@/lib/i18n/translate";
 import type { MessageKey } from "@/lib/i18n/types";

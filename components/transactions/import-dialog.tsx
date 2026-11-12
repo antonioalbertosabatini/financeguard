@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ArrowLeft, FileUp, Landmark, PiggyBank } from "lucide-react";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { Badge } from "@/components/ui/badge";

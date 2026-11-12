@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { THEME_PREFERENCES, type ThemePreference } from "@/lib/theme";
 import { useTheme } from "@/providers/theme-provider";
 import { useI18n } from "@/providers/i18n-provider";
+import { haptic } from "@/lib/native/haptics";
 
 const ICONS: Record<ThemePreference, LucideIcon> = {
   light: Sun,
@@ -32,7 +33,10 @@ export function ThemeSelector() {
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => setTheme(pref)}
+            onClick={() => {
+              haptic("select");
+              setTheme(pref);
+            }}
             className={cn(
               "pressable flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected

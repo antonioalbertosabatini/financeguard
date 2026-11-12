@@ -14,7 +14,7 @@ const SOURCE_SVG = join(root, "public/icon.svg");
 const ICON_SIZE = 1024;
 const SPLASH_SIZE = 2732;
 const FOREGROUND_SCALE = 0.62; // Android adaptive icon safe zone
-const SPLASH_LOGO_SCALE = 0.42;
+const SPLASH_LOGO_SCALE = 0.28;
 
 const PWA_WEBP_SIZES = [48, 72, 96, 128, 192, 256, 512];
 
@@ -46,18 +46,22 @@ await out(
 
 await out("assets/icon-background.png", await raster(SOLID_BG_SVG, ICON_SIZE, "png"));
 
-const splashBase = await raster(SOLID_BG_SVG, SPLASH_SIZE, "png");
+// Splash backgrounds = the app's `--background` token (see lib/theme.ts
+// THEME_BACKGROUND_HEX), so the launch screen blends into the first frame.
+const SPLASH_BG = { light: "#f9f9fc", dark: "#0b0b12" };
 const logoSmall = await raster(
   sourceSvg,
   Math.round(SPLASH_SIZE * SPLASH_LOGO_SCALE),
   "png"
 );
-const splash = await sharp(splashBase)
-  .composite([{ input: logoSmall, gravity: "center" }])
-  .png()
-  .toBuffer();
-await out("assets/splash.png", splash);
-await out("assets/splash-dark.png", splash);
+for (const [mode, color] of Object.entries(SPLASH_BG)) {
+  const bg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="${color}"/></svg>`;
+  const splash = await sharp(await raster(bg, SPLASH_SIZE, "png"))
+    .composite([{ input: logoSmall, gravity: "center" }])
+    .png()
+    .toBuffer();
+  await out(mode === "light" ? "assets/splash.png" : "assets/splash-dark.png", splash);
+}
 
 for (const size of PWA_WEBP_SIZES) {
   await out(`public/icons/icon-${size}.webp`, await raster(sourceSvg, size, "webp"));

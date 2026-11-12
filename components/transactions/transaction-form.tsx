@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { z } from "zod";
 import { Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";

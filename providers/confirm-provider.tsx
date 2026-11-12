@@ -13,6 +13,7 @@ import { AlertTriangle, HelpCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { useI18n } from "@/providers/i18n-provider";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/native/haptics";
 
 export interface ConfirmOptions {
   /** Short question. Defaults to "Sei sicuro?". */
@@ -42,6 +43,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const resolver = useRef<((value: boolean) => void) | null>(null);
 
   const confirm = useCallback<ConfirmFn>((opts) => {
+    if ((opts.tone ?? "danger") === "danger") haptic("warning");
     // A pending confirmation is answered "no" if a new one replaces it.
     resolver.current?.(false);
     setOptions(opts);

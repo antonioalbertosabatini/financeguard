@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { z } from "zod";
 import { AccountIcon } from "@/components/accounts/account-icon";
 import { ACCOUNT_TYPE_DOT } from "@/components/accounts/account-card";

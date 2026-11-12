@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
@@ -14,6 +15,7 @@ import {
   type ResolvedTheme,
   type ThemePreference,
 } from "@/lib/theme";
+import { syncStatusBar } from "@/lib/native/chrome";
 
 interface ThemeContextValue {
   /** User preference (light / dark / follow the system). */
@@ -111,6 +113,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => false
   );
   const resolvedTheme = resolve(theme, systemDark);
+
+  // Native status bar follows the app theme (no-op outside Capacitor).
+  useEffect(() => {
+    void syncStatusBar(resolvedTheme);
+  }, [resolvedTheme]);
 
   const value = useMemo(
     () => ({ theme, resolvedTheme, setTheme }),
