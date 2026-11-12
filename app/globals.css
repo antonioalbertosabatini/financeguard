@@ -304,11 +304,12 @@
     min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
   /* Height of the mobile bottom navigation incl. safe area */
+  /* Floating bottom bar: 4.25rem tall + 0.75rem gap from the screen edge */
   .h-bottom-nav {
-    height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    height: calc(5rem + env(safe-area-inset-bottom, 0px));
   }
   .pb-bottom-nav {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

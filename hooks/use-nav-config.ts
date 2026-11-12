@@ -15,6 +15,7 @@ import {
   bottomNavLeft,
   bottomNavRight,
   moreNavItems,
+  allNavItems,
   type NavGroup,
   type NavItem,
   type TranslatedNavItem,
@@ -26,7 +27,7 @@ function translateNavItem(
   item: NavItem,
   t: (key: MessageKey, params?: Record<string, string | number>) => string
 ): TranslatedNavItem {
-  return { ...item, label: t(item.labelKey) };
+  return { ...item, label: t(item.labelKey), description: t(item.descKey) };
 }
 
 export function useNavConfig() {
@@ -64,6 +65,7 @@ export function useNavConfig() {
       bottomNavLeft: bottomNavLeft.map((item) => translateNavItem(item, t)),
       bottomNavRight: bottomNavRight.map((item) => translateNavItem(item, t)),
       moreNavItems: moreNavItems.map((item) => translateNavItem(item, t)),
+      allNavItems: allNavItems.map((item) => translateNavItem(item, t)),
       dashboard: translateNavItem(DASHBOARD, t),
       transactions: translateNavItem(TRANSACTIONS, t),
       accounts: translateNavItem(ACCOUNTS, t),

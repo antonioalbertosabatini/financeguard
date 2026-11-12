@@ -16,7 +16,10 @@ export function YearSelector() {
 
   return (
     <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
-      <SelectTrigger className="w-[92px] rounded-xl bg-card shadow-sm sm:w-[120px]">
+      <SelectTrigger
+        aria-label={t("common.year")}
+        className="h-9! w-auto gap-1 rounded-full bg-card pr-2.5 pl-3.5 font-semibold tabular-nums md:h-10!"
+      >
         <SelectValue placeholder={t("common.yearPlaceholder")} />
       </SelectTrigger>
       <SelectContent>
