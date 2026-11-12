@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Tags } from "lucide-react";
+import { Palette, Tags } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import { settingsWithLanguage } from "@/lib/schemas/settings";
 import type { Settings } from "@/lib/schemas/settings";
 import { useI18n } from "@/providers/i18n-provider";
 import { formatErrorMessage } from "@/lib/i18n/translate";
+import { ThemeSelector } from "@/components/settings/theme-selector";
 
 export function SettingsView({ settings }: { settings: Settings }) {
   const { t, language, setLanguage } = useI18n();
@@ -56,6 +57,21 @@ export function SettingsView({ settings }: { settings: Settings }) {
         title={t("settings.title")}
         description={t("settings.description")}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="size-4" />
+            {t("settings.appearanceTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {t("settings.appearanceDescription")}
+          </p>
+          <ThemeSelector />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

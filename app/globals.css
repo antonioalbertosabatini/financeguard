@@ -35,17 +35,34 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-surface-2: var(--surface-2);
+  --color-hero: var(--hero);
+  --color-hero-foreground: var(--hero-foreground);
+  --color-scrim: var(--scrim);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
-  --shadow-soft: 0 1px 2px oklch(0.2 0.04 270 / 0.04), 0 4px 16px oklch(0.2 0.04 270 / 0.06);
-  --shadow-card: 0 1px 3px oklch(0.2 0.04 270 / 0.05), 0 8px 24px -8px oklch(0.2 0.04 270 / 0.1);
-  --shadow-pop: 0 8px 32px -4px oklch(0.2 0.04 270 / 0.18);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  /* Elevation: 3 levels, each redefined for dark mode */
+  --shadow-soft: var(--elevation-soft);
+  --shadow-card: var(--elevation-card);
+  --shadow-pop: var(--elevation-pop);
+  /* Radii: controls = rounded-lg (14px), cards = rounded-xl (~20px),
+     sheets/dialogs = rounded-2xl/3xl, chips = rounded-full */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -53,83 +70,151 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Motion */
+  --ease-fluid: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-rise: fg-rise 0.5s var(--ease-fluid) both;
+  --animate-shimmer: fg-shimmer 1.4s ease-in-out infinite;
 }
 
+@keyframes fg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fg-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+/*
+ * Design tokens v2 — evolution of the original violet (hue 285) identity.
+ * Source of truth: the approved restyling prototype. The Android Quick Add
+ * widget mirrors these values in android/app/src/main/res/values{,-night}/colors.xml.
+ */
 :root {
-  --background: oklch(0.985 0.006 285);
-  --foreground: oklch(0.17 0.025 285);
-  --card: oklch(1 0.003 285);
-  --card-foreground: oklch(0.17 0.025 285);
-  --popover: oklch(1 0.003 285);
-  --popover-foreground: oklch(0.17 0.025 285);
-  --primary: oklch(0.54 0.205 285);
+  --background: oklch(0.984 0.004 285);
+  --foreground: oklch(0.21 0.02 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.02 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.02 285);
+  --surface-2: oklch(0.965 0.007 285);
+  --primary: oklch(0.52 0.2 285);
   --primary-foreground: oklch(0.99 0.005 285);
-  --secondary: oklch(0.96 0.015 285);
-  --secondary-foreground: oklch(0.3 0.05 285);
-  --muted: oklch(0.96 0.01 285);
-  --muted-foreground: oklch(0.48 0.03 285);
-  --accent: oklch(0.945 0.03 285);
-  --accent-foreground: oklch(0.3 0.05 285);
-  --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.62 0.15 155);
+  --primary-soft: oklch(0.95 0.035 285);
+  --primary-soft-foreground: oklch(0.42 0.17 285);
+  --hero: oklch(0.47 0.19 285);
+  --hero-foreground: oklch(0.99 0.005 285);
+  --secondary: oklch(0.965 0.007 285);
+  --secondary-foreground: oklch(0.27 0.03 285);
+  --muted: oklch(0.965 0.007 285);
+  --muted-foreground: oklch(0.49 0.02 285);
+  --accent: oklch(0.955 0.018 285);
+  --accent-foreground: oklch(0.27 0.04 285);
+  --destructive: oklch(0.52 0.19 22);
+  --success: oklch(0.52 0.13 155);
   --success-foreground: oklch(0.99 0.01 155);
-  --danger: oklch(0.59 0.215 18);
-  --danger-foreground: oklch(0.99 0.01 18);
-  --border: oklch(0.91 0.012 285);
-  --input: oklch(0.91 0.012 285);
-  --ring: oklch(0.54 0.205 285);
-  --chart-1: oklch(0.62 0.2 285);
-  --chart-2: oklch(0.65 0.16 155);
-  --chart-3: oklch(0.62 0.2 25);
-  --chart-4: oklch(0.72 0.15 75);
-  --chart-5: oklch(0.6 0.17 330);
+  --success-soft: oklch(0.95 0.04 155);
+  --danger: oklch(0.52 0.19 22);
+  --danger-foreground: oklch(0.99 0.01 22);
+  --danger-soft: oklch(0.955 0.03 22);
+  --warning: oklch(0.52 0.12 65);
+  --warning-foreground: oklch(0.99 0.01 80);
+  --warning-soft: oklch(0.96 0.045 80);
+  --info: oklch(0.5 0.13 245);
+  --info-foreground: oklch(0.99 0.01 245);
+  --info-soft: oklch(0.955 0.03 245);
+  --border: oklch(0.915 0.008 285);
+  --input: oklch(0.915 0.008 285);
+  --ring: oklch(0.52 0.2 285);
+  --scrim: oklch(0.15 0.03 285 / 0.45);
+  --chart-1: oklch(0.58 0.19 285);
+  --chart-2: oklch(0.62 0.13 175);
+  --chart-3: oklch(0.68 0.16 50);
+  --chart-4: oklch(0.62 0.17 340);
+  --chart-5: oklch(0.6 0.13 245);
+  --chart-income: oklch(0.62 0.13 155);
+  --chart-expense: oklch(0.62 0.17 22);
+  --elevation-soft: 0 1px 2px oklch(0.2 0.04 285 / 0.04), 0 4px 16px oklch(0.2 0.04 285 / 0.06);
+  --elevation-card: 0 1px 3px oklch(0.2 0.04 285 / 0.05), 0 8px 24px -8px oklch(0.2 0.04 285 / 0.1);
+  --elevation-pop: 0 12px 40px -8px oklch(0.2 0.06 285 / 0.25);
   --radius: 0.875rem;
-  --sidebar: oklch(0.99 0.005 285);
-  --sidebar-foreground: oklch(0.24 0.03 285);
-  --sidebar-primary: oklch(0.54 0.205 285);
+  --sidebar: oklch(0.975 0.006 285);
+  --sidebar-foreground: oklch(0.21 0.02 285);
+  --sidebar-primary: oklch(0.52 0.2 285);
   --sidebar-primary-foreground: oklch(0.99 0.005 285);
-  --sidebar-accent: oklch(0.955 0.022 285);
-  --sidebar-accent-foreground: oklch(0.3 0.05 285);
-  --sidebar-border: oklch(0.91 0.012 285);
-  --sidebar-ring: oklch(0.54 0.205 285);
+  --sidebar-accent: oklch(0.95 0.035 285);
+  --sidebar-accent-foreground: oklch(0.42 0.17 285);
+  --sidebar-border: oklch(0.915 0.008 285);
+  --sidebar-ring: oklch(0.52 0.2 285);
 }
 
 .dark {
-  --background: oklch(0.145 0.018 285);
-  --foreground: oklch(0.97 0.006 285);
-  --card: oklch(0.185 0.022 285);
-  --card-foreground: oklch(0.97 0.006 285);
-  --popover: oklch(0.185 0.022 285);
-  --popover-foreground: oklch(0.97 0.006 285);
-  --primary: oklch(0.66 0.19 285);
-  --primary-foreground: oklch(0.13 0.02 285);
-  --secondary: oklch(0.23 0.028 285);
-  --secondary-foreground: oklch(0.97 0.006 285);
-  --muted: oklch(0.23 0.028 285);
-  --muted-foreground: oklch(0.68 0.03 285);
-  --accent: oklch(0.26 0.035 285);
-  --accent-foreground: oklch(0.97 0.006 285);
-  --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.7 0.15 155);
-  --success-foreground: oklch(0.14 0.02 155);
-  --danger: oklch(0.68 0.19 18);
-  --danger-foreground: oklch(0.14 0.02 18);
-  --border: oklch(0.28 0.025 285);
-  --input: oklch(0.3 0.025 285);
-  --ring: oklch(0.66 0.19 285);
-  --chart-1: oklch(0.66 0.2 285);
-  --chart-2: oklch(0.7 0.16 155);
-  --chart-3: oklch(0.66 0.2 25);
-  --chart-4: oklch(0.75 0.15 75);
-  --chart-5: oklch(0.66 0.17 330);
-  --sidebar: oklch(0.165 0.022 285);
-  --sidebar-foreground: oklch(0.95 0.008 285);
-  --sidebar-primary: oklch(0.66 0.19 285);
-  --sidebar-primary-foreground: oklch(0.13 0.02 285);
-  --sidebar-accent: oklch(0.23 0.028 285);
-  --sidebar-accent-foreground: oklch(0.95 0.008 285);
-  --sidebar-border: oklch(0.28 0.025 285);
-  --sidebar-ring: oklch(0.66 0.19 285);
+  --background: oklch(0.155 0.014 285);
+  --foreground: oklch(0.965 0.004 285);
+  --card: oklch(0.195 0.017 285);
+  --card-foreground: oklch(0.965 0.004 285);
+  --popover: oklch(0.21 0.018 285);
+  --popover-foreground: oklch(0.965 0.004 285);
+  --surface-2: oklch(0.235 0.02 285);
+  --primary: oklch(0.7 0.16 285);
+  --primary-foreground: oklch(0.15 0.03 285);
+  --primary-soft: oklch(0.29 0.06 285);
+  --primary-soft-foreground: oklch(0.86 0.08 285);
+  --hero: oklch(0.37 0.14 285);
+  --hero-foreground: oklch(0.98 0.005 285);
+  --secondary: oklch(0.235 0.02 285);
+  --secondary-foreground: oklch(0.965 0.004 285);
+  --muted: oklch(0.235 0.02 285);
+  --muted-foreground: oklch(0.72 0.018 285);
+  --accent: oklch(0.26 0.03 285);
+  --accent-foreground: oklch(0.965 0.004 285);
+  --destructive: oklch(0.75 0.15 22);
+  --success: oklch(0.77 0.14 155);
+  --success-foreground: oklch(0.15 0.02 155);
+  --success-soft: oklch(0.27 0.05 155);
+  --danger: oklch(0.75 0.15 22);
+  --danger-foreground: oklch(0.15 0.02 22);
+  --danger-soft: oklch(0.28 0.06 22);
+  --warning: oklch(0.82 0.12 78);
+  --warning-foreground: oklch(0.17 0.03 78);
+  --warning-soft: oklch(0.3 0.05 75);
+  --info: oklch(0.76 0.11 245);
+  --info-foreground: oklch(0.15 0.02 245);
+  --info-soft: oklch(0.28 0.05 245);
+  --border: oklch(0.29 0.02 285);
+  --input: oklch(0.31 0.02 285);
+  --ring: oklch(0.7 0.16 285);
+  --scrim: oklch(0.05 0.01 285 / 0.6);
+  --chart-1: oklch(0.7 0.16 285);
+  --chart-2: oklch(0.74 0.12 175);
+  --chart-3: oklch(0.76 0.14 55);
+  --chart-4: oklch(0.72 0.15 340);
+  --chart-5: oklch(0.72 0.11 245);
+  --chart-income: oklch(0.72 0.13 155);
+  --chart-expense: oklch(0.7 0.15 22);
+  --elevation-soft: 0 1px 2px oklch(0 0 0 / 0.3), 0 4px 16px oklch(0 0 0 / 0.25);
+  --elevation-card: 0 1px 3px oklch(0 0 0 / 0.35), 0 8px 24px -8px oklch(0 0 0 / 0.45);
+  --elevation-pop: 0 16px 48px -8px oklch(0 0 0 / 0.6);
+  --sidebar: oklch(0.175 0.016 285);
+  --sidebar-foreground: oklch(0.965 0.004 285);
+  --sidebar-primary: oklch(0.7 0.16 285);
+  --sidebar-primary-foreground: oklch(0.15 0.03 285);
+  --sidebar-accent: oklch(0.29 0.06 285);
+  --sidebar-accent-foreground: oklch(0.86 0.08 285);
+  --sidebar-border: oklch(0.29 0.02 285);
+  --sidebar-ring: oklch(0.7 0.16 285);
 }
 
 @layer base {
@@ -142,6 +227,10 @@
   html {
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   h1, h2, h3 {
     @apply font-heading tracking-tight;
@@ -151,6 +240,48 @@
 @layer utilities {
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Typography scale for amounts and page titles */
+  .text-display {
+    font-size: 2.25rem;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-title {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+  .text-section {
+    font-size: 1.0625rem;
+    line-height: 1.3;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  .text-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Skeleton shimmer */
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+    background-size: 400px 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  /* Tactile press feedback for buttons and tappable rows */
+  .pressable {
+    transition: transform 150ms var(--ease-fluid), background-color 200ms ease, color 200ms ease;
+  }
+  .pressable:active {
+    transform: scale(0.97);
   }
 
   /* Safe-area helpers for iOS/Android notches and home indicator */
@@ -182,6 +313,18 @@
 }
 
 @layer base {
+  /* Respect the OS "reduce motion" preference for CSS animations too */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /* Avoid iOS zoom-on-focus by keeping inputs >= 16px on small screens */
   @media (max-width: 767px) {
     input,

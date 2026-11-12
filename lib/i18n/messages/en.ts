@@ -656,6 +656,14 @@ export const enMessages: {
       "Organize your income and expenses with custom categories.",
     manageCategories: "Manage categories",
     appVersion: "Version {version}",
+    appearanceTitle: "Appearance",
+    appearanceDescription:
+      "Choose the app theme. \"System\" follows your device setting.",
+    theme: {
+      light: "Light",
+      dark: "Dark",
+      system: "System",
+    },
   },
   labels: {
     accountType: {

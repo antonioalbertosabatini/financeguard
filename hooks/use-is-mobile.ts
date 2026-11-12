@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 
 /**
- * Tracks whether the viewport is below the given breakpoint (Tailwind `sm` = 640px).
+ * Tracks whether the viewport is below the given breakpoint. Defaults to
+ * Tailwind `md` (768px), the same cut-off the CSS layout uses to switch
+ * between the mobile shell (bottom nav) and the desktop shell (sidebar).
  * Returns `false` until mounted to avoid hydration mismatches in the static export.
  */
-export function useIsMobile(breakpoint = 640) {
+export function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

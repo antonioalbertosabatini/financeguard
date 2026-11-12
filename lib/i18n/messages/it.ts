@@ -646,6 +646,14 @@ export const itMessages = {
       "Organizza le tue spese e entrate con categorie personalizzate.",
     manageCategories: "Gestisci categorie",
     appVersion: "Versione {version}",
+    appearanceTitle: "Aspetto",
+    appearanceDescription:
+      "Scegli il tema dell'app. \"Sistema\" segue l'impostazione del dispositivo.",
+    theme: {
+      light: "Chiaro",
+      dark: "Scuro",
+      system: "Sistema",
+    },
   },
   labels: {
     accountType: {
