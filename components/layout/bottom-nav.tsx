@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useYearHref } from "@/hooks/use-year-href";
 import { useState } from "react";
 import { MoreHorizontal, Plus } from "lucide-react";
 import {
@@ -20,16 +21,16 @@ type NavTabItem = TranslatedNavItem;
 function NavTab({
   item,
   active,
-  query,
+  href,
 }: {
   item: NavTabItem;
   active: boolean;
-  query: string;
+  href: string;
 }) {
   const Icon = item.icon;
   return (
     <Link
-      href={`${item.href}${query}`}
+      href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex h-full flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.65rem] font-medium transition-colors",
@@ -51,12 +52,10 @@ function NavTab({
 
 export function BottomNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [moreOpen, setMoreOpen] = useState(false);
   const { bottomNavLeft, bottomNavRight, moreNavItems } = useNavConfig();
   const { t } = useI18n();
-  const yearParam = searchParams.get("year");
-  const query = yearParam ? `?year=${yearParam}` : "";
+  const withYear = useYearHref();
 
   const moreActive = moreNavItems.some((item) =>
     isActivePath(pathname, item.href)
@@ -71,13 +70,13 @@ export function BottomNav() {
               key={item.href}
               item={item}
               active={isActivePath(pathname, item.href)}
-              query={query}
+              href={withYear(item.href)}
             />
           ))}
 
           <div className="flex w-16 shrink-0 items-start justify-center">
             <Link
-              href={`/add${query}`}
+              href={withYear("/add")}
               aria-label={t("nav.addTransaction")}
               className="-mt-5 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-6px_oklch(0.54_0.205_285/0.6)] ring-4 ring-background transition-transform active:scale-95"
             >
@@ -90,7 +89,7 @@ export function BottomNav() {
               key={item.href}
               item={item}
               active={isActivePath(pathname, item.href)}
-              query={query}
+              href={withYear(item.href)}
             />
           ))}
 
@@ -128,7 +127,7 @@ export function BottomNav() {
               return (
                 <Link
                   key={item.href}
-                  href={`${item.href}${query}`}
+                  href={withYear(item.href)}
                   onClick={() => setMoreOpen(false)}
                   className={cn(
                     "flex flex-col gap-2 rounded-2xl border p-4 transition-colors",

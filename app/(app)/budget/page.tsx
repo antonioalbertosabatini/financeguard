@@ -1,7 +1,8 @@
 "use client";
 
 import { BudgetView } from "@/components/budget/budget-view";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { getCategories } from "@/lib/actions/categories";
 import { getBudgetProgress } from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
@@ -11,7 +12,7 @@ import { currentMonth } from "@/lib/utils/dates";
 export default function BudgetPage() {
   const { year } = useYear();
   const month = currentMonth();
-  const { data } = useAsyncData(
+  const { data, failed, error, reload } = useAsyncData(
     async () => ({
       progress: await getBudgetProgress(year, month),
       categories: await getCategories(),
@@ -19,7 +20,8 @@ export default function BudgetPage() {
     [year, month]
   );
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="cards" />;
 
   return (
     <BudgetView

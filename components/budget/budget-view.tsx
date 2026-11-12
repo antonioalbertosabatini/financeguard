@@ -53,6 +53,7 @@ import { centsToEuroString, toCents } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 const NO_CATEGORY = "none";
 const DEFAULT_BUDGET_ICON = "piggy-bank";
@@ -102,6 +103,7 @@ export function BudgetView({
   locale: string;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const monthLabelsFull = getMonthLabelsFull(language);
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
@@ -192,7 +194,7 @@ export function BudgetView({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("budget.deleteConfirm"))) return;
+    if (!(await confirm({ title: t("budget.deleteConfirm"), description: t("common.cannotUndo"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteBudget(id);
       toast.success(t("budget.deleted"));

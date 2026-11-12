@@ -1,7 +1,8 @@
 "use client";
 
 import { AccountsView } from "@/components/accounts/accounts-view";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { getAccountTransfers } from "@/lib/actions/account-transfers";
 import { getAccountsAnalysisSummary } from "@/lib/actions/transactions";
 import { getSettings } from "@/lib/actions/settings";
@@ -11,7 +12,7 @@ import { useYear } from "@/providers/year-provider";
 
 export default function AccountsPage() {
   const { year } = useYear();
-  const { data } = useAsyncData(async () => {
+  const { data, failed, error, reload } = useAsyncData(async () => {
     const nowYear = currentYear();
     const asOfISO = year === nowYear ? todayISO() : `${year}-12-31`;
     const [analysis, settings, transfers] = await Promise.all([
@@ -22,7 +23,8 @@ export default function AccountsPage() {
     return { analysis, settings, transfers };
   }, [year]);
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="cards" />;
 
   return (
     <AccountsView

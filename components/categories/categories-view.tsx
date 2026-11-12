@@ -37,6 +37,7 @@ import {
 import type { Category } from "@/lib/schemas/category";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 type CategoryCardProps = {
   category: Category;
@@ -129,6 +130,7 @@ function CategorySection({
 
 export function CategoriesView({ categories }: { categories: Category[] }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState("");
@@ -181,7 +183,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("categories.deleteConfirm"))) return;
+    if (!(await confirm({ title: t("categories.deleteConfirm"), description: t("common.cannotUndo"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteCategory(id);
       toast.success(t("categories.deleted"));

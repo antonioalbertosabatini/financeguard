@@ -64,6 +64,7 @@ import {
 import { formatDate, todayISO } from "@/lib/utils/dates";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 const RECENT_LIMIT = 10;
 
@@ -99,6 +100,7 @@ export function PlansView({
   locale: string;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlanListItem | null>(null);
   const [addingOneTime, setAddingOneTime] = useState<PlanListItem | null>(null);
@@ -237,7 +239,7 @@ export function PlansView({
   }
 
   async function handleRemoveOneTime(planId: string, contributionId: string) {
-    if (!confirm(t("plans.oneTimeRemoveConfirm"))) return;
+    if (!(await confirm({ description: t("plans.oneTimeRemoveConfirm"), confirmLabel: t("common.confirm") }))) return;
     try {
       await removeAccumulationPlanOneTimeContribution(planId, contributionId);
       toast.success(t("plans.oneTimeRemoved"));
@@ -247,7 +249,7 @@ export function PlansView({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("plans.deleteConfirm"))) return;
+    if (!(await confirm({ description: t("plans.deleteConfirm"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteAccumulationPlan(id);
       toast.success(t("plans.deleted"));
@@ -294,7 +296,7 @@ export function PlansView({
   }
 
   async function handleRemovePurchase(holdingId: string, purchaseId: string) {
-    if (!confirm(t("plans.stocksPurchaseRemoveConfirm"))) return;
+    if (!(await confirm({ description: t("plans.stocksPurchaseRemoveConfirm"), confirmLabel: t("common.confirm") }))) return;
     try {
       await removeStockPurchase(holdingId, purchaseId);
       toast.success(t("plans.stocksPurchaseRemoved"));
@@ -304,7 +306,7 @@ export function PlansView({
   }
 
   async function handleDeleteStock(id: string) {
-    if (!confirm(t("plans.stocksDeleteConfirm"))) return;
+    if (!(await confirm({ description: t("plans.stocksDeleteConfirm"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteStockHolding(id);
       toast.success(t("plans.stocksDeleted"));

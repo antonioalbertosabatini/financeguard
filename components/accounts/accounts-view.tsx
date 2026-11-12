@@ -69,6 +69,7 @@ import { ACCOUNT_ICON_NAMES } from "@/lib/constants/account-icons";
 import type { Account } from "@/lib/schemas/account";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 import { formatErrorMessage } from "@/lib/i18n/translate";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,7 @@ export function AccountsView({
   year: number;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const accounts = analysis.accountsAsOf;
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
@@ -309,7 +311,7 @@ export function AccountsView({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("accounts.deleteConfirm"))) return;
+    if (!(await confirm({ title: t("accounts.deleteConfirm"), description: t("common.cannotUndo"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteAccount(id);
       toast.success(t("accounts.deleted"));

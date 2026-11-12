@@ -6,6 +6,8 @@ import { I18nProvider } from "@/providers/i18n-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { MotionProvider } from "@/providers/motion-provider";
+import { ConfirmProvider } from "@/providers/confirm-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { THEME_BACKGROUND_HEX, THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const dmSans = DM_Sans({
@@ -56,9 +58,13 @@ export default function RootLayout({
         <ThemeProvider>
           <MotionProvider>
             <I18nProvider>
-              <StoreBootstrap />
-              {children}
-              <Toaster richColors closeButton />
+              <TooltipProvider delayDuration={300}>
+                <ConfirmProvider>
+                  <StoreBootstrap />
+                  {children}
+                  <Toaster richColors closeButton />
+                </ConfirmProvider>
+              </TooltipProvider>
             </I18nProvider>
           </MotionProvider>
         </ThemeProvider>

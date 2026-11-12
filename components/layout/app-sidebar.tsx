@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useYearHref } from "@/hooks/use-year-href";
 import { AppLogo } from "@/components/layout/app-logo";
 import { useSidebar } from "@/providers/sidebar-provider";
 import { isActivePath } from "@/components/layout/nav-config";
@@ -11,12 +12,10 @@ import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { sidebarOpen } = useSidebar();
   const { navGroups } = useNavConfig();
   const { t } = useI18n();
-  const yearParam = searchParams.get("year");
-  const query = yearParam ? `?year=${yearParam}` : "";
+  const withYear = useYearHref();
 
   return (
     <aside
@@ -30,9 +29,9 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <AppLogo className="size-10" />
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-sidebar-foreground">
+            <p className="text-base font-semibold tracking-tight text-sidebar-foreground">
               FinanceGuard
-            </h1>
+            </p>
             <p className="text-xs text-muted-foreground">{t("nav.tagline")}</p>
           </div>
         </div>
@@ -48,7 +47,7 @@ export function AppSidebar() {
               return (
                 <Link
                   key={href}
-                  href={`${href}${query}`}
+                  href={withYear(href)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                     active

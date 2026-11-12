@@ -83,6 +83,13 @@ export const itMessages = {
     pwaDescription: "Gestione finanze personali, locale e cifrata.",
     language: "Lingua",
   },
+  states: {
+    errorTitle: "Qualcosa è andato storto",
+    errorDescription:
+      "Non è stato possibile caricare i dati. Riprova; se il problema continua, riavvia l'app.",
+    retry: "Riprova",
+    confirmTitle: "Sei sicuro?",
+  },
   auth: {
     welcomeTitle: "Benvenuto in FinanceGuard",
     welcomeDescription:

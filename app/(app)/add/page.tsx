@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,9 +16,10 @@ export default function AddPage() {
   const { t } = useI18n();
   const { year } = useYear();
   const yearQuery = `?year=${year}`;
-  const { data } = useAsyncData(() => loadTransactionFormDeps(year), [year]);
+  const { data, failed, error, reload } = useAsyncData(() => loadTransactionFormDeps(year), [year]);
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="form" />;
 
   const { accounts, categories, availableTags } = data;
   const hasExpenseCategories = categories.some((c) => c.type === "expense");

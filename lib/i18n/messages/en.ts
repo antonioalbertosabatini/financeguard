@@ -93,6 +93,13 @@ export const enMessages: {
     pwaDescription: "Local, encrypted personal finance management.",
     language: "Language",
   },
+  states: {
+    errorTitle: "Something went wrong",
+    errorDescription:
+      "The data could not be loaded. Try again; if the problem persists, restart the app.",
+    retry: "Try again",
+    confirmTitle: "Are you sure?",
+  },
   auth: {
     welcomeTitle: "Welcome to FinanceGuard",
     welcomeDescription:
