@@ -9,7 +9,7 @@
  * secure context, necessario perche' Web Crypto (`crypto.subtle`, usato per la
  * cifratura del vault) sia disponibile.
  */
-const { app, BrowserWindow, protocol, net } = require("electron");
+const { app, BrowserWindow, protocol, net, nativeTheme } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
@@ -52,7 +52,9 @@ function createWindow() {
     height: 860,
     minWidth: 480,
     minHeight: 640,
-    backgroundColor: "#0a0a0a",
+    // Same as the app's --background token for the OS theme (lib/theme.ts),
+    // so the window doesn't flash before the first paint.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0b0b12" : "#f9f9fc",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

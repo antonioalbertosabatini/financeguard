@@ -32,7 +32,7 @@ import {
   sumExpensesByDayAndCategory,
   sumByMonth,
 } from "@/lib/utils/balance";
-import { currentYear } from "@/lib/utils/dates";
+import { currentYear, todayISO } from "@/lib/utils/dates";
 import {
   accumulationCategory,
   contributionYears,
@@ -213,6 +213,11 @@ export async function copyRecurringFromPreviousYear(toYear: number) {
   return copyRecurringRules(toYear - 1, toYear);
 }
 
+const DASHBOARD_RECENT_LIMIT = 5;
+const DASHBOARD_BUDGET_LIMIT = 3;
+/** Share of the monthly limit from which a budget is shown as "at risk". */
+const BUDGET_AT_RISK_RATIO = 0.8;
+
 export async function getDashboardData(year: number) {
   const [accounts, categories, settings, transfers, expanded, posted] =
     await Promise.all([
@@ -242,8 +247,55 @@ export async function getDashboardData(year: number) {
   const inAccumulation = sumAccumulation(posted.contributions);
   const inStocks = sumAccumulation(posted.purchases);
 
+  // Latest posted movements (recurring occurrences included, future ones excluded).
+  const today = todayISO();
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const recentTransactions = expanded
+    .filter((tx) => tx.date <= today)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, DASHBOARD_RECENT_LIMIT)
+    .map((tx) => {
+      const category = tx.categoryId ? categoryById.get(tx.categoryId) : undefined;
+      return {
+        id: tx.occurrenceId,
+        transactionId: tx.id,
+        type: tx.type,
+        amount: tx.amount,
+        date: tx.date,
+        notes: tx.notes ?? "",
+        categoryName: category?.name,
+        categoryColor: category?.color,
+        categoryIcon: category?.icon,
+      };
+    });
+
+  // Budgets of the current month that are close to (>= 80%) or over the limit.
+  const currentMonthNumber = now.getMonth() + 1;
+  const budgetProgress =
+    year === now.getFullYear()
+      ? (await getBudgetProgress(year, currentMonthNumber)).items
+      : [];
+  const budgetsAtRisk = budgetProgress
+    .map((b) => ({
+      id: b.id,
+      name: b.name,
+      icon: b.icon,
+      color: b.categoryColor,
+      spent: b.spent,
+      limit: b.monthlyLimit,
+      ratio: b.monthlyLimit > 0 ? b.spent / b.monthlyLimit : 0,
+    }))
+    .filter((b) => b.ratio >= BUDGET_AT_RISK_RATIO)
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, DASHBOARD_BUDGET_LIMIT);
+
   return {
     settings,
+    currentMonth: currentMonthNumber,
+    accountsCount: accounts.length,
+    recentTransactions,
+    budgetsAtRisk,
+    budgetsCount: budgetProgress.length,
     totalBalance: liquidBalance + inAccumulation + inStocks,
     availableBalance: liquidBalance,
     inAccumulation,

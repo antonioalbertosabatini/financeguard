@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { ALLOCATION_BUCKETS } from "@/components/allocation/allocation-buckets";
 import { FilterMultiSelect } from "@/components/transactions/filter-multi-select";

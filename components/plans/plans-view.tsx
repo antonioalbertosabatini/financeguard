@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   CirclePlus,
   Info,
@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState as CommonEmptyState } from "@/components/common/empty-state";
+import { SectionHeader as CommonSectionHeader } from "@/components/common/section-header";
 import { InvestmentSummary } from "@/components/plans/investment-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,7 @@ import {
 import { formatDate, todayISO } from "@/lib/utils/dates";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 const RECENT_LIMIT = 10;
 
@@ -99,6 +102,7 @@ export function PlansView({
   locale: string;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PlanListItem | null>(null);
   const [addingOneTime, setAddingOneTime] = useState<PlanListItem | null>(null);
@@ -237,7 +241,7 @@ export function PlansView({
   }
 
   async function handleRemoveOneTime(planId: string, contributionId: string) {
-    if (!confirm(t("plans.oneTimeRemoveConfirm"))) return;
+    if (!(await confirm({ description: t("plans.oneTimeRemoveConfirm"), confirmLabel: t("common.confirm") }))) return;
     try {
       await removeAccumulationPlanOneTimeContribution(planId, contributionId);
       toast.success(t("plans.oneTimeRemoved"));
@@ -247,7 +251,7 @@ export function PlansView({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("plans.deleteConfirm"))) return;
+    if (!(await confirm({ description: t("plans.deleteConfirm"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteAccumulationPlan(id);
       toast.success(t("plans.deleted"));
@@ -294,7 +298,7 @@ export function PlansView({
   }
 
   async function handleRemovePurchase(holdingId: string, purchaseId: string) {
-    if (!confirm(t("plans.stocksPurchaseRemoveConfirm"))) return;
+    if (!(await confirm({ description: t("plans.stocksPurchaseRemoveConfirm"), confirmLabel: t("common.confirm") }))) return;
     try {
       await removeStockPurchase(holdingId, purchaseId);
       toast.success(t("plans.stocksPurchaseRemoved"));
@@ -304,7 +308,7 @@ export function PlansView({
   }
 
   async function handleDeleteStock(id: string) {
-    if (!confirm(t("plans.stocksDeleteConfirm"))) return;
+    if (!(await confirm({ description: t("plans.stocksDeleteConfirm"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteStockHolding(id);
       toast.success(t("plans.stocksDeleted"));
@@ -724,38 +728,21 @@ function SectionHeader({
   onAction: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      <Button onClick={onAction}>
-        <Plus className="size-4" />
-        {actionLabel}
-      </Button>
-    </div>
+    <CommonSectionHeader
+      title={title}
+      className="pb-0"
+      action={
+        <Button onClick={onAction}>
+          <Plus />
+          {actionLabel}
+        </Button>
+      }
+    />
   );
 }
 
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Landmark;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card className="border-dashed">
-      <CardContent className="py-12 text-center">
-        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-6 text-muted-foreground" />
-        </div>
-        <h3 className="font-medium">{title}</h3>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          {description}
-        </p>
-      </CardContent>
-    </Card>
-  );
+function EmptyState(props: { icon: typeof Landmark; title: string; description: string }) {
+  return <CommonEmptyState {...props} />;
 }
 
 function AccountSelect({

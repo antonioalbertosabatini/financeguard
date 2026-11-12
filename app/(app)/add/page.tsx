@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/common/empty-state";
+import { AlertTriangle, Shapes, Wallet } from "lucide-react";
+import { useYearHref } from "@/hooks/use-year-href";
 import { loadTransactionFormDeps } from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { useI18n } from "@/providers/i18n-provider";
@@ -14,10 +17,11 @@ import { useYear } from "@/providers/year-provider";
 export default function AddPage() {
   const { t } = useI18n();
   const { year } = useYear();
-  const yearQuery = `?year=${year}`;
-  const { data } = useAsyncData(() => loadTransactionFormDeps(year), [year]);
+  const withYear = useYearHref();
+  const { data, failed, error, reload } = useAsyncData(() => loadTransactionFormDeps(year), [year]);
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="form" />;
 
   const { accounts, categories, availableTags } = data;
   const hasExpenseCategories = categories.some((c) => c.type === "expense");
@@ -36,34 +40,32 @@ export default function AddPage() {
       />
 
       {accounts.length === 0 ? (
-        <Card className="shadow-sm">
-          <CardContent className="py-10 text-center">
-            <p className="text-muted-foreground mb-4">
-              {t("transactions.addPage.needAccount")}
-            </p>
+        <EmptyState
+          icon={Wallet}
+          title={t("transactions.addPage.needAccount")}
+          action={
             <Button asChild>
-              <Link href={`/accounts${yearQuery}`}>
-                {t("transactions.addPage.goToAccounts")}
-              </Link>
+              <Link href={withYear("/accounts")}>{t("transactions.addPage.goToAccounts")}</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : categories.length === 0 ? (
-        <Card className="shadow-sm">
-          <CardContent className="py-10 text-center">
-            <p className="text-muted-foreground mb-4">
-              {t("transactions.addPage.needCategories")}
-            </p>
+        <EmptyState
+          icon={Shapes}
+          title={t("transactions.addPage.needCategories")}
+          action={
             <Button asChild>
-              <Link href="/categories">
-                {t("transactions.addPage.goToCategories")}
-              </Link>
+              <Link href="/categories">{t("transactions.addPage.goToCategories")}</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : !hasExpenseCategories || !hasIncomeCategories ? (
-        <Card className="border-amber-200 bg-amber-50/50 shadow-sm">
-          <CardContent className="py-4 text-sm text-amber-900">
+        <div
+          role="status"
+          className="mx-auto flex max-w-2xl items-start gap-3 rounded-xl bg-warning-soft p-4 text-sm text-warning"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p>
             {t(
               !hasExpenseCategories && !hasIncomeCategories
                 ? "transactions.addPage.missingBothTypes"
@@ -72,12 +74,12 @@ export default function AddPage() {
                   : "transactions.addPage.missingIncome"
             )}{" "}
             {addInCategoriesPrefix}{" "}
-            <Link href="/categories" className="font-medium underline">
+            <Link href="/categories" className="font-semibold underline">
               {categoriesLabel}
             </Link>
             .
-          </CardContent>
-        </Card>
+          </p>
+        </div>
       ) : null}
 
       {accounts.length > 0 && (

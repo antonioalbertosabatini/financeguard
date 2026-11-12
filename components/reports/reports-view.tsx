@@ -1,5 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { StatTile, type StatTone } from "@/components/common/stat-tile";
+import { chartBar, chartColors, chartCursor, chartDonut } from "@/components/charts/chart-theme";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart,
@@ -75,42 +79,19 @@ type ReportsViewProps = {
   };
 };
 
+/** Report KPI: thin wrapper over the shared StatTile. */
 function StatCard({
   title,
   value,
-  icon: Icon,
-  iconClassName,
-  valueClassName,
-  borderClassName,
+  icon,
+  tone,
 }: {
   title: string;
-  value: string;
+  value: ReactNode;
   icon: LucideIcon;
-  iconClassName: string;
-  valueClassName?: string;
-  borderClassName?: string;
+  tone: StatTone;
 }) {
-  return (
-    <Card className={`shadow-sm ${borderClassName ?? ""}`}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        <div
-          className={`flex size-9 items-center justify-center rounded-xl ${iconClassName}`}
-        >
-          <Icon className="size-4" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p
-          className={`text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${valueClassName ?? ""}`}
-        >
-          {value}
-        </p>
-      </CardContent>
-    </Card>
-  );
+  return <StatTile label={title} value={value} icon={icon} tone={tone} />;
 }
 
 function CategoryBarChart({
@@ -184,7 +165,7 @@ function CategoryBarChart({
         />
         <Tooltip
           trigger={isMobile ? "click" : "hover"}
-          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          cursor={chartCursor}
           content={({ active, payload }) => {
             if (!active || !payload?.length) return null;
             const entry = payload[0].payload as {
@@ -245,7 +226,10 @@ function CategoryPieChart({
           nameKey="name"
           cx="50%"
           cy={isMobile ? "45%" : "50%"}
-          outerRadius={isMobile ? 78 : 100}
+          innerRadius={isMobile ? 56 : 70}
+          outerRadius={isMobile ? 84 : 104}
+          paddingAngle={chartDonut.paddingAngle}
+          cornerRadius={chartDonut.cornerRadius}
           label={isMobile ? false : ({ name }) => name}
         >
           {data.map((entry) => (
@@ -316,7 +300,7 @@ function DailyStackedBarChart({
       />
       <Tooltip
         trigger={isMobile ? "click" : "hover"}
-        cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+        cursor={chartCursor}
         content={
           <ChartTooltip
             currency={currency}
@@ -461,23 +445,19 @@ export function ReportsView({
               title={t("reports.incomeMonth", { month: monthLabel })}
               value={formatAmount(monthlyReport.income, currency, locale)}
               icon={TrendingUp}
-              iconClassName="bg-success/10 text-success"
-              valueClassName="text-success"
-              borderClassName="border-success/30"
+              tone="success"
             />
             <StatCard
               title={t("reports.expenseMonth", { month: monthLabel })}
               value={formatAmount(monthlyReport.expense, currency, locale)}
               icon={TrendingDown}
-              iconClassName="bg-danger/10 text-danger"
-              valueClassName="text-danger"
-              borderClassName="border-danger/30"
+              tone="danger"
             />
             <StatCard
               title={t("reports.netBalance")}
               value={formatAmount(monthlyReport.net, currency, locale)}
               icon={Wallet}
-              iconClassName="bg-primary/10 text-primary"
+              tone="primary"
             />
           </div>
 
@@ -565,23 +545,19 @@ export function ReportsView({
               title={t("reports.incomeYear", { year })}
               value={formatAmount(annualReport.income, currency, locale)}
               icon={TrendingUp}
-              iconClassName="bg-success/10 text-success"
-              valueClassName="text-success"
-              borderClassName="border-success/30"
+              tone="success"
             />
             <StatCard
               title={t("reports.expenseYear", { year })}
               value={formatAmount(annualReport.expense, currency, locale)}
               icon={TrendingDown}
-              iconClassName="bg-danger/10 text-danger"
-              valueClassName="text-danger"
-              borderClassName="border-danger/30"
+              tone="danger"
             />
             <StatCard
               title={t("reports.netAnnual")}
               value={formatAmount(annualReport.net, currency, locale)}
               icon={Wallet}
-              iconClassName="bg-primary/10 text-primary"
+              tone="primary"
             />
           </div>
 
@@ -619,7 +595,7 @@ export function ReportsView({
                   />
                   <Tooltip
                     trigger={isMobile ? "click" : "hover"}
-                    cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                    cursor={chartCursor}
                     content={
                       <ChartTooltip currency={currency} locale={locale} />
                     }
@@ -631,14 +607,14 @@ export function ReportsView({
                   />
                   <Bar
                     dataKey={incomeLabel}
-                    fill="var(--success)"
-                    radius={[4, 4, 0, 0]}
+                    fill={chartColors.income}
+                    radius={chartBar.radius}
                     maxBarSize={isMobile ? 14 : 28}
                   />
                   <Bar
                     dataKey={expenseLabel}
-                    fill="var(--danger)"
-                    radius={[4, 4, 0, 0]}
+                    fill={chartColors.expense}
+                    radius={chartBar.radius}
                     maxBarSize={isMobile ? 14 : 28}
                   />
                 </BarChart>

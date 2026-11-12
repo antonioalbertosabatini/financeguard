@@ -1,7 +1,8 @@
 "use client";
 
 import { ReportsView } from "@/components/reports/reports-view";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { getAnnualReport, getMonthlyReport } from "@/lib/actions/transactions";
 import { useAsyncData } from "@/lib/storage/use-async-data";
 import { useYear } from "@/providers/year-provider";
@@ -10,7 +11,7 @@ import { currentMonth } from "@/lib/utils/dates";
 export default function ReportsPage() {
   const { year } = useYear();
   const month = currentMonth();
-  const { data } = useAsyncData(
+  const { data, failed, error, reload } = useAsyncData(
     async () => {
       const [monthlyReport, annualReport] = await Promise.all([
         getMonthlyReport(year, month),
@@ -21,7 +22,8 @@ export default function ReportsPage() {
     [year, month]
   );
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="dashboard" />;
 
   const { monthlyReport, annualReport } = data;
 

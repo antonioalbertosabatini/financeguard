@@ -8,11 +8,9 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex animate-rise flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-          {title}
-        </h2>
+        <h1 className="text-title sm:text-[2rem]">{title}</h1>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}

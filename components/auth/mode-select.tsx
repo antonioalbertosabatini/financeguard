@@ -39,8 +39,8 @@ export function ModeSelect({
     return (
       <Card>
         <CardContent className="space-y-4">
-          <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
-            <Cloud className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-start gap-3 rounded-xl bg-warning-soft p-3.5 text-sm text-warning">
+            <Cloud className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div className="space-y-1">
               <p className="font-medium">{t("auth.cloudNotConfiguredTitle")}</p>
               <p>{t("auth.cloudNotConfiguredBody")}</p>

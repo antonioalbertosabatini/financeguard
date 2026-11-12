@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ALLOCATION_BUCKET_BY_ID } from "@/components/allocation/allocation-buckets";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { Badge } from "@/components/ui/badge";

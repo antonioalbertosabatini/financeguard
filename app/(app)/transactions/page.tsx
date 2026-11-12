@@ -1,7 +1,8 @@
 "use client";
 
 import { TransactionsView } from "@/components/transactions/transactions-view";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { getSettings } from "@/lib/actions/settings";
 import {
   getTransactionsForListView,
@@ -12,7 +13,7 @@ import { useYear } from "@/providers/year-provider";
 
 export default function TransactionsPage() {
   const { year } = useYear();
-  const { data } = useAsyncData(
+  const { data, failed, error, reload } = useAsyncData(
     async () => {
       const [{ transactions, occurrences }, formDeps, settings] = await Promise.all([
         getTransactionsForListView(year),
@@ -24,7 +25,8 @@ export default function TransactionsPage() {
     [year]
   );
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="list" />;
 
   return (
     <TransactionsView

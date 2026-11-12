@@ -1,25 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#4F46E5</color>
-    <color name="colorPrimaryDark">#3730A3</color>
-    <color name="colorAccent">#4F46E5</color>
+    <!-- App chrome: primary token (oklch(0.52 0.2 285)). -->
+    <color name="colorPrimary">#634CD4</color>
+    <color name="colorPrimaryDark">#4A36B0</color>
+    <color name="colorAccent">#634CD4</color>
     <color name="quick_add_on_primary">#FFFFFF</color>
 
-    <!-- Quick Add dialog: light palette from app/globals.css (:root). -->
+    <!--
+      Quick Add dialog: light palette mirrored from app/globals.css (:root),
+      design tokens v2. Keep in sync when the web tokens change:
+      card=card, foreground=foreground, primary=primary,
+      muted=surface-2, muted_fg=muted-foreground, border=border,
+      outline_bg=background, success=success, danger=danger.
+    -->
     <color name="qa_card">#FFFFFF</color>
-    <color name="qa_foreground">#0E0E1A</color>
-    <color name="qa_foreground_10">#1A0E0E1A</color>
-    <color name="qa_primary">#6951DE</color>
-    <color name="qa_primary_10">#1A6951DE</color>
-    <color name="qa_primary_30">#4D6951DE</color>
+    <color name="qa_foreground">#171721</color>
+    <color name="qa_foreground_10">#1A171721</color>
+    <color name="qa_primary">#634CD4</color>
+    <color name="qa_primary_10">#1A634CD4</color>
+    <color name="qa_primary_30">#4D634CD4</color>
     <color name="qa_on_primary">#FBFBFF</color>
-    <color name="qa_muted">#F1F1F8</color>
-    <color name="qa_muted_fg">#5B5C6E</color>
-    <color name="qa_border">#E0E0E9</color>
+    <color name="qa_muted">#F3F3F8</color>
+    <color name="qa_muted_fg">#5F5F6C</color>
+    <color name="qa_border">#E2E2E8</color>
     <color name="qa_input_bg">#FFFFFF</color>
-    <color name="qa_outline_bg">#F9FAFE</color>
-    <color name="qa_success">#0FA05C</color>
-    <color name="qa_danger">#E0284A</color>
-    <color name="qa_ripple">#140E0E1A</color>
+    <color name="qa_outline_bg">#F9F9FC</color>
+    <color name="qa_success">#007E46</color>
+    <color name="qa_danger">#BE2132</color>
+    <color name="qa_ripple">#14171721</color>
     <color name="qa_ripple_on_primary">#33FBFBFF</color>
 </resources>

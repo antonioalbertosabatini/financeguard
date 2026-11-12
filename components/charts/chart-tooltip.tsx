@@ -57,7 +57,7 @@ export function ChartTooltip({
       : null;
 
   return (
-    <div className="max-w-[16rem] rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-md">
+    <div className="max-w-[16rem] rounded-xl border border-border bg-popover px-3.5 py-2.5 text-sm shadow-pop">
       {headerText && (
         <p className="mb-1 font-medium text-foreground">{headerText}</p>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AppShellLayout } from "@/components/layout/app-shell-layout";
+import { CommandPaletteProvider } from "@/components/layout/command-palette";
 import { AmountVisibilityProvider } from "@/providers/amount-visibility-provider";
 import { CloudSyncProvider } from "@/providers/cloud-sync-provider";
 import { SidebarProvider } from "@/providers/sidebar-provider";
@@ -18,7 +19,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AmountVisibilityProvider>
         <SidebarProvider>
           <CloudSyncProvider>
-            <AppShellLayout>{children}</AppShellLayout>
+            <CommandPaletteProvider>
+              <AppShellLayout>{children}</AppShellLayout>
+            </CommandPaletteProvider>
           </CloudSyncProvider>
         </SidebarProvider>
       </AmountVisibilityProvider>

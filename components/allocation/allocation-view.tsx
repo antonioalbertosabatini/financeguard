@@ -6,7 +6,8 @@ import { AllocationAssignDialog } from "@/components/allocation/allocation-assig
 import { AllocationSettingsDialog } from "@/components/allocation/allocation-settings-dialog";
 import { ALLOCATION_BUCKETS } from "@/components/allocation/allocation-buckets";
 import { PageHeader } from "@/components/layout/page-header";
-import { FullScreenLoader } from "@/components/providers/full-screen-loader";
+import { ErrorState } from "@/components/common/error-state";
+import { PageSkeleton } from "@/components/common/page-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,7 @@ export function AllocationView({ year }: { year: number }) {
     useState<IncomeAllocationBucketId | null>(null);
   const monthNum = parseInt(month, 10);
 
-  const { data } = useAsyncData(
+  const { data, failed, error, reload } = useAsyncData(
     () => getIncomeAllocation(year, monthNum),
     [year, monthNum]
   );
@@ -53,7 +54,8 @@ export function AllocationView({ year }: { year: number }) {
   );
   const monthLabel = monthLabelsFull[monthNum - 1];
 
-  if (!data) return <FullScreenLoader />;
+  if (!data && failed) return <ErrorState message={error} onRetry={reload} />;
+  if (!data) return <PageSkeleton variant="cards" />;
 
   const stale = data.year !== year || data.month !== monthNum;
   const {

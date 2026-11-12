@@ -1,21 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { ChevronDown, Pencil, Plus, Tag, Trash2 } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { CategorySelectItem } from "@/components/categories/category-select-item";
-import { TagBadges } from "@/components/tags/tag-badges";
 import { TagSingleInput } from "@/components/tags/tag-single-input";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
+import { Amount } from "@/components/common/amount";
+import { EmptyState } from "@/components/common/empty-state";
+import { Stagger, StaggerItem } from "@/components/common/motion";
+import { StatTile } from "@/components/common/stat-tile";
+import { BudgetCard, budgetTone } from "@/components/budget/budget-card";
+import { ArrowUpRight, PiggyBank, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
@@ -25,7 +23,6 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -33,14 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { deleteBudget, updateBudget, upsertBudget } from "@/lib/actions/budgets";
 import { CATEGORY_ICON_NAMES } from "@/lib/constants/category-icons";
 import {
@@ -48,15 +37,14 @@ import {
   getMonthLabelsFull,
 } from "@/lib/i18n/translate";
 import type { Category } from "@/lib/schemas/category";
-import { formatDate } from "@/lib/utils/dates";
 import { centsToEuroString, toCents } from "@/lib/utils/money";
-import { cn } from "@/lib/utils";
-import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 const NO_CATEGORY = "none";
 const DEFAULT_BUDGET_ICON = "piggy-bank";
-const TAG_COLOR = "#6366F1";
+/** Accent for tag-only budgets (no category colour available). */
+const TAG_COLOR = "var(--primary)";
 
 type BudgetExpense = {
   id: string;
@@ -91,7 +79,6 @@ export function BudgetView({
   year,
   month,
   currency,
-  locale,
 }: {
   items: BudgetItem[];
   categories: Category[];
@@ -102,8 +89,8 @@ export function BudgetView({
   locale: string;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const monthLabelsFull = getMonthLabelsFull(language);
-  const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetItem | null>(null);
   const [name, setName] = useState("");
@@ -192,7 +179,7 @@ export function BudgetView({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("budget.deleteConfirm"))) return;
+    if (!(await confirm({ title: t("budget.deleteConfirm"), description: t("common.cannotUndo"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteBudget(id);
       toast.success(t("budget.deleted"));
@@ -218,57 +205,50 @@ export function BudgetView({
       />
 
       {items.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card size="sm">
-            <CardHeader>
-              <CardDescription>{t("budget.activeCount")}</CardDescription>
-              <CardTitle>{items.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card size="sm">
-            <CardHeader>
-              <CardDescription>{t("budget.spentMonth")}</CardDescription>
-              <CardTitle>{formatAmount(totals.spent, currency, locale)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card size="sm">
-            <CardHeader>
-              <CardDescription>{t("budget.totalLimit")}</CardDescription>
-              <CardTitle>{formatAmount(totals.limit, currency, locale)}</CardTitle>
-            </CardHeader>
-          </Card>
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <StatTile label={t("budget.activeCount")} icon={PiggyBank} tone="primary" value={items.length} />
+          <StatTile
+            label={t("budget.spentMonth")}
+            icon={ArrowUpRight}
+            tone={totals.limit > 0 ? budgetTone(totals.spent / totals.limit) : "neutral"}
+            value={<Amount cents={totals.spent} currency={currency} animated />}
+          />
+          <StatTile
+            label={t("budget.totalLimit")}
+            icon={Target}
+            tone="neutral"
+            value={<Amount cents={totals.limit} currency={currency} />}
+          />
         </div>
       )}
 
       {items.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-              <CategoryIcon
-                name={DEFAULT_BUDGET_ICON}
-                color={TAG_COLOR}
-                className="size-6"
-              />
-            </div>
-            <h3 className="font-medium">{t("budget.emptyTitle")}</h3>
-            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              {t("budget.emptyDescription")}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={PiggyBank}
+          title={t("budget.emptyTitle")}
+          description={t("budget.emptyDescription")}
+          action={
+            <Button onClick={openCreateDialog}>
+              <Plus />
+              {t("budget.new")}
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {items.map((item) => (
-            <BudgetCard
-              key={item.id}
-              item={item}
-              currency={currency}
-              locale={locale}
-              onEdit={openEditDialog}
-              onDelete={handleDelete}
-            />
+        <Stagger className="grid gap-4 lg:grid-cols-2">
+          {items.map((item, index) => (
+            <StaggerItem key={item.id}>
+              <BudgetCard
+                item={item}
+                index={index}
+                currency={currency}
+                accentColor={item.categoryId ? item.categoryColor : TAG_COLOR}
+                onEdit={() => openEditDialog(item)}
+                onDelete={() => handleDelete(item.id)}
+              />
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
 
       <Sheet open={open} onOpenChange={(nextOpen) => {
@@ -369,191 +349,6 @@ export function BudgetView({
           </form>
         </SheetContent>
       </Sheet>
-    </div>
-  );
-}
-
-function BudgetCard({
-  item,
-  currency,
-  locale,
-  onEdit,
-  onDelete,
-}: {
-  item: BudgetItem;
-  currency: string;
-  locale: string;
-  onEdit: (item: BudgetItem) => void;
-  onDelete: (id: string) => void;
-}) {
-  const { t, language } = useI18n();
-  const formatAmount = useFormatCents();
-  const pctRaw = item.monthlyLimit > 0 ? (item.spent / item.monthlyLimit) * 100 : 0;
-  const pct = Math.min(100, pctRaw);
-  const overBudget = item.spent > item.monthlyLimit;
-  const remaining = item.monthlyLimit - item.spent;
-  const accentColor = item.categoryId ? item.categoryColor : TAG_COLOR;
-
-  return (
-    <Card className="shadow-sm">
-      <CardHeader className="gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <div
-              className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ backgroundColor: `${accentColor}1A` }}
-            >
-              <CategoryIcon name={item.icon} color={accentColor} className="size-5" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <CardTitle className="truncate">{item.name}</CardTitle>
-              <div className="flex flex-wrap gap-1.5">
-                {item.categoryName && (
-                  <Badge variant="secondary" className="gap-1">
-                    {item.categoryIcon && (
-                      <CategoryIcon
-                        name={item.categoryIcon}
-                        color={item.categoryColor}
-                        className="size-3"
-                      />
-                    )}
-                    {item.categoryName}
-                  </Badge>
-                )}
-                {item.tag && (
-                  <Badge variant="outline" className="gap-1">
-                    <Tag className="size-3" />
-                    {item.tag}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onEdit(item)}
-              aria-label={t("budget.editAria", { name: item.name })}
-            >
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onDelete(item.id)}
-              aria-label={t("budget.deleteAria", { name: item.name })}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Metric label={t("budget.spent")} value={formatAmount(item.spent, currency, locale)} />
-          <Metric label={t("budget.limit")} value={formatAmount(item.monthlyLimit, currency, locale)} />
-          <Metric
-            label={overBudget ? t("budget.overBudget") : t("budget.remaining")}
-            value={formatAmount(Math.abs(remaining), currency, locale)}
-            className={overBudget ? "text-destructive" : "text-success"}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Progress
-            value={pct}
-            className={cn(overBudget && "[&>div]:bg-destructive")}
-          />
-          <p className="flex justify-between text-xs text-muted-foreground">
-            <span>
-              {t("budget.usedPercent", { percent: pctRaw.toFixed(0) })}
-            </span>
-            <span>
-              {item.expenses.length}{" "}
-              {item.expenses.length === 1
-                ? t("budget.expenseSingular")
-                : t("budget.expensePlural")}
-            </span>
-          </p>
-        </div>
-
-        <Collapsible>
-          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/50">
-            {t("budget.expenseDetails")}
-            <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3">
-            {item.expenses.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                {t("budget.noExpensesMonth")}
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("common.date")}</TableHead>
-                      <TableHead>{t("common.category")}</TableHead>
-                      <TableHead>{t("common.tags")}</TableHead>
-                      <TableHead>{t("common.notes")}</TableHead>
-                      <TableHead className="text-right">{t("common.amount")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {item.expenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell className="tabular-nums">
-                          {formatDate(expense.date, "dd/MM/yyyy", language)}
-                        </TableCell>
-                        <TableCell>
-                          <span className="flex items-center gap-2">
-                            {expense.categoryIcon && (
-                              <CategoryIcon
-                                name={expense.categoryIcon}
-                                color={expense.categoryColor}
-                                className="size-3.5"
-                              />
-                            )}
-                            <span>{expense.categoryName}</span>
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <TagBadges tags={expense.tags} />
-                        </TableCell>
-                        <TableCell className="max-w-[180px] truncate">
-                          {expense.notes || t("common.none")}
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums text-danger">
-                          -{formatAmount(expense.amount, currency, locale)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div className="rounded-lg bg-muted/40 p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 font-medium tabular-nums", className)}>{value}</p>
     </div>
   );
 }

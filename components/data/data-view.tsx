@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Download,
   FileDown,
@@ -37,6 +37,7 @@ import {
 import { todayISO } from "@/lib/utils/dates";
 import { toastActionError } from "@/lib/utils/toast";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -63,6 +64,7 @@ async function pushImportToCloud(): Promise<"pushed" | "skipped" | "failed"> {
 
 export function DataView() {
   const { t } = useI18n();
+  const confirm = useConfirm();
   const [importing, setImporting] = useState(false);
   const [exportingPlain, setExportingPlain] = useState(false);
 
@@ -107,7 +109,7 @@ export function DataView() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm(t("data.importPlainConfirm"))) {
+    if (!(await confirm({ description: t("data.importPlainConfirm"), confirmLabel: t("common.confirm") }))) {
       e.target.value = "";
       return;
     }
@@ -164,7 +166,7 @@ export function DataView() {
       toast.error(t("data.enterBackupPassword"));
       return;
     }
-    if (!confirm(t("data.importEncryptedConfirm"))) {
+    if (!(await confirm({ description: t("data.importEncryptedConfirm"), confirmLabel: t("common.confirm") }))) {
       return;
     }
 

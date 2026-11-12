@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ const STRENGTH_KEYS = [
 const STRENGTH_COLORS = [
   "bg-destructive",
   "bg-destructive",
-  "bg-amber-500",
+  "bg-warning",
   "bg-success",
   "bg-success",
 ];

@@ -9,30 +9,63 @@ import {
   type ReactNode,
 } from "react";
 
-const STORAGE_KEY = "financeguard:sidebar-open";
-const STORAGE_EVENT = "financeguard:sidebar-open-change";
+/**
+ * Desktop sidebar has three states:
+ * - "expanded": icons + labels (default)
+ * - "collapsed": icons only, labels in tooltips
+ * - "hidden": no sidebar, content uses the full width
+ */
+export type SidebarMode = "expanded" | "collapsed" | "hidden";
+
+const STORAGE_KEY = "financeguard:sidebar-mode";
+/** Pre-restyling key (boolean "open"), migrated on first read. */
+const LEGACY_KEY = "financeguard:sidebar-open";
+/** Remembers the last visible mode so "show" restores it. */
+const LAST_VISIBLE_KEY = "financeguard:sidebar-last-visible";
+const STORAGE_EVENT = "financeguard:sidebar-mode-change";
 
 type SidebarContextValue = {
-  sidebarOpen: boolean;
-  toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
+  mode: SidebarMode;
+  /** True when the sidebar takes space on screen (expanded or collapsed). */
+  sidebarVisible: boolean;
+  setMode: (mode: SidebarMode) => void;
+  /** expanded ⇄ collapsed (keyboard shortcut, in-sidebar button). */
+  toggleCollapsed: () => void;
+  /** hidden ⇄ last visible mode (header button). */
+  toggleHidden: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
-function readStoredOpen(): boolean {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "false") return false;
-    return true;
-  } catch {
-    return true;
-  }
+function isMode(value: unknown): value is SidebarMode {
+  return value === "expanded" || value === "collapsed" || value === "hidden";
 }
 
-function writeStoredOpen(open: boolean) {
+function readMode(): SidebarMode {
   try {
-    localStorage.setItem(STORAGE_KEY, String(open));
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (isMode(stored)) return stored;
+    if (localStorage.getItem(LEGACY_KEY) === "false") return "hidden";
+  } catch {
+    // ignore storage errors
+  }
+  return "expanded";
+}
+
+function readLastVisible(): Exclude<SidebarMode, "hidden"> {
+  try {
+    const stored = localStorage.getItem(LAST_VISIBLE_KEY);
+    if (stored === "collapsed") return "collapsed";
+  } catch {
+    // ignore storage errors
+  }
+  return "expanded";
+}
+
+function writeMode(mode: SidebarMode) {
+  try {
+    localStorage.setItem(STORAGE_KEY, mode);
+    if (mode !== "hidden") localStorage.setItem(LAST_VISIBLE_KEY, mode);
     window.dispatchEvent(new Event(STORAGE_EVENT));
   } catch {
     // ignore storage errors
@@ -48,28 +81,34 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
-function getServerSnapshot() {
-  return true;
+function getServerSnapshot(): SidebarMode {
+  return "expanded";
 }
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const sidebarOpen = useSyncExternalStore(
-    subscribe,
-    readStoredOpen,
-    getServerSnapshot
-  );
+  const mode = useSyncExternalStore(subscribe, readMode, getServerSnapshot);
 
-  const setSidebarOpen = useCallback((open: boolean) => {
-    writeStoredOpen(open);
+  const setMode = useCallback((next: SidebarMode) => writeMode(next), []);
+
+  const toggleCollapsed = useCallback(() => {
+    const current = readMode();
+    writeMode(current === "expanded" ? "collapsed" : "expanded");
   }, []);
 
-  const toggleSidebar = useCallback(() => {
-    writeStoredOpen(!readStoredOpen());
+  const toggleHidden = useCallback(() => {
+    const current = readMode();
+    writeMode(current === "hidden" ? readLastVisible() : "hidden");
   }, []);
 
   const value = useMemo(
-    () => ({ sidebarOpen, toggleSidebar, setSidebarOpen }),
-    [sidebarOpen, toggleSidebar, setSidebarOpen]
+    () => ({
+      mode,
+      sidebarVisible: mode !== "hidden",
+      setMode,
+      toggleCollapsed,
+      toggleHidden,
+    }),
+    [mode, setMode, toggleCollapsed, toggleHidden]
   );
 
   return (

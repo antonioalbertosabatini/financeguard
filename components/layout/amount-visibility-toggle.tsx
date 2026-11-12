@@ -21,12 +21,12 @@ export function AmountVisibilityToggle() {
       onClick={toggleAmountsVisibility}
       aria-label={label}
       title={label}
-      className="size-9 rounded-xl"
+      className="rounded-full text-muted-foreground hover:text-foreground"
     >
       {amountsHidden ? (
-        <EyeOff className="size-4" />
+        <EyeOff className="size-[1.125rem]" />
       ) : (
-        <Eye className="size-4" />
+        <Eye className="size-[1.125rem]" />
       )}
     </Button>
   );

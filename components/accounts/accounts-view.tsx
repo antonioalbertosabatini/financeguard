@@ -1,22 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   ArrowLeftRight,
   ChevronDown,
-  ChevronUp,
   Filter,
   Shuffle,
-  Pencil,
   Plus,
   Trash2,
+  Wallet,
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { AccountIcon } from "@/components/accounts/account-icon";
+import { AccountCard } from "@/components/accounts/account-card";
+import { AccountFormSheet } from "@/components/accounts/account-form-sheet";
+import { Amount } from "@/components/common/amount";
+import { EmptyState } from "@/components/common/empty-state";
+import { Stagger, StaggerItem } from "@/components/common/motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
@@ -42,35 +46,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  createAccount,
   deleteAccount,
   reorderAccounts,
-  updateAccount,
 } from "@/lib/actions/accounts";
 import {
   createAccountTransfer,
   deleteAccountTransfer,
 } from "@/lib/actions/account-transfers";
-import { ACCOUNT_TYPES } from "@/lib/constants";
-import { ACCOUNT_ICON_NAMES } from "@/lib/constants/account-icons";
 import type { Account } from "@/lib/schemas/account";
 import { useFormatCents } from "@/hooks/use-format-cents";
 import { useI18n } from "@/providers/i18n-provider";
+import { useConfirm } from "@/providers/confirm-provider";
 import { formatErrorMessage } from "@/lib/i18n/translate";
-import { centsToEuroString, toCents } from "@/lib/utils/money";
+import { toCents } from "@/lib/utils/money";
 import { cn } from "@/lib/utils";
 import type { AccountTransfer } from "@/lib/schemas/account-transfer";
 import { formatDate, todayISO } from "@/lib/utils/dates";
@@ -99,15 +92,11 @@ export function AccountsView({
   year: number;
 }) {
   const { t, language } = useI18n();
+  const confirm = useConfirm();
   const accounts = analysis.accountsAsOf;
   const formatAmount = useFormatCents();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
-  const [name, setName] = useState("");
-  const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]>("checking");
-  const [initialBalance, setInitialBalance] = useState("0.00");
-  const [currencyInput, setCurrencyInput] = useState(currency);
-  const [icon, setIcon] = useState<string>(ACCOUNT_ICON_NAMES[0]);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferDate, setTransferDate] = useState(() => {
     const today = todayISO();
@@ -117,9 +106,6 @@ export function AccountsView({
   const [fromAccountId, setFromAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [transferNotes, setTransferNotes] = useState("");
-  const [deletingTransfer, setDeletingTransfer] = useState<AccountTransfer | null>(
-    null
-  );
 
   const [transfersOpen, setTransfersOpen] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -176,42 +162,13 @@ export function AccountsView({
     filterTo !== "all" ||
     query.trim() !== "";
 
-  const TYPE_STYLE: Record<Account["type"], { icon: string; badge: string }> = {
-    checking: {
-      icon: "bg-sky-500/10 text-sky-700",
-      badge: "bg-sky-500/10 text-sky-700 hover:bg-sky-500/10",
-    },
-    cash: {
-      icon: "bg-emerald-500/10 text-emerald-700",
-      badge: "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10",
-    },
-    savings: {
-      icon: "bg-violet-500/10 text-violet-700",
-      badge: "bg-violet-500/10 text-violet-700 hover:bg-violet-500/10",
-    },
-    credit_card: {
-      icon: "bg-amber-500/10 text-amber-700",
-      badge: "bg-amber-500/10 text-amber-700 hover:bg-amber-500/10",
-    },
-  };
-
   function openCreate() {
     setEditing(null);
-    setName("");
-    setType("checking");
-    setInitialBalance("0.00");
-    setCurrencyInput(currency);
-    setIcon(ACCOUNT_ICON_NAMES[0]);
     setOpen(true);
   }
 
   function openEdit(account: Account) {
     setEditing(account);
-    setName(account.name);
-    setType(account.type);
-    setInitialBalance(centsToEuroString(account.initialBalance));
-    setCurrencyInput(account.currency);
-    setIcon(account.icon);
     setOpen(true);
   }
 
@@ -255,29 +212,6 @@ export function AccountsView({
     setToAccountId(ensured.to);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const data = {
-      name,
-      type,
-      initialBalance: toCents(initialBalance),
-      currency: currencyInput,
-      icon,
-    };
-    try {
-      if (editing) {
-        await updateAccount(editing.id, data);
-        toast.success(t("accounts.updated"));
-      } else {
-        await createAccount(data);
-        toast.success(t("accounts.created"));
-      }
-      setOpen(false);
-    } catch (err) {
-      toast.error(formatErrorMessage(language, err));
-    }
-  }
-
   async function handleTransferSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -296,20 +230,23 @@ export function AccountsView({
     }
   }
 
-  async function handleDeleteTransfer() {
-    if (!deletingTransfer) return;
+  async function handleDeleteTransfer(transfer: AccountTransfer) {
+    const ok = await confirm({
+      title: t("accounts.transferDeleteConfirm"),
+      description: t("common.cannotUndo"),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     try {
-      await deleteAccountTransfer(deletingTransfer.id, year);
+      await deleteAccountTransfer(transfer.id, year);
       toast.success(t("accounts.transferDeleted"));
     } catch (err) {
       toast.error(formatErrorMessage(language, err));
-    } finally {
-      setDeletingTransfer(null);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(t("accounts.deleteConfirm"))) return;
+    if (!(await confirm({ title: t("accounts.deleteConfirm"), description: t("common.cannotUndo"), confirmLabel: t("common.delete") }))) return;
     try {
       await deleteAccount(id);
       toast.success(t("accounts.deleted"));
@@ -356,169 +293,45 @@ export function AccountsView({
       />
 
       {accounts.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            {t("accounts.empty")}
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Wallet}
+          title={t("accounts.empty")}
+          action={
+            <Button onClick={openCreate}>
+              <Plus />
+              {t("accounts.new")}
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account, index) => (
-            <Card key={account.id}>
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-lg border",
-                      account.balance > 0
-                        ? "border-success/20 bg-success/10 text-success"
-                        : account.balance < 0
-                          ? "border-danger/20 bg-danger/10 text-danger"
-                          : TYPE_STYLE[account.type].icon
-                    )}
-                  >
-                    <AccountIcon name={account.icon} className="size-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">{account.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {t(`labels.accountType.${account.type}`)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-1">
-                  <div className="flex flex-col">
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={index === 0}
-                      aria-label={t("accounts.moveUp")}
-                      onClick={() => handleMove(index, -1)}
-                    >
-                      <ChevronUp className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={index === accounts.length - 1}
-                      aria-label={t("accounts.moveDown")}
-                      onClick={() => handleMove(index, 1)}
-                    >
-                      <ChevronDown className="size-3.5" />
-                    </Button>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => openEdit(account)}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleDelete(account.id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold tabular-nums">
-                  {formatAmount(account.balance, account.currency, locale)}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          <div className="flex items-baseline justify-between gap-3 rounded-xl bg-surface-2 px-5 py-4">
+            <span className="text-sm font-medium text-muted-foreground">{t("accounts.totalBalance")}</span>
+            <Amount cents={analysis.totalAsOf} currency={currency} animated className="text-xl font-bold tracking-tight" />
+          </div>
+          <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {accounts.map((account, index) => (
+              <StaggerItem key={account.id}>
+                <AccountCard
+                  account={account}
+                  isFirst={index === 0}
+                  isLast={index === accounts.length - 1}
+                  onEdit={() => openEdit(account)}
+                  onDelete={() => handleDelete(account.id)}
+                  onMove={(direction) => handleMove(index, direction)}
+                />
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </>
       )}
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>
-              {editing ? t("accounts.edit") : t("accounts.new")}
-            </SheetTitle>
-          </SheetHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto">
-            <div className="space-y-2">
-              <Label htmlFor="name">{t("common.name")}</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("common.type")}</Label>
-              <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACCOUNT_TYPES.map((accountType) => (
-                    <SelectItem key={accountType} value={accountType}>
-                      {t(`labels.accountType.${accountType}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("common.icon")}</Label>
-              <div className="max-h-60 overflow-y-auto rounded-lg border p-2">
-                <div className="grid grid-cols-6 gap-2">
-                  {ACCOUNT_ICON_NAMES.map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      title={opt}
-                      onClick={() => setIcon(opt)}
-                      className={cn(
-                        "flex size-10 items-center justify-center rounded-lg border transition-colors",
-                        icon === opt
-                          ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2"
-                          : "border-border hover:bg-muted"
-                      )}
-                    >
-                      <AccountIcon name={opt} className="size-5" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="balance">
-                  {t("accounts.initialBalance", {
-                    currency: currencyInput.toUpperCase(),
-                  })}
-                </Label>
-                <Input
-                  id="balance"
-                  value={initialBalance}
-                  onChange={(e) => setInitialBalance(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">{t("common.currency")}</Label>
-                <Input
-                  id="currency"
-                  value={currencyInput}
-                  onChange={(e) => setCurrencyInput(e.target.value.toUpperCase())}
-                  maxLength={3}
-                  required
-                />
-              </div>
-            </div>
-            <SheetFooter>
-              <Button type="submit">{t("common.save")}</Button>
-            </SheetFooter>
-          </form>
-        </SheetContent>
-      </Sheet>
+      <AccountFormSheet
+        open={open}
+        onOpenChange={setOpen}
+        account={editing}
+        defaultCurrency={currency}
+      />
 
       <Sheet open={transferOpen} onOpenChange={setTransferOpen}>
         <SheetContent className="sm:max-w-md">
@@ -843,7 +656,7 @@ export function AccountsView({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              onClick={() => setDeletingTransfer(tr)}
+                              onClick={() => handleDeleteTransfer(tr)}
                             >
                               <Trash2 className="size-3.5" />
                             </Button>
@@ -961,27 +774,6 @@ export function AccountsView({
         </Card>
       )}
 
-      <Dialog
-        open={!!deletingTransfer}
-        onOpenChange={(open) => !open && setDeletingTransfer(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("accounts.transferDeleteConfirm")}</DialogTitle>
-            <DialogDescription>
-              {t("common.cannotUndo")}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingTransfer(null)}>
-              {t("common.cancel")}
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteTransfer}>
-              {t("common.delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -201,8 +201,9 @@
             <EditText
                 android:id="@+id/quick_add_amount"
                 style="@style/QuickAdd.Field"
-                android:layout_height="56dp"
-                android:fontFamily="@font/dm_sans_semibold"
+                android:layout_height="64dp"
+                android:fontFamily="@font/dm_sans_bold"
+                android:gravity="center"
                 android:fontFeatureSettings="tnum"
                 android:hint="@string/quick_add_amount_hint"
                 android:importantForAutofill="no"
@@ -212,7 +213,7 @@
                 android:paddingEnd="12dp"
                 android:textColor="@color/qa_foreground"
                 android:textColorHint="@color/qa_muted_fg"
-                android:textSize="24sp" />
+                android:textSize="32sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
