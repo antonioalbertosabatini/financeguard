@@ -28,6 +28,7 @@ const SECTIONS: { key: string; path: string; heading: RegExp }[] = [
 ];
 
 const VIEWPORTS = [
+  { name: "small", width: 360, height: 780 },
   { name: "mobile", width: 390, height: 844 },
   { name: "desktop", width: 1280, height: 800 },
 ] as const;
@@ -45,7 +46,7 @@ test.describe.serial("restyled UI smoke test", () => {
   let errors: string[];
 
   test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
+    page = await browser.newPage({ locale: "it-IT" });
     await createLocalVault(page);
     await seedDemoData(page);
     // The seeding burst re-renders charts hundreds of times; start clean.
@@ -54,7 +55,7 @@ test.describe.serial("restyled UI smoke test", () => {
   });
 
   test.afterAll(async () => {
-    await page.close();
+    await page?.close();
   });
 
   for (const scheme of ["light", "dark"] as const) {

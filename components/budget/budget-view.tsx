@@ -235,7 +235,7 @@ export function BudgetView({
           }
         />
       ) : (
-        <Stagger className="grid gap-4 lg:grid-cols-2">
+        <Stagger className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {items.map((item, index) => (
             <StaggerItem key={item.id}>
               <BudgetCard

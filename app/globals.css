@@ -229,6 +229,22 @@
     -webkit-tap-highlight-color: transparent;
     color-scheme: light;
   }
+  /* Safety net: an element wider than the screen must never make the whole
+     page pan sideways (WebView). `clip` (unlike `hidden`) creates no scroll
+     container, so sticky headers keep working. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+  /* Toasts sit above the floating bottom nav while it is shown (< md). */
+  :root {
+    --toast-offset-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 768px) {
+    :root {
+      --toast-offset-bottom: 1.5rem;
+    }
+  }
   html.dark {
     color-scheme: dark;
   }

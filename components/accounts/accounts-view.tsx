@@ -309,7 +309,7 @@ export function AccountsView({
             <span className="text-sm font-medium text-muted-foreground">{t("accounts.totalBalance")}</span>
             <Amount cents={analysis.totalAsOf} currency={currency} animated className="text-xl font-bold tracking-tight" />
           </div>
-          <Stagger className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {accounts.map((account, index) => (
               <StaggerItem key={account.id}>
                 <AccountCard

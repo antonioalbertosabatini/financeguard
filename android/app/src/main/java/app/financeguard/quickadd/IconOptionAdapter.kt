@@ -46,7 +46,13 @@ internal class IconOptionAdapter(
         val option = options[position]
         view.findViewById<TextView>(R.id.quick_add_option_text).text = option.name
         val icon = view.findViewById<ImageView>(R.id.quick_add_option_icon)
-        icon.setImageResource(option.iconRes)
+        // A broken drawable must never take the whole dialog down (it used to
+        // crash the category dropdown): fall back to a neutral circle.
+        try {
+            icon.setImageResource(option.iconRes)
+        } catch (_: RuntimeException) {
+            icon.setImageResource(R.drawable.lucide_circle)
+        }
         ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(option.tint))
         return view
     }

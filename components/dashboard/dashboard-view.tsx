@@ -81,8 +81,8 @@ export function DashboardView({
     <div className="space-y-6">
       <PageHeader title={t("dashboard.title")} description={t("dashboard.description")} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Rise className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Rise className="min-w-0 lg:col-span-2">
           <BalanceHero
             className="h-full"
             totalBalance={data.totalBalance}
@@ -96,7 +96,7 @@ export function DashboardView({
             currency={currency}
           />
         </Rise>
-        <Rise delay={0.06} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-1">
+        <Rise delay={0.06} className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-1">
           <StatTile
             label={t("dashboard.monthlyIncome")}
             icon={ArrowDownLeft}
@@ -126,17 +126,17 @@ export function DashboardView({
         </Rise>
       </div>
 
-      <div className="grid gap-x-4 gap-y-6 lg:grid-cols-3">
-        <Rise delay={0.12} className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-6 lg:grid-cols-3">
+        <Rise delay={0.12} className="min-w-0 lg:col-span-2">
           <MonthlyTrendChart data={data.monthlyTrend} year={year} currency={currency} locale={locale} />
         </Rise>
-        <Rise delay={0.16}>
+        <Rise delay={0.16} className="min-w-0">
           <BudgetsAtRisk items={data.budgetsAtRisk} budgetsCount={data.budgetsCount} currency={currency} />
         </Rise>
-        <Rise delay={0.2} className="lg:col-span-2">
+        <Rise delay={0.2} className="min-w-0 lg:col-span-2">
           <RecentTransactions items={data.recentTransactions} currency={currency} />
         </Rise>
-        <Rise delay={0.24}>
+        <Rise delay={0.24} className="min-w-0">
           <ExpensesDonut items={data.expensesByCategory} currency={currency} locale={locale} />
         </Rise>
       </div>

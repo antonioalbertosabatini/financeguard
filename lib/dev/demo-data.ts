@@ -8,6 +8,7 @@ import { upsertBudget } from "@/lib/actions/budgets";
 import { getCategories } from "@/lib/actions/categories";
 import { createTransaction } from "@/lib/actions/transactions";
 import type { Category } from "@/lib/schemas/category";
+import { persistNow } from "@/lib/storage/data-store";
 
 function isoDate(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -89,9 +90,37 @@ export async function seedDemoData(): Promise<string> {
     await add(27, "expense", ristoranti, 30 + rand() * 50, "Pizzeria", card.id, ["amici"]);
   }
 
+  // Long bank-statement descriptions (like Trade Republic imports) to exercise
+  // truncation and narrow layouts.
+  const today = isoDate(year, lastMonth, now.getDate());
+  for (const notes of [
+    "Kartentransaktion ESSELUNGA SPA SUPERMERCATO VIA ROMA 123 MILANO IT carta ****4821",
+    "Pagamento POS AUTOSTRADE PER L'ITALIA SPA CASELLO MILANO SUD BARRIERA TERMINALE 0042",
+  ]) {
+    await createTransaction({
+      date: today,
+      amount: 4790,
+      type: "expense",
+      categoryId: spesa.id,
+      accountId: card.id,
+      notes,
+      tags: ["casa"],
+      isRecurring: false,
+    });
+  }
+
   await upsertBudget({ name: ristoranti.name, categoryId: ristoranti.id, icon: ristoranti.icon, monthlyLimit: 9000 });
+  await upsertBudget({
+    name: "Spesa casa, supermercati e negozi del quartiere",
+    tag: "casa",
+    icon: spesa.icon,
+    monthlyLimit: 5000,
+  });
   await upsertBudget({ name: spesa.name, categoryId: spesa.id, icon: spesa.icon, monthlyLimit: 30000 });
   await upsertBudget({ name: trasporti.name, categoryId: trasporti.id, icon: trasporti.icon, monthlyLimit: 4000 });
 
+  // commit() saves with a 250ms debounce: flush now so a reload right after
+  // seeding (e.g. in the e2e tests) does not lose the last writes.
+  await persistNow();
   return "Dati demo creati.";
 }

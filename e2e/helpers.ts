@@ -49,10 +49,28 @@ export function collectErrors(page: Page) {
   return errors;
 }
 
-/** Fails if any element makes the page scroll horizontally. */
+/**
+ * Fails if any element of the page content sticks out of the viewport.
+ * `html, body { overflow-x: clip }` hides such overflow from scrollWidth, so we
+ * look at element boxes instead, ignoring those inside an intentional
+ * horizontal scroller (e.g. the daily chart in Reports).
+ */
 export async function expectNoHorizontalOverflow(page: Page) {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-  );
-  expect(overflow, "page should not scroll horizontally").toBeLessThanOrEqual(1);
+  const offenders = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const insideScroller = (el: Element) => {
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        if (getComputedStyle(p).overflowX !== "visible") return true;
+      }
+      return false;
+    };
+    return [...document.querySelectorAll("main *")]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.right > vw + 1 && !insideScroller(el);
+      })
+      .slice(0, 5)
+      .map((el) => `${el.tagName}.${String(el.className).slice(0, 60)}`);
+  });
+  expect(offenders, "elements wider than the screen").toEqual([]);
 }

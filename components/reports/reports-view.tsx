@@ -440,7 +440,7 @@ export function ReportsView({
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <StatCard
               title={t("reports.incomeMonth", { month: monthLabel })}
               value={formatAmount(monthlyReport.income, currency, locale)}
@@ -462,7 +462,7 @@ export function ReportsView({
           </div>
 
           {hasMonthlyExpenses && (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle>
@@ -540,7 +540,7 @@ export function ReportsView({
         </TabsContent>
 
         <TabsContent value="annual" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <StatCard
               title={t("reports.incomeYear", { year })}
               value={formatAmount(annualReport.income, currency, locale)}

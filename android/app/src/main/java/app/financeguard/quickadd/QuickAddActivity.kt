@@ -224,7 +224,9 @@ class QuickAddActivity : AppCompatActivity() {
     private fun parseColor(value: String): Int =
         try {
             Color.parseColor(value)
-        } catch (_: IllegalArgumentException) {
+        } catch (_: RuntimeException) {
+            // Empty or malformed colour (parseColor throws IllegalArgumentException
+            // or StringIndexOutOfBoundsException): use the brand colour.
             ContextCompat.getColor(this, R.color.qa_primary)
         }
 

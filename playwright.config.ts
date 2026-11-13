@@ -18,6 +18,10 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
     ...devices["Desktop Chrome"],
+    // Full Chromium in new headless mode: no separate headless-shell download.
+    channel: "chromium",
+    // The assertions use the Italian UI strings.
+    locale: "it-IT",
   },
   webServer: {
     command: "npm run dev",

@@ -143,7 +143,8 @@ function normalizePath(d) {
 
 function attrs(raw) {
   const result = {};
-  for (const [, name, value] of raw.matchAll(/([a-zA-Z-]+)="([^"]*)"/g)) {
+  // Attribute names may contain digits (x1, y1, x2, y2 on <line>).
+  for (const [, name, value] of raw.matchAll(/([a-zA-Z][a-zA-Z0-9:-]*)="([^"]*)"/g)) {
     result[name] = value;
   }
   return result;
@@ -225,6 +226,10 @@ function iconToVector(key, componentName) {
     paths.push(elementToPath(tag, attrs(raw)));
   }
   if (paths.length === 0) fail(`icon "${componentName}" rendered no shapes`);
+  // A NaN in pathData makes Android's VectorDrawable throw at inflate time
+  // (crashed the Quick Add category dropdown), so refuse to write it.
+  const broken = paths.find((d) => !d || /NaN|undefined/.test(d));
+  if (broken !== undefined) fail(`icon "${componentName}" produced invalid pathData: ${broken}`);
 
   const body = paths
     .map(

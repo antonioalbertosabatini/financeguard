@@ -10,6 +10,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={resolvedTheme}
+      // Keep toasts above the floating bottom nav on phones (see
+      // --toast-offset-bottom in globals.css), so they never block its taps.
+      offset={{ bottom: "var(--toast-offset-bottom)" }}
+      mobileOffset={{ bottom: "var(--toast-offset-bottom)" }}
       className="toaster group"
       icons={{
         success: (
